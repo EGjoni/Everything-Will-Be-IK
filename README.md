@@ -14,6 +14,9 @@ It is based on a generalization of CCD (highly stable), which incorporates eleme
 -3-DOF constraints.</br>
 </br>
 </br>
+
+See https://www.youtube.com/watch?v=HY-XF075Xkc for a demo.
+
 The code isn't optimized, but the algorithm is fast enough that it shouldn't matter too much for most applications. 
 </br>
 </br>
