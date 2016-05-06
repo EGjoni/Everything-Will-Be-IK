@@ -1,102 +1,100 @@
-/*
-USE w, a, s, d KEYS TO MOVE PIN
-*/
 
-
-import ewbIK.*;
-import pseudoScene.*;
-
-boolean w, a, s, d;  //keyPress Variables
+import IK.*;
+import sceneGraph.*;
 
 Armature simpleArmature;
-Bone rootBone, initialBone, secondBone, thirdBone, fourthBone, fifthBone;
+Bone  rootBone, initialBone, 
+      secondBone, thirdBone, 
+      fourthBone, fifthBone, 
+      bFourthBone, bFifthBone, 
+      bSixthBone;
 
 
 void setup() {
-  size(800, 600, P3D);
- 
+  size(1200, 900, P3D);
   simpleArmature = new Armature("example");
-
-  rootBone = simpleArmature.getRootBone();
-  DVector roll = new DVector(0, 0, 1);
-
-  DVector t1Tip = new DVector(0, 5, 0); 
-  DVector t2Tip = new DVector(0, 9, 0);
-  DVector t3Tip = new DVector(0, 12, 0);
-  DVector t4Tip = new DVector(0, 17, 0); 
-  DVector t5Tip = new DVector(0, 21, 0); 
-
-  initialBone = new Bone(rootBone, t1Tip, roll, "initial", 5d, Bone.frameType.GLOBAL);
-  secondBone = new Bone(initialBone, t2Tip, roll, "nextBone", 5d, Bone.frameType.GLOBAL);
-  thirdBone = new Bone(secondBone, t3Tip, roll, "anotherBone", 5d, Bone.frameType.GLOBAL); 
-  fourthBone = new Bone(thirdBone, t4Tip, roll, "oneMoreBone", 5d, Bone.frameType.GLOBAL);
-  fifthBone = new Bone(fourthBone, t5Tip, roll, "fifthBone", 5d, Bone.frameType.GLOBAL);
+  simpleArmature.localAxes().translateTo(new DVector(0, 200, 0));
+  simpleArmature.localAxes().rotateAboutZ(PI);
   
-  rootBone.enablePin();
+  rootBone = simpleArmature.getRootBone();
+  
+  initialBone = new Bone(rootBone, "initial", 74d);
+  secondBone = new Bone(initialBone, "nextBone", 86d);
+  thirdBone = new Bone(secondBone, "anotherBone", 98d); 
+  fourthBone = new Bone(thirdBone, "oneMoreBone", 70d);
+  fifthBone = new Bone(fourthBone, "fifthBone", 80d);  
+  
+  bFourthBone = new Bone(thirdBone, "branchBone", 80d);
+  bFifthBone = new Bone(bFourthBone, "nextBranch", 70d);
+  bSixthBone = new Bone(bFifthBone, "leaf", 80d); 
+  
+  secondBone.rotAboutFrameZ(.4d);
+  thirdBone.rotAboutFrameZ(.4d);
+  
+  bFourthBone.rotAboutFrameZ(-.5d);
+  bFifthBone.rotAboutFrameZ(-1d);
+  bSixthBone.rotAboutFrameZ(-.5d);
+  initialBone.rotAboutFrameX(.01d);
+    
+  rootBone.enablePin();  
   fifthBone.enablePin();
+  fifthBone.setPin(new DVector(-200, 0, 0));
+  bSixthBone.enablePin();
+  bSixthBone.setPin(new DVector(100, 50, 0));
+  
+  //solving once before the drawing phase because it looks nicer when the sketch starts
+  simpleArmature.tranquilIKSolver(rootBone, 0.1, 50);
+  
 }
 
-void draw() {
-  background(160);
-  camera(cameraPosition, lookAt, up);
- 
-  drawBone(initialBone);
-  drawBone(secondBone);
-  drawBone(thirdBone);
-  drawBone(fourthBone);
-  drawBone(fifthBone);
-  
-  stroke(255,0,0);
-  strokeWeight(10);
-  point(rootBone.getPin());
-  point(fifthBone.getPin());
-  
-  if(a || d || s || w || keyPressed) {
-     if(a) fifthBone.setPin(DVector.add(fifthBone.getPin(),new DVector(0.4,0,0)));
-     if(d) fifthBone.setPin(DVector.add(fifthBone.getPin(),new DVector(-0.4,0,0)));
-     if(s) fifthBone.setPin(DVector.add(fifthBone.getPin(),new DVector(0,-0.4,0)));
-     if(w) fifthBone.setPin(DVector.add(fifthBone.getPin(),new DVector(0, 0.4, 0)));
-     
-     simpleArmature.solveIK(fourthBone, 0.1, 5);
+  void draw() {
+    background(160, 100, 100);
+    mouse.x =  mouseX - (width/2); mouse.y = mouseY - (height/2);
+    camera(cameraPosition, lookAt, up);
+    ortho(-width/2, width/2, -height/2, height/2, -10000, 10000);
+    drawBones();  
+
+    if(mousePressed) {
+      rootBone.setPin(mouse);      
+      //simpleArmature.ambitiousIKSolver(bSixthBone, 0.1, 20);
+      simpleArmature.tranquilIKSolver(rootBone, 0.01, 25);
+    }
+  }
+
+  DVector mouse = new DVector(0,0,0);
+  public void drawBones() {
+    ArrayList<?> boneList = simpleArmature.getBoneList();
+    for(Object b : boneList) {
+      if( b != rootBone)
+        drawBone(((Bone)b));
+    }    
   }
   
-}
-
-public void drawBone(Bone bone) {
-  stroke(0);
-  strokeWeight(2);
-  line(bone.getBase(), bone.getTip());
-  strokeWeight(7);
-  point(bone.getBase());
-  strokeWeight(8);
-  stroke(255);
-  point(bone.getTip());
-}
-
-
-public void keyPressed() {
-switch(key) {
-      case 'a' : a = true;
-      break;
-      case 'd' : d = true;
-      break;
-      case 's' : s= true;
-      break;
-      case 'w' : w= true;
+  public void drawBone(Bone bone) {
+    stroke(0);
+    strokeWeight(2);
+    line(bone.getBase(), bone.getTip());
+    strokeWeight(7);
+    point(bone.getBase());
+    strokeWeight(8);
+    stroke(255);
+    point(bone.getTip());
+    if(bone.isPinned()) {
+      strokeWeight(10); 
+      stroke(255,0,0); 
+      point(bone.pinnedTo());
     }
-}
-
-public void keyReleased() {
-  switch(key) {
-      case 'a' : a = false;
-      break;
-      case 'd' : d = false;
-      break;
-      case 's' : s= false;
-      break;
-      case 'w' : w= false;
-    }
-}
+    
+    String boneAngles = "";
+    try {
+    double[] angleArr = bone.getXYZAngle();
+     boneAngles += "  ( " + degrees((float)angleArr[0]) + ",   " + degrees((float)angleArr[1]) + ",   " + degrees((float)angleArr[2]) + "  )";
+    fill(0);
+    text(boneAngles,(float)bone.getBase().x, (float)bone.getBase().y); 
+    } catch (Exception e) {
+    }  
+    
+  }
 
 public void printXY(DVector pd) {
  PVector p = pd.toPVec();
@@ -115,8 +113,8 @@ public void point(DVector pd) {
 }
 
 PVector cameraPosition = new PVector(0, 0, 70); 
-PVector lookAt = new PVector(0, 10, 0);
-PVector up = new PVector(0, -1, 0);
+PVector lookAt = new PVector(0, 0, 0);
+PVector up = new PVector(0, 1, 0);
 
 public void camera(PVector cp, PVector so, PVector up) {
   camera(cp.x, cp.y, cp.z, so.x, so.y, so.z, up.x, up.y, up.z);
