@@ -1,9 +1,0 @@
-[submodule "src"]
-	path = src
-	url = https://gitlab.com/rufsketch1/IK.git
-[submodule "IK"]
-	path = IK
-	url = https://gitlab.com/rufsketch1/IK.git
-[submodule "sceneGraph"]
-	path = sceneGraph
-	url = https://gitlab.com/rufsketch1/sceneGraph.git
