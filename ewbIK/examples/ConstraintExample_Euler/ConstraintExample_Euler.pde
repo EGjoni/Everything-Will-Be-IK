@@ -11,7 +11,7 @@ The recommended constraint to use is Kusudama, it is easy to reason about, extre
 and demonstrates excellent stability.
 
 This is mostly here as a placeholder until I make a larger example on
-creating ustom constraints
+creating custom constraints
 */
 import IK.*;
 import sceneGraph.*;
@@ -66,11 +66,9 @@ void setup() {
 
     if(mousePressed) {
       fifthBone.setPin(mouse);
-          
-      /*for this example, we are using unstable Euler constraints, so, 
-      it doesn't really matter which solver we settle on. Things will still probably get wonky*/
-      simpleArmature.ambitiousIKSolver(bSixthBone, 0.1, 50);
-      //simpleArmature.tranquilIKSolver(bSixthBone, .1, 50);
+         
+      //simpleArmature.ambitiousIKSolver(bSixthBone, 0.1, 50);
+      simpleArmature.tranquilIKSolver(bSixthBone, .1, 50);
     }   
     
      drawBones(); 
@@ -78,26 +76,26 @@ void setup() {
 
 public void setBoneLimits() {
     EulerLimits firstConstraint = new EulerLimits(initialBone);
-    firstConstraint.setXLimits(-1d, 0d);
-    firstConstraint.setYLimits(-1d, 1d);
-    firstConstraint.setZLimits(-1d, 1d);
-    initialBone.addConstraint(firstConstraint);
-    
-    EulerLimits secondConstraint = new EulerLimits(secondBone);
-    secondConstraint.setXYZLimits(-1d, 0d, -1d, 1d, -1d, 1d);
-    secondBone.addConstraint(secondConstraint);
-    
-    EulerLimits thirdConstraint = new EulerLimits(thirdBone); 
-    thirdConstraint.setXYZLimits(-1d, 0d, -1d, 1d, -1d, 1d);
-    thirdBone.addConstraint(thirdConstraint);
-    
-    EulerLimits fourthConstraint = new EulerLimits(fourthBone); 
-    fourthConstraint.setXYZLimits(-1d, 0d, -1d, 1d, -1d, 1d);
-    fourthBone.addConstraint(fourthConstraint);
-    
-    EulerLimits fifthConstraint = new EulerLimits(fifthBone); 
-    fifthConstraint.setXYZLimits(-1d, 0d, -1d, 1d, -1d, 1d);
-    fifthBone.addConstraint(fifthConstraint);
+	firstConstraint.setXLimits(-1d, 0d);
+	firstConstraint.setYLimits(-1d, 1d);
+	firstConstraint.setZLimits(-1d, 1d);
+	initialBone.addConstraint(firstConstraint);
+		
+	EulerLimits secondConstraint = new EulerLimits(secondBone);
+	secondConstraint.setXZYLimits(-1d, 0d, -1d, 1d, -1d, 1d);
+	secondBone.addConstraint(secondConstraint);
+		
+	EulerLimits thirdConstraint = new EulerLimits(thirdBone); 
+	thirdConstraint.setXZYLimits(-1d, 0d, -1d, 1d, -1d, 1d);
+	thirdBone.addConstraint(thirdConstraint);
+		
+	EulerLimits fourthConstraint = new EulerLimits(fourthBone); 
+	fourthConstraint.setXZYLimits(-1d, 0d, -1d, 1d, -1d, 1d);
+	fourthBone.addConstraint(fourthConstraint);
+		
+	EulerLimits fifthConstraint = new EulerLimits(fifthBone); 
+	fifthConstraint.setXZYLimits(-1d, 0d, -1d, 1d, -1d, 1d);
+	fifthBone.addConstraint(fifthConstraint);
   }
   
     
