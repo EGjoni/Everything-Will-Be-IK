@@ -700,6 +700,34 @@ public class DVector {
 		}
 		return target;
 	}
+	
+	/**
+	 * Takes two vectors representing a plane 
+	 * and returns the projection of this vector onto 
+	 * that plane.
+	 * 
+	 * @param p1 vector representing first edge of plane 
+	 * @param p2 vector representing second edge of plane
+	 * @return
+	 */
+	public DVector projectOntoPlane(DVector p1, DVector p2) {
+		return this.projectOntoPlane(p1.cross(p2));
+	}
+	
+	
+	/**
+	 * Takes a vector representing the normal of a plane, and returns 
+	 * the value of this vector projected onto that plane
+	 * @param norm
+	 * @return
+	 */
+	public DVector projectOntoPlane(DVector rawNorm) {
+		DVector norm = normalize(rawNorm);
+		DVector normProj = DVector.mult(norm, this.dot(norm));
+		normProj.mult(-1);
+		
+		return DVector.add(normProj, this);
+	}
 
 
 	/**

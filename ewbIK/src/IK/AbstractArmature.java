@@ -33,6 +33,15 @@ import sceneGraph.*;
  */
 
 public abstract class AbstractArmature {
+	/**
+	 * MIXED MODE APPLIES ONE ITERATION OF 
+	 * TRANQUIL TO GET A STABLE STARTING TEMPLATE
+	 * AND ONE ITERATION OF AMBITIOUS TO GET 
+	 * STRONG MATCH. HOWEVER, THIS IS NECESSARILY 
+	 * SLOWER THAN JUST USING ONE OR THE OTHER
+	 */
+	public static int AMBITIOUS = 0, TRANQUIL = 1, MIXED = 2;
+
 	protected AbstractAxes localAxes;
 	protected ArrayList<AbstractBone> bones = new ArrayList<AbstractBone>();
 	protected HashMap<String, AbstractBone> boneMap = new HashMap<String, AbstractBone>();
@@ -40,10 +49,15 @@ public abstract class AbstractArmature {
 	public SegmentedArmature segmentedArmature;
 	public StrandedArmature strandedArmature;
 	protected String tag;
+	
+	protected int IKType = AMBITIOUS; 
+	protected int IKIterations = 15;
+	protected double dampening = 0.1d;
 
 	public double IKSolverStability = 0d; 
 
-
+	public AbstractArmature() {}
+	
 	public AbstractArmature(AbstractAxes inputOrigin, String name) {
 		this.localAxes = inputOrigin; 
 		this.tag = name;
@@ -93,6 +107,19 @@ public abstract class AbstractArmature {
 			String inputTag, 
 			double boneHeight, 
 			AbstractBone.frameType coordinateType);
+	
+	public void setDefaultIterations(int iter) {
+		this.IKIterations = iter;
+	}
+	
+	public void setDefaultIKType(int type) {
+		IKType = type;
+		if(IKType < 0 || IKType > 3) IKType = 3;
+	}
+	
+	public void setDefaultDampening(double damp) {
+		this.dampening = Math.min(Math.abs(Double.MIN_VALUE), Math.abs(damp)); 
+	}
 
 	/**
 	 * @return the rootBone of this armature.
@@ -106,6 +133,7 @@ public abstract class AbstractArmature {
 	 * @return all bones belonging to this armature.
 	 */
 	public ArrayList<AbstractBone> getBoneList() {
+		this.bones.clear();
 		rootBone.addDescendantsToArmature();
 		return bones;
 	}
@@ -128,12 +156,23 @@ public abstract class AbstractArmature {
 	 * to know it exists. 
 	 * @param bone
 	 */
-	protected void addToBoneList(AbstractBone abstractBone) {
+	public void addToBoneList(AbstractBone abstractBone) {
 		if(!bones.contains(abstractBone)) {
 			bones.add(abstractBone);
 			boneMap.put(abstractBone.tag, abstractBone);
 		}
 	}
+	
+	/**
+	 * this method should be called by any newly deleted bone object if the armature is
+	 * to know it no longer exists
+	 */
+	public void removeFromBoneList(AbstractBone abstractBone) {
+		if(bones.contains(abstractBone)) {
+			bones.remove(abstractBone);
+			boneMap.remove(abstractBone);
+		}
+ 	}
 
 	/**
 	 * 
@@ -183,6 +222,39 @@ public abstract class AbstractArmature {
 			else chainList.add(insertAt, sa);
 		}
 	}
+	
+	
+	/**
+	 * automatically solves the IK system of this armature from the
+	 * given bone using the armature's default IK parameters. 
+	 * 
+	 * You can specify these using the setDefaultIterations() setDefaultIKType() and setDefaultDampening() methods.
+	 * The library comes with some defaults already set, so you can more or less use this method out of the box if 
+	 * you're just testing things out. 
+	 * @param bone
+	 */
+	public void IKSolver(AbstractBone bone) {
+		IKSolver(bone, dampening, IKIterations);
+	}
+	
+	public void IKSolver(AbstractBone bone, double dampening, int iterations) {
+		if(this.IKType == AMBITIOUS) {
+			ambitiousIKSolver(bone, dampening, iterations);
+		} else if(this.IKType == TRANQUIL) {
+			tranquilIKSolver(bone, dampening, iterations);
+		} else if(this.IKType == MIXED) {
+			tranquilIKSolver(bone, dampening, iterations);
+			ambitiousIKSolver(bone, dampening, iterations);
+		}
+	}
+	
+	/**
+	 * Same as other ambitiousIKSolver method, but uses the armature's default iteration and dampening. 
+	 * @param bone
+	 */
+	public void ambitiousIKSolver(AbstractBone bone) {
+		ambitiousIKSolver(bone, dampening, IKIterations);
+	}
 
 
 	/**
@@ -190,7 +262,7 @@ public abstract class AbstractArmature {
 	 * are impossible to reach AND the armature is under-constrained, this solver can become unstable. 
 	 * 
 	 * That said, it is quite stable when the chain armature is sufficiently constrained. 
-	 * That is -- if you constrain all bones affected by the solver with Kusudamas such that 
+	 * That is -- it is stable if you constrain all bones affected by the solver with Kusudamas such that 
 	 * full 360 degree rotations on any axis are disallowed.
 	 * 
 	 * @param bone the bone from which to begin solving the IK system. Pinned ancestors of this bone
@@ -284,12 +356,20 @@ public abstract class AbstractArmature {
 			DVector axis = rotateToTarget.getAxis();
 
 			angle = Math.min(angle, dampening);
-			currentBone.localAxes.rotateTo(new Rot(axis, angle));   
+			currentBone.rotateBy(new Rot(axis, angle).rotation);   
 
 			currentBone.snapToConstraints();   
 			currentBone = currentBone.parent;
 
 		}
+	}
+	
+	/**
+	 * Same as other tranquilIKSolver method, but uses the armature's default iteration and dampening. 
+	 * @param bone
+	 */
+	public void tranquilIKSolver(AbstractBone bone) {
+		tranquilIKSolver(bone, dampening, IKIterations);
 	}
 
 
@@ -349,7 +429,7 @@ public abstract class AbstractArmature {
 		 * For each strand, add to its rotationHashMap for each bone the rotational difference
 		 * between its current orientation, and its original orientation 
 		 * then reset the bone orientations of all bones in the collections back to their original orientations;
-		 * (as an optimization, only reset the orientation of the bone is mapped to multiple strands in boneStrandsMap;
+		 * (as an optimization, only reset the orientation if the bone is mapped to multiple strands in boneStrandsMap;
 		 */		
 
 		for(int i =0; i<iterations; i++) {
@@ -429,7 +509,10 @@ public abstract class AbstractArmature {
 				//totalDist += distance;
 			}
 			Rot avg = new Rot(wT/totalCount, xT/totalCount, yT/totalCount, zT/totalCount, true);
-			b.localAxes().rotateTo(avg);
+			b.rotateBy(avg.rotation);
+			
+			//TODO DEBUG: TEST WHAT HAPPENS IF I ENABLE SNAPPING TO CONSTRAINTS HERE
+			
 			//b.snapToConstraints();
 			collection.setDeltaMeasureForBone(b, avg.getAngle());
 		}
@@ -464,7 +547,7 @@ public abstract class AbstractArmature {
 
 			angle = Math.min(angle, dampening);
 
-			currentBone.localAxes.rotateTo(new Rot(rotateToTarget.getAxis(), angle));   
+			currentBone.rotateBy(new Rot(rotateToTarget.getAxis(), angle).rotation);   
 			currentBone.snapToConstraints();   			
 
 			postXHead = currentBone.localAxes().x().heading(); 

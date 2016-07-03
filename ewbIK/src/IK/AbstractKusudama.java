@@ -3,6 +3,11 @@
  */
 package IK;
 import java.util.ArrayList;
+
+import org.apache.commons.math3.geometry.euclidean.threed.Rotation;
+import org.apache.commons.math3.geometry.euclidean.threed.RotationOrder;
+
+import ga.Axes;
 import sceneGraph.*;
 /**
  * @author Eron
@@ -23,32 +28,23 @@ public abstract class AbstractKusudama implements Constraint{
 	 * Defined as some Angle in radians about the limitingAxes Y axis, 0 being equivalent to the
 	 * limitingAxes Z axis. 
 	 */
-	private double minAxialAngle; 
+	protected double minAxialAngle = 0; 
 	/**
 	 * Defined as some Angle in radians about the limitingAxes Y axis, 0 being equivalent to the
-	 * limitingAxes Z axis. 
+	 * minAxialAngle
 	 */
-	private double maxAxialAngle;
+	protected double range = G.TAU;
 
 	protected boolean orientationallyConstrained = false;
 	protected boolean axiallyConstrained = false; 
 
 	protected AbstractBone attachedTo;  
 
+	public AbstractKusudama() {}
+	
 	public AbstractKusudama(AbstractBone forBone) {
 		this.attachedTo = forBone; 
 		this.limitingAxes = forBone.getMajorRotationAxes();
-		//toggleAxialLimits();
-		
-
-		/*if(attachedTo.parent != null) {
-			generateAxes(attachedTo.parent.localAxes.x(), attachedTo.parent.localAxes.y(), attachedTo.parent.localAxes.z()); 
-			System.out.println(limitingAxes);
-			limitingAxes.translateTo(attachedTo.getBase());
-			limitingAxes.setParent(attachedTo.parent.localAxes);
-		} else {
-			generateAxes(attachedTo.parentArmature.localAxes.x(), attachedTo.parentArmature.localAxes.y(), attachedTo.parentArmature.localAxes.z()); 
-		}*/	
 	}
 
 	public abstract void generateAxes(Ray x, Ray y, Ray z);
@@ -65,9 +61,10 @@ public abstract class AbstractKusudama implements Constraint{
 	 * Snaps the bone this Kusudama is constraining to the Kusudama's orientational and axial limits. 
 	 */
 	public void snapToLimits() {
+		//System.out.println("snapping to limits");
 		if(orientationallyConstrained) {
 			boolean[] inBounds = {true}; 
-
+			//System.out.println("orientationalSnap ");
 			Ray boneRay = new Ray(attachedTo.getBase(), attachedTo.getTip());    
 			DVector inLimits = this.pointInLimits(attachedTo.getTip(), inBounds);    
 
@@ -82,33 +79,58 @@ public abstract class AbstractKusudama implements Constraint{
 		}
 	}
 
+	private DVector minVector = new DVector(1,0,0);
+	private DVector maxVector = new DVector(1,0,0);
+	
+	/**
+	 * Kusudama constraints decompose the bone orientation into a swing component, and a twist component. 
+	 * The "Swing" component is the final direction of the bone. The "Twist" component represents how much 
+	 * the bone is rotated about its own final direction. Where limit cones allow you to constrain the "Swing" 
+	 * component, this method lets you constrain the "twist" component. 
+	 * 
+	 * @param minAnlge some angle in radians about the major rotation frame's y-axis to serve as the first angle within the range that the bone is allowed to twist. 
+	 * @param maxAngle some angle in radians added to the minAngle. if the bone's local Z goes maxAngle radians beyond the minAngle, it is considered past the limit. 
+	 * This value is always interpreted as being in the positive direction. For example, if this value is -PI/2, the entire range from minAngle to minAngle + 3PI/4 is
+	 * considered valid.  
+	 */
+	
+	public void setAxialLimits(double minAngle, double inRange) {
+		minAxialAngle = minAngle;
+		range = inRange;
+	}
+	
 	public void snapToTwistLimits() {
-		DVector yHeading = new DVector(0,1,0); 
-		DVector zHeading = new DVector(0,0,1); 
-		DVector localAxesYHeading = limitingAxes.getLocalOf(attachedTo.localAxes().y().p2);
-		DVector localAxesZHeading = limitingAxes.getLocalOf(attachedTo.localAxes().z().p2);
-		Rot yAlign = new Rot(localAxesYHeading, yHeading); 
-		DVector alignedBoneZ = yAlign.applyTo(localAxesZHeading); 
 		
-		Rot zAlign = new Rot(zHeading, alignedBoneZ);
-		double zToZangle = zAlign.getAngle();
-		if(zAlign.getAxis().y < 0) {
-			zToZangle =(Math.PI*2) - zToZangle; 
-		}
+		AbstractAxes limitLocalAxes = limitingAxes.getLocalOf(attachedTo.localAxes);
+		Rot localAxestoLimitingAxes = new Rot(limitLocalAxes.lx.p2, limitLocalAxes.lz.p2, new DVector(1,0,0), new DVector(0,0,1)); 
+		Rot[] decomposition = localAxestoLimitingAxes.getSwingTwist(new DVector(0,1,0));
 		
-		double zDelta = toTau(zToZangle - minAxialAngle);
-		if(zDelta < toTau(maxAxialAngle) && zDelta > 0) { 
-		} else {
-			double zMaxDiff = zDelta - toTau(maxAxialAngle);
-			if(Math.abs(zMaxDiff) < Math.abs((Math.PI*2) - zDelta)) {
+		
+		double angleDelta = decomposition[1].getAngle() * decomposition[1].getAxis().y *-1;
+					
+		angleDelta = toTau(angleDelta);
+		
+		double fromMinToAngleDelta = toTau(signedAngleDifference(angleDelta, minAxialAngle()));
 				
-				attachedTo.localAxes.rotateAboutY(-zMaxDiff);
+		if(fromMinToAngleDelta > range ) {
+			if(fromMinToAngleDelta - range < G.TAU - fromMinToAngleDelta) {
+				attachedTo().localAxes().rotateAboutY(-1*(fromMinToAngleDelta - range)); 
 			} else {
-				attachedTo.localAxes.rotateAboutY((Math.PI*2) - zDelta);
-				
+				attachedTo().localAxes().rotateAboutY(G.TAU-fromMinToAngleDelta);
 			}
-			
+		} else {
 		}
+		
+		
+	}
+	
+	public double signedAngleDifference(double minAngle, double base) {
+		double d = Math.abs(minAngle - base) % G.TAU; 
+		double r = d > G.PI ? G.TAU - d : d;
+
+		double sign = (minAngle - base >= 0 && minAngle - base <=G.PI) || (minAngle - base <=-G.PI && minAngle - base>= -G.TAU) ? 1f : -1f; 
+		r *= sign;
+		return r;
 	}
 
 	/**
@@ -210,19 +232,7 @@ public abstract class AbstractKusudama implements Constraint{
 		 return result;
 	}
 	
-	/**
-	 * This function will be changing soon to more wisely decompose a rotation into its axial and orientaional components.
-	 * In the meantime, you can get the gist of how it currently works by trying it out. 
-	 * @param minAngle
-	 * @param maxAngle
-	 */
 	
-	public void setAxialLimits(double minAngle, double maxAngle) {
-		double min = toTau(minAngle);
-		double max = toTau(maxAngle);
-		minAxialAngle = min;
-		maxAxialAngle = max-min;
-	}
 	
 	/**
 	 * @return the limitingAxes of this Kusudama (actually, these are just its parentBone's majorRotationAxes)
@@ -238,12 +248,17 @@ public abstract class AbstractKusudama implements Constraint{
 	public double minAxialAngle(){
 		return minAxialAngle;
 	} 
+	
+	public double maxAxialAngle(){
+		return range;
+	}
+	
 	/**
-	 * the upper bound on the axial constraint
+	 * the upper bound on the axial constraint in absolute terms
 	 * @return
 	 */
-	public double maxAxialAngle(){
-		return maxAxialAngle+minAxialAngle;
+	public double absoluteMaxAxialAngle(){
+		return signedAngleDifference(range+minAxialAngle, 0);
 	}
 	
 	public boolean isAxiallyConstrained() {
@@ -276,6 +291,40 @@ public abstract class AbstractKusudama implements Constraint{
 
 	public void toggleAxialLimits() {
 		axiallyConstrained = !axiallyConstrained;  
+	}
+	
+	public boolean isEnabled() {
+		return axiallyConstrained || orientationallyConstrained;
+	}
+	
+	public void disable() {
+		this.axiallyConstrained = false; 
+		this.orientationallyConstrained = false;
+	}
+	
+	public void enable() {
+		this.axiallyConstrained = true; 
+		this.orientationallyConstrained = true; 
+	}
+	
+	
+	/**
+	 * attaches the Kusudama to the Bone. If the 
+	 * kusudama has its own limiting axes specified,
+	 * replaces the bone's major rotation 
+	 * axes with the Kusudamas limiting axes. 
+	 * 
+	 * otherwise, this function will set the kusudama's
+	 * limiting axes to the major rotation axes specified by the bone.
+	 */
+	public void attachTo(AbstractBone forBone) {
+		this.attachedTo = forBone; 
+		if(this.limitingAxes == null)
+			this.limitingAxes = forBone.getMajorRotationAxes();
+		else {
+			forBone.setFrameofRotation(this.limitingAxes);
+			this.limitingAxes = forBone.getMajorRotationAxes();
+		}
 	}
 }
 

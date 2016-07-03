@@ -37,8 +37,10 @@ public abstract class AbstractBone {
 	public AbstractArmature parentArmature;
 	protected String tag;
 
+	protected Rotation lastRotation;
+	protected AbstractAxes previousOrientation; 
 	protected AbstractAxes localAxes;
-	private AbstractAxes majorRotationAxes;
+	protected AbstractAxes majorRotationAxes;
 
 	protected double boneHeight;
 	protected AbstractBone parent;
@@ -103,6 +105,8 @@ public abstract class AbstractBone {
 			generateAxes(parent.getTip(), tempX, tempTip, tempRoll);
 			this.localAxes.orthogonalize();
 			localAxes.setParent(parent.localAxes);
+			
+			previousOrientation = localAxes.attachedCopy(true);
 
 			majorRotationAxes = parent.localAxes().getAbsoluteCopy(); 
 			majorRotationAxes.translateTo(parent.getTip());
@@ -144,7 +148,8 @@ public abstract class AbstractBone {
 
 			generateAxes(parent.getTip(), tempAxes.x().heading(), tempAxes.y().heading(), tempAxes.z().heading());
 			this.localAxes.orthogonalize();
-			localAxes.setParent(parent.localAxes);
+			localAxes.setParent(parent.localAxes);			
+			previousOrientation = localAxes.attachedCopy(true);
 
 			majorRotationAxes = parent.localAxes().getAbsoluteCopy(); 
 			majorRotationAxes.translateTo(parent.getTip());
@@ -198,6 +203,7 @@ public abstract class AbstractBone {
 			generateAxes(parent.getTip(), tempX, tempTip, tempRoll);
 			this.localAxes.orthogonalize();
 			localAxes.setParent(parent.localAxes);
+			previousOrientation = localAxes.attachedCopy(true);
 
 			majorRotationAxes = parent.localAxes().getAbsoluteCopy(); 
 			majorRotationAxes.translateTo(parent.getTip());
@@ -254,6 +260,11 @@ public abstract class AbstractBone {
 			generateAxes(parentArmature.localAxes.origin(), tempX, tempTip, tempRoll);
 			this.localAxes.orthogonalize();
 			localAxes.setParent(parentArmature.localAxes);
+			previousOrientation = localAxes.attachedCopy(true);
+			
+			majorRotationAxes = parentArmature.localAxes().getAbsoluteCopy(); 
+			majorRotationAxes.setParent(parentArmature.localAxes());
+
 
 
 			this.boneHeight = inputBoneHeight;
@@ -303,12 +314,11 @@ public abstract class AbstractBone {
 			generateAxes(parentArmature.localAxes.origin(), tempX, tempTip, tempRoll);
 			this.localAxes.orthogonalize();
 			localAxes.setParent(parentArmature.localAxes);	
+			previousOrientation = localAxes.attachedCopy(true);
 
-			majorRotationAxes = parent.localAxes().getAbsoluteCopy(); 
-			majorRotationAxes.translateTo(parent.getTip());
+			majorRotationAxes = parentArmature.localAxes().getAbsoluteCopy(); 
 			majorRotationAxes.setParent(parent.localAxes);
-
-
+			
 			parentArmature.addToBoneList(this);
 			//this.updateSegmentedArmature();	
 
@@ -317,20 +327,26 @@ public abstract class AbstractBone {
 		}
 
 	}
+	
+	public AbstractBone() {
+		
+	}
 
 	public AbstractBone(AbstractArmature parArma, JSONObject boneJSON, AbstractAxes attachedAxes) {
 		this.localAxes = attachedAxes;
+		previousOrientation = localAxes.attachedCopy(true);
 		this.boneHeight = boneJSON.getDouble("boneHeight");
 		this.tag = boneJSON.getString("tag");
 
-		majorRotationAxes = parent.localAxes().getAbsoluteCopy(); 
-		majorRotationAxes.translateTo(parent.getTip());
-		majorRotationAxes.setParent(parent.localAxes);
-
+		
 		this.parentArmature = parArma;
 		parentArmature.addToBoneList(this);
 	}
 
+	public AbstractBone getParent() {
+		return this.parent;
+	}
+	
 	public void attachToParent(AbstractBone inputParent) {
 		inputParent.addChildBone(this);
 		this.parent = inputParent;
@@ -338,10 +354,19 @@ public abstract class AbstractBone {
 
 	public void addChildBone(AbstractBone newChild) {
 		if(!this.children.contains(newChild)) this.children.add(newChild);
+		this.parentArmature.addToBoneList(newChild);
+	}
+	
+	public void solveIKFromHere() {
+		this.parentArmature.IKSolver(this);
 	}
 
 	public void ambitiouslySolveIKFromHere(double dampening, int iterations) {
 		this.parentArmature.ambitiousIKSolver(this, dampening, iterations);
+	}
+	
+	public void tranquillySolveIKFromHere(double dampening, int iterations) {
+		this.parentArmature.tranquilIKSolver(this, dampening, iterations);
 	}
 
 	public void snapToConstraints() {
@@ -412,11 +437,30 @@ public abstract class AbstractBone {
 	}
 	
 	/**
+	 * @return An Apache Commons Rotation object representing the rotation which transforms this 
+	 * Bone from its previous orientation to its current orientation. 
+	 */
+	
+	public Rotation getRotationFromPrevious() {
+		return lastRotation;
+	}
+	
+	/** 
+	 * @return the reference frame representing this bone's previous orientation relative to
+	 * its parent.
+	 */
+	public AbstractAxes getPreviousOrientation() {
+		return previousOrientation;
+	}
+	/**
 	 * Rotate the bone about its frame of reference by a custom Apache Commons Rotation object
 	 * @param rot
 	 */
 	public void rotateBy(Rotation rot) {
+		this.previousOrientation.alignLocalsTo(localAxes);
+		this.localAxes.rotateTo(rot);
 		
+		this.lastRotation = rot;
 	}
 
 	/**
@@ -456,9 +500,13 @@ public abstract class AbstractBone {
 	 * @param obeyConstrants  whether or not this functions should obey constraints when rotating the bone
 	 */
 	public void rotAboutFrameX(double amt, boolean obeyConstraints) {
+		previousOrientation.alignLocalsTo(localAxes);		
+		
 		Rot xRot = new Rot(majorRotationAxes.x().heading(), amt); 
 		localAxes.rotateTo(xRot);
 
+		lastRotation = xRot.rotation;
+		
 		if(obeyConstraints) this.snapToConstraints();
 	}
 
@@ -468,9 +516,13 @@ public abstract class AbstractBone {
 	 * @param obeyConstrants  whether or not this functions should obey constraints when rotating the bone
 	 */
 	public void rotAboutFrameY(double amt, boolean obeyConstraints) {
+		previousOrientation.alignLocalsTo(localAxes);	
+		
 		Rot yRot = new Rot(majorRotationAxes.y().heading(), amt); 
 		localAxes.rotateTo(yRot);
 
+		lastRotation = yRot.rotation;
+		
 		if(obeyConstraints) this.snapToConstraints();
 	}
 
@@ -481,8 +533,12 @@ public abstract class AbstractBone {
 	 * @param obeyConstrants  whether or not this functions should obey constraints when rotating the bone
 	 */
 	public void rotAboutFrameZ(double amt, boolean obeyConstraints) {
+		previousOrientation.alignLocalsTo(localAxes);	
+		
 		Rot zRot = new Rot(majorRotationAxes.z().heading(), amt); 
 		localAxes.rotateTo(zRot);
+		
+		lastRotation = zRot.rotation;
 
 		if(obeyConstraints) this.snapToConstraints();
 	}
@@ -722,6 +778,10 @@ public abstract class AbstractBone {
 
 	public void setBoneHeight(double inBoneHeight) {
 		this.boneHeight = inBoneHeight;
+		for(AbstractBone child : this.children) {
+			child.localAxes().translateTo(this.getTip());
+			child.majorRotationAxes.translateTo(this.getTip());
+		}
 	}  
 
 	public AbstractAxes localAxes() { 

@@ -111,6 +111,24 @@ public class EulerLimits implements Constraint {
 	@Override
 	public AbstractAxes limitingAxes() {
 		return this.limitingAxes;
-	}; 	
+	}
+
+	@Override
+	public void disable() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void enable() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public boolean isEnabled() {
+		// TODO Auto-generated method stub
+		return false;
+	}
 
 }

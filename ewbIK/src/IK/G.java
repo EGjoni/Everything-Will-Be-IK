@@ -24,12 +24,17 @@ import java.util.ArrayList;
 
 import org.apache.commons.math3.complex.Quaternion;
 
+import processing.core.PVector;
+
 /**
  * @author Eron
  *
  */
 public class G {
-
+	
+	public static double PI = Math.PI;
+	public static double TAU = 2*PI;
+	
 	public static double lerp(double a, double b, double t) {
 		return (1-t)*a + t*b;
 	}
@@ -156,9 +161,15 @@ public class G {
 		}
 	}
 
-	public static DVector closestPointOnGreatArc(DVector p1, DVector p2, DVector hoverPoint) {
-		//returns the point on the great arc p1 <-> p2 to which hoverPoint is closest. If the point
-		//does not lie on the great arc p1 <-> p2, returns whichever of p1 or p2 is closest to hoverPoint.
+	/**
+	 * returns the point on the great arc p1 <-> p2 to which hoverPoint is closest. If the point
+	 * does not lie on the great arc p1 <-> p2, returns whichever of p1 or p2 is closest to hoverPoint.
+	 * @param p1
+	 * @param p2
+	 * @param hoverPoint
+	 * @return
+	 */
+	public static DVector closestPointOnGreatArc(DVector p1, DVector p2, DVector hoverPoint) {		
 		DVector normal = p1.cross(p2); 
 		Ray hoverRay = new Ray(hoverPoint, null); 
 		hoverRay.heading(normal);
@@ -181,8 +192,15 @@ public class G {
 
 	}
 
+	/**
+	 * returns the point on the great circle through p1 <-> p2 to which hoverPoint is closest. 
+	 * @param p1
+	 * @param p2
+	 * @param hoverPoint
+	 * @return
+	 */
 	public static DVector closestPointOnGreatCircle(DVector p1, DVector p2, DVector hoverPoint) {
-		//returns the point on the great circle through p1 <-> p2 to which hoverPoint is closest. 
+		
 		DVector normal = p1.cross(p2); 
 		Ray hoverRay = new Ray(hoverPoint, null); 
 		hoverRay.heading(normal);
@@ -241,7 +259,6 @@ public class G {
 	}
 
 	public static  DVector planeIntersectTest(DVector R, DVector ta, DVector tb, DVector tc, double[] uvw) {
-
 		DVector I = new DVector();
 		DVector u = new DVector(tb.x, tb.y, tb.z); 
 		DVector v = new DVector(tc.x, tc.y, tc.z); 
@@ -340,12 +357,9 @@ public class G {
 		DVector n ;
 		DVector dir = new DVector(R.x, R.y, R.z); 
 		DVector w0 = new DVector(); 
-		//DVector w = new DVector();
 		double     r, a, b;
 
-		//u = ta;
 		DVector.sub(u, ta, u);
-		//v = tc;
 		DVector.sub(v, ta, v);
 		n = new DVector(); // cross product
 		DVector.cross(u, v, n);
@@ -354,7 +368,6 @@ public class G {
 			return null;
 		}
 
-		//dir = R;
 		w0 = new DVector(0,0,0);
 		DVector.sub(w0, ta, w0);
 		a = -(new DVector(n.x, n.y, n.z).dot(w0));
@@ -365,9 +378,6 @@ public class G {
 		}
 
 		r = a / b;
-		if (r < 0.0) {
-			return null;
-		}
 
 		I = new DVector(0,0,0);
 		I.x += r * dir.x;
@@ -377,14 +387,11 @@ public class G {
 		double[] barycentric = new double[3];
 		barycentric(ta, tb, tc, I, barycentric);
 
-		if(barycentric[0] >= 0 && barycentric[1] >= 0 && barycentric[2] >= 0){ 
-			uvw[0]=barycentric[0];
-			uvw[1]=barycentric[1];
-			uvw[2]=barycentric[2];
-			return I;
-		} else {
-			return null;  
-		}
+		uvw[0]=barycentric[0];
+		uvw[1]=barycentric[1];
+		uvw[2]=barycentric[2];
+		return I;
+		
 	}	
 
 
@@ -426,11 +433,28 @@ public class G {
 		uvw[1] = nv * ood;
 		uvw[2] = 1.0f - uvw[0] - uvw[1];
 	}
+	
+	public static DVector barycentricToCartesian(DVector ta, DVector tb, DVector tc, double[] uvw) {
+		DVector result = DVector.mult(ta, uvw[0]);
+		result.add(DVector.mult(tb, uvw[1]));
+		result.add(DVector.mult(tc, uvw[2]));
+
+		return result;
+	}
 
 	public static double triArea2D(double x1, double y1, double x2, double y2, double x3, double y3) {
 		return (x1 - x2) * (y2 - y3) - (x2 - x3) * (y1 - y2);   
 	}
 
+	
+	/**
+	 * Find where a ray intersects a sphere (centered about the origin)
+	 * @param ray to test against sphere 
+	 * @param radius radius of the sphere
+	 * @param S1 reference to variable in which the first intersection will be placed
+	 * @param S2 reference to variable in which the second intersection will be placed
+	 * @return number of intersections found;
+	 */
 	public static int raySphereIntersection(Ray ray, double radius, DVector S1, DVector S2) {
 		DVector direction = ray.heading();
 		DVector e = new DVector(direction.x, direction.y, direction.z);   // e=ray.dir

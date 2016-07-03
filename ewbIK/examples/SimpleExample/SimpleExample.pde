@@ -87,7 +87,7 @@ void setup() {
     
     String boneAngles = "";
     try {
-    double[] angleArr = bone.getXYZAngle();
+    double[] angleArr = bone.getXZYAngle();
      boneAngles += "  ( " + degrees((float)angleArr[0]) + ",   " + degrees((float)angleArr[1]) + ",   " + degrees((float)angleArr[2]) + "  )";
     fill(0);
     text(boneAngles,(float)bone.getBase().x, (float)bone.getBase().y); 

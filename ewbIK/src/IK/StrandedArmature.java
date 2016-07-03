@@ -55,6 +55,7 @@ public class StrandedArmature {
 	}
 
 	public void generateStrandHierarchy() {
+		childCollections.clear();
 		ArrayList<AbstractBone> pinnedTips = strandRoot.getMostImmediatelyPinnedDescendants();
 		for(AbstractBone b : pinnedTips) {
 			Strand s = new Strand(this, b, strandRoot);
@@ -246,6 +247,7 @@ public class StrandedArmature {
 			AbstractBone currentBone = strandTip;
 			while(currentBone != strandRoot) {
 				populateBoneData(currentBone);
+				System.out.println(currentBone);
 				currentBone = currentBone.parent;
 			}
 			populateBoneData(currentBone);

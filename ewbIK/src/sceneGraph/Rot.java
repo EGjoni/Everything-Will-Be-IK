@@ -27,6 +27,10 @@ public class Rot {
 
 	public Rot(){};
 	
+	public Rot(Rotation r) {
+		this.rotation = r;
+	}
+	
 	public Rot(DVector iv1, DVector iv2, DVector iu1, DVector iu2) {
 		Vector3D v1 = new Vector3D((double) iv1.x, (double) iv1.y, (double) iv1.z);
 		Vector3D v2 = new Vector3D((double) iv2.x, (double) iv2.y, (double) iv2.z);
@@ -136,6 +140,33 @@ public class Rot {
 		
 		rotation = new Rotation(q.getQ0(), q.getQ1(), q.getQ2(), q.getQ3(), false);
 	}
+	
+	/** Get the swing rotation and twist rotation for the specified axis. The twist rotation represents the rotation around the
+	 * specified axis. The swing rotation represents the rotation of the specified axis itself, which is the rotation around an
+	 * axis perpendicular to the specified axis. </p> The swing and twist rotation can be used to reconstruct the original
+	 * quaternion: this = swing * twist
+	 * 
+	 * @param axisX the X component of the normalized axis for which to get the swing and twist rotation
+	 * @param axisY the Y component of the normalized axis for which to get the swing and twist rotation
+	 * @param axisZ the Z component of the normalized axis for which to get the swing and twist rotation
+	 * @return an Array of Rot objects. With the first element representing the swing, and the second representing the twist
+	 * @see <a href="http://www.euclideanspace.com/maths/geometry/rotations/for/decomposition">calculation</a> */
+	public Rot[] getSwingTwist (DVector axis) {
+		Quaternion thisQ = new Quaternion(rotation.getQ0(), rotation.getQ1(), rotation.getQ2(), rotation.getQ3());
+		double d = new DVector(thisQ.getQ1(), thisQ.getQ2(), thisQ.getQ3()).dot(axis);
+		Quaternion twist = new Quaternion(rotation.getQ0(), axis.x * d, axis.y * d, axis.z * d).normalize();
+		if (d < 0) twist.multiply(-1f);
+		Quaternion swing = twist.getConjugate();
+		swing = Quaternion.multiply(thisQ, swing);
+		
+		Rot[] result = new Rot[2]; 
+				
+		result[0] = new Rot(new Rotation(swing.getQ0(), swing.getQ1(), swing.getQ2(), swing.getQ3(), true));
+		result[1] = new Rot(new Rotation(twist.getQ0(), twist.getQ1(), twist.getQ2(), twist.getQ3(), true));		
+		
+		return result;
+	}
+	
 	
 	public Quaternion slerp(double amount, Quaternion value1, Quaternion value2)
     {

@@ -15,7 +15,7 @@ PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS 
 DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. 
 
-*/
+ */
 
 package IK;
 import sceneGraph.*;
@@ -37,6 +37,16 @@ public abstract class AbstractLimitCone {
 
 	public boolean isSelected = false;
 
+	/**
+	 * a triangle where the [1] is th tangentCircleNext_n, and [0] and [2] 
+	 * are the points at which the tangent circle intersects this limitCone and the
+	 * next limitCone
+	 */
+	public DVector[] firstTriangleNext = new DVector[3];
+	public DVector[] secondTriangleNext = new DVector[3];
+
+	public AbstractLimitCone(){}
+
 	public AbstractLimitCone(DVector location, double rad, AbstractKusudama attachedTo) {
 		controlPoint = location; 
 		radius = Math.max(Double.MIN_VALUE, rad);
@@ -44,97 +54,152 @@ public abstract class AbstractLimitCone {
 	}
 
 
-	public boolean inBounds(DVector input, DVector output) {
-		Rot pointDiff = new Rot(this.controlPoint, input);
-		if(pointDiff.getAngle() < this.radius) {
-			output = input; 
-			return true;
+	public boolean inBoundsFromThisToNext(AbstractLimitCone next, DVector input, DVector collisionPoint) {
+		boolean isInBounds = determineIfInBounds(next, input);
+		if(!isInBounds) {
+			DVector closestCollision = getClosestCollision(next, input); 
+			collisionPoint.x = closestCollision.x; collisionPoint.y = closestCollision.y; collisionPoint.z = closestCollision.z; 
 		} else {
-			Rot rotTo = new Rot(pointDiff.getAxis(), this.radius); 
-			output = rotTo.applyTo(input);
-			return false;	
+			collisionPoint.x = input.x; 
+			collisionPoint.y = input.y; 
+			collisionPoint.z = input.z;
+		}
+		return isInBounds;
+	}
+	
+	public DVector getClosestCollision(AbstractLimitCone next, DVector input) {
+		DVector result = getOnGreatTangentTriangleSnap(next, input);
+		if(result == null) {
+			boolean[] inBounds = {false};
+			result = closestPointOnClosestCone(next, input, inBounds);
+		}
+		return result;
+	}
+	
+	public boolean determineIfInBounds(AbstractLimitCone next, DVector input) {
+		boolean[] inBounds = {false};
+		if(next == null) {
+			DVector result = closestToCone(input, inBounds);
+			return inBounds[0];
+		} else {
+			if(!onTangentRadii(input)) {
+				if(!onNaivelyInterpolatedPath(next, input)) {
+					closestPointOnClosestCone(next, input, inBounds);
+					return inBounds[0];
+				} else {
+					return true;
+				}
+			} else {	
+				return false;
+			}
 		}
 	}
 
-	public boolean inBoundsFromThisToNext(AbstractLimitCone next, DVector input, DVector collisionPoint) {
+	public DVector getOnGreatTangentTriangleSnap(AbstractLimitCone next, DVector input) {
+		DVector result = null;
 
-		if(next == null) {
-			return inBounds(input, collisionPoint);
+		double[] onTriangle1 = new double[3];
+		DVector tri1Intersect = G.intersectTest(input, this.controlPoint, this.tangentCircleCenterNext1, next.controlPoint, onTriangle1);
+
+		if(tri1Intersect != null 
+		&& tri1Intersect.dot(input) > 0 
+		&& onTriangle1[0] >= 0 && onTriangle1[1] >= 0 && onTriangle1[2] >= 0) {
+		
+			Rot tan1ToBorder = new Rot(tangentCircleCenterNext1, input); 
+			result = new Rot(tan1ToBorder.getAxis(), tangentCircleRadiusNext).applyTo(tangentCircleCenterNext1);
 		} else {
-			DVector tangentThisBisector = G.closestPointOnGreatCircle(this.controlPoint, 
-					next.controlPoint, 
-					new Rot(
-							new Rot(
-									this.controlPoint, this.tangentCircleCenterNext1
-									).getAxis(), 
-							this.radius
-							).applyTo(this.controlPoint)
-					).normalize();
+			double[] onTriangle2 = new double[3];
+			DVector tri2Intersect = G.intersectTest(input, this.controlPoint, this.tangentCircleCenterNext2, next.controlPoint, onTriangle2);
+
+			if(tri2Intersect != null 
+			&& tri2Intersect.dot(input) > 0 
+			&& onTriangle2[0] >= 0 && onTriangle2[1] >= 0 && onTriangle2[2] >= 0) {
 			
-			DVector tangentNextBisector = G.closestPointOnGreatCircle(next.controlPoint, this.controlPoint, new Rot(new Rot(next.controlPoint, this.tangentCircleCenterNext1).getAxis(), next.radius).applyTo(next.controlPoint)).normalize();
-			DVector closestPointOnSegment = G.closestPointOnGreatCircle(this.controlPoint, next.controlPoint, input).normalize();
-
-
-			if((DVector.angleBetween(input, this.controlPoint) < this.radius || DVector.angleBetween(input, next.controlPoint) < next.radius)) {
-				collisionPoint = input;
-				return true;  
-			} else {
-
-				boolean withinBisectorBounds = false; 
-
-				if(DVector.angleBetween(closestPointOnSegment,  tangentThisBisector) < DVector.angleBetween(tangentNextBisector, tangentThisBisector) 
-						&& DVector.angleBetween(closestPointOnSegment, tangentNextBisector) < DVector.angleBetween(tangentNextBisector, tangentThisBisector)) {
-					Rot dirCheckThis = new Rot(this.controlPoint, closestPointOnSegment);
-					Rot dirCheckNext = new Rot(this.controlPoint, next.controlPoint); 
-					if(dirCheckThis.getAxis().dot(dirCheckNext.getAxis()) > 0) {
-						withinBisectorBounds = true;  
-					}
-
-				}
-				//double segmentRadius = DVector.angleBetween(this.controlPoint, next.controlPoint);
-
-				double distFromThis = DVector.angleBetween(closestPointOnSegment, this.controlPoint);
-				double distFromNext = DVector.angleBetween(closestPointOnSegment, next.controlPoint);
-
-				if(DVector.angleBetween(this.tangentCircleCenterNext1, input) > tangentCircleRadiusNext 
-						&& DVector.angleBetween(this.tangentCircleCenterNext2, input) > tangentCircleRadiusNext
-						&& withinBisectorBounds) {
-					return true;      
-				} else if (withinBisectorBounds) {
-					double distFromTangent1 = DVector.angleBetween(this.tangentCircleCenterNext1, input);
-					double distFromTangent2 = DVector.angleBetween(this.tangentCircleCenterNext2, input);
-					if(distFromTangent1 < distFromTangent2) {
-						collisionPoint.set(new Rot(new Rot(this.tangentCircleCenterNext1, input).getAxis(), this.tangentCircleRadiusNext).applyTo(tangentCircleCenterNext1));
-					} else {
-						collisionPoint.set(new Rot(new Rot(this.tangentCircleCenterNext2, input).getAxis(), this.tangentCircleRadiusNext).applyTo(tangentCircleCenterNext2));
-					}
-
-					return false;  
-				} else  {
-					if(distFromNext < distFromThis) { 
-						collisionPoint.set(new Rot(new Rot(next.controlPoint, input).getAxis(), next.radius).applyTo(next.controlPoint));
-					} else {
-						collisionPoint.set(new Rot(new Rot(this.controlPoint, input).getAxis(), this.radius).applyTo(this.controlPoint));
-					}
-					return false;  
-				}
+				Rot tan2ToBorder = new Rot(tangentCircleCenterNext2, input); 
+				result = new Rot(tan2ToBorder.getAxis(), tangentCircleRadiusNext).applyTo(tangentCircleCenterNext2);
 			}
 		}
+		
+		return result;
+	}
 
+	public DVector closestPointOnClosestCone(AbstractLimitCone next, DVector input, boolean[] inBounds) {
+		DVector closestToFirst = this.closestToCone(input, inBounds); 
+		if(inBounds[0]) {
+			return closestToFirst; 
+		}
+		DVector closestToSecond = next.closestToCone(input, inBounds); 
+		if(inBounds[0]) {
+			return closestToSecond; 
+		}
+		
+		double angleToFirst = DVector.angleBetween(input, closestToFirst); 
+		double angleToSecond = DVector.angleBetween(input, closestToSecond);
+
+		if(Math.abs(angleToFirst) < Math.abs(angleToSecond)) {
+			return closestToFirst;
+		} else {
+			return closestToSecond;
+		}
+
+	}
+	
+	public DVector closestToCone(DVector input, boolean[] inBounds) {
+		Rot pointDiff = new Rot(this.controlPoint, input);
+		DVector result = new DVector(0,0,0);
+		if(pointDiff.getAngle() < this.radius) {
+			inBounds[0] = true;
+			return input;
+		} else {
+			Rot rotTo = new Rot(pointDiff.getAxis(), this.radius); 
+			result = rotTo.applyTo(this.controlPoint);
+			inBounds[0] = false;
+			return result;	
+		}
+	}
+
+
+	private boolean onTangentRadii(DVector input) {
+		if(Math.abs(DVector.angleBetween(input, tangentCircleCenterNext1)) < tangentCircleRadiusNext) {
+			return true; 
+		} else if(Math.abs(DVector.angleBetween(input, tangentCircleCenterNext2)) < tangentCircleRadiusNext) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+
+	private boolean onNaivelyInterpolatedPath(AbstractLimitCone next, DVector input) {
+		double[] alongPath = new double[3];
+		/*Rot thisToNext = new Rot(this.controlPoint, next.controlPoint); 
+		DVector midPoint = new Rot(thisToNext.getAxis(), thisToNext.getAngle()/2d).applyTo(next.controlPoint);*/
+
+		DVector intersectPoint = G.intersectTest(input, firstTriangleNext[0], firstTriangleNext[2], secondTriangleNext[0], alongPath);
+
+		if(intersectPoint != null && 
+				alongPath[0] >= 0 && alongPath[1] >= 0 && alongPath[2] >= 0 
+				&& intersectPoint.dot(input) > 0) {
+			return true;
+		}
+
+		intersectPoint = G.intersectTest(input, secondTriangleNext[0], secondTriangleNext[2], firstTriangleNext[2], alongPath);
+
+		if(intersectPoint != null &&
+				alongPath[0] >= 0 && alongPath[1] >= 0 && alongPath[2] >= 0 
+				&& intersectPoint.dot(input) >0 ) {
+			return true;
+		} else {
+			return false;
+		}		
 	}
 
 	public void updateTangentHandles(AbstractLimitCone next) {    
-		DVector inA = this.controlPoint;
 		double radA = this.radius;
-		DVector inB = next.controlPoint;
 		double radB = next.radius;
 
-
-		DVector aProjected = DVector.mult(inA, G.cos(radA));
-		DVector bProjected = DVector.mult(inB, G.cos(radB));
-
-		DVector A = inA.copy();
-		DVector B = inB.copy(); 
+		DVector A = this.controlPoint.copy();
+		DVector B = next.controlPoint.copy(); 
 
 		DVector arcNormal = A.cross(B); 
 		Rot aToARadian = new Rot(A, arcNormal); 
@@ -143,40 +208,6 @@ public abstract class AbstractLimitCone {
 		DVector bToBRadianAxis = bToBRadian.getAxis();
 		aToARadian = new Rot(aToARadianAxis, radA);
 		bToBRadian = new Rot(bToBRadianAxis, radB);
-
-		DVector aRadP = aToARadian.applyTo(A.copy());
-
-		double aRadianProjectedLength = aProjected.dist(aRadP); 
-
-		double aToBEuclidianLength = aProjected.dist(bProjected);
-
-		double tangentLength = G.sqrt((aToBEuclidianLength*aToBEuclidianLength) - (aRadianProjectedLength*aRadianProjectedLength));
-
-		Ray projectedAToBRay = new Ray(aProjected, bProjected);
-		Ray projectedAToARadRay = new Ray(aProjected, aRadP);
-
-
-		DVector euclidianPlaneNormal = projectedAToBRay.heading().cross(projectedAToARadRay.heading());
-		DVector tangentHeading = euclidianPlaneNormal.cross(projectedAToARadRay.heading());
-		if (tangentHeading.dot(projectedAToBRay.heading()) < 0) tangentHeading.mult(-1); 
-		tangentHeading.normalize();
-		tangentHeading.mult(tangentLength); 
-		Ray tangentRay = new Ray(aRadP, null);
-		tangentRay.heading(tangentHeading);
-
-
-		Ray aProjectedCenterToATangentTip = new Ray(aProjected, tangentRay.p2);
-		Rot rotateTangent = new Rot(aProjectedCenterToATangentTip.heading(), projectedAToBRay.heading()); 
-
-		tangentRay.p1 = rotateTangent.applyTo(DVector.sub(tangentRay.p1, aProjected));
-		tangentRay.p2 = rotateTangent.applyTo(DVector.sub(tangentRay.p2, aProjected));
-
-		tangentRay.translateBy(A);
-
-		Rot aToTangentBase = new Rot(A, tangentRay.p1);
-		DVector aFullRad = new Rot(aToTangentBase.getAxis(), radB).applyTo(tangentRay.p1);
-		aFullRad.normalize();
-		aFullRad.mult(A.mag());
 
 		double tRadius = ((Math.PI)-(radA+radB))/2f; 
 
@@ -193,11 +224,9 @@ public abstract class AbstractLimitCone {
 		DVector minorAppoloniusP2B = new Rot(arcNormal, minorAppoloniusRadiusB).applyTo(minorAppoloniusAxisB);
 		DVector minorAppoloniusP3B = new Rot(minorAppoloniusAxisB, Math.PI/2d).applyTo(minorAppoloniusP2B);      
 
+		Ray r1B = new Ray(minorAppoloniusP2B, minorAppoloniusP1B); r1B.elongate();
+		Ray r2B = new Ray(minorAppoloniusP2B, minorAppoloniusP3B); r2B.elongate();
 
-		Ray r1B = new Ray(minorAppoloniusP2B, minorAppoloniusP1B);
-		r1B.elongate();
-		Ray r2B = new Ray(minorAppoloniusP2B, minorAppoloniusP3B);
-		r2B.elongate();
 		DVector intersection1 = G.intersectTest(r1B, minorAppoloniusP1A, minorAppoloniusP2A, minorAppoloniusP3A);
 		DVector intersection2 = G.intersectTest(r2B, minorAppoloniusP1A, minorAppoloniusP2A, minorAppoloniusP3A);
 
@@ -217,5 +246,27 @@ public abstract class AbstractLimitCone {
 		next.tangentCircleCenterPrevious2 = sphereIntersect2;
 		next.tangentCircleRadiusPrevious = tRadius;
 
+		computeTriangles(next); 
+	}
+
+	private void computeTriangles(AbstractLimitCone next) {
+		firstTriangleNext[1] = this.tangentCircleCenterNext1;		
+		Rot tangentNext1ToThisLimitConeCenter = new Rot(tangentCircleCenterNext1, this.controlPoint);
+		Rot tangentNext1ToThisLimitConeBoundary = new Rot(tangentNext1ToThisLimitConeCenter.getAxis(), tangentCircleRadiusNext);
+		firstTriangleNext[0] = tangentNext1ToThisLimitConeBoundary.applyTo(tangentCircleCenterNext1);
+
+		Rot tangentNext1ToNextLimitConeCenter = new Rot(tangentCircleCenterNext1, next.controlPoint);
+		Rot tangentNext1ToNextLimitConeBoundary = new Rot(tangentNext1ToNextLimitConeCenter.getAxis(), tangentCircleRadiusNext);
+		firstTriangleNext[2] = tangentNext1ToNextLimitConeBoundary.applyTo(tangentCircleCenterNext1);
+
+		secondTriangleNext[1] = this.tangentCircleCenterNext2;
+
+		Rot tangentNext2ToThisLimitConeCenter = new Rot(tangentCircleCenterNext2, this.controlPoint);
+		Rot tangentNext2ToThisLimitConeBoundary = new Rot(tangentNext2ToThisLimitConeCenter.getAxis(), tangentCircleRadiusNext);
+		secondTriangleNext[0] = tangentNext2ToThisLimitConeBoundary.applyTo(tangentCircleCenterNext2);
+
+		Rot tangentNext2ToNextLimitConeCenter = new Rot(tangentCircleCenterNext2, next.controlPoint);
+		Rot tangentNext2ToNextLimitConeBoundary = new Rot(tangentNext2ToNextLimitConeCenter.getAxis(), tangentCircleRadiusNext);
+		secondTriangleNext[2] = tangentNext2ToNextLimitConeBoundary.applyTo(tangentCircleCenterNext2);		
 	}
 }

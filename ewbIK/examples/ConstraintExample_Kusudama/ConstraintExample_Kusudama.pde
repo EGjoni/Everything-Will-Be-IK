@@ -16,6 +16,26 @@ void setup() {
   simpleArmature.localAxes().translateTo(new DVector(0, 200, 0));
   simpleArmature.localAxes().rotateAboutZ(PI);
   
+  initializeBones(); 
+  setBoneConstraints();
+}
+
+  void draw() {
+    background(160, 100, 100);
+    mouse.x =  mouseX - (width/2); mouse.y = mouseY - (height/2);
+    camera(cameraPosition, lookAt, up);
+    ortho(-width/2, width/2, -height/2, height/2, -10000, 10000);
+    drawBones();  
+
+    if(mousePressed) {
+      bSixthBone.setPin(mouse);      
+      //simpleArmature.ambitiousIKSolver(rootBone, 0.1, 20);
+      simpleArmature.tranquilIKSolver(bSixthBone, 0.1, 20);
+    }
+  }
+
+
+public void initializeBones() {
   rootBone = simpleArmature.getRootBone();
   
   initialBone = new Bone(rootBone, "initial", 74d);
@@ -39,41 +59,30 @@ void setup() {
   rootBone.enablePin();  
   fifthBone.enablePin();
   bSixthBone.enablePin();
-  
-  setBoneLimits();
 }
 
-  void draw() {
-    background(160, 100, 100);
-    mouse.x =  mouseX - (width/2); mouse.y = mouseY - (height/2);
-    camera(cameraPosition, lookAt, up);
-    ortho(-width/2, width/2, -height/2, height/2, -10000, 10000);
-    drawBones();  
-
-    if(mousePressed) {
-      fifthBone.setPin(mouse);      
-      //simpleArmature.ambitiousIKSolver(bSixthBone, 0.1, 20);
-      simpleArmature.tranquilIKSolver(rootBone, 0.1, 20);
-    }
-  }
-
-public void setBoneLimits() {
+public void setBoneConstraints() {    
   
     Kusudama fourthConstraint = new Kusudama(fourthBone);
-    fourthConstraint.addLimitConeAtIndex(0, new DVector(.5, 1, 0), 0);
-    fourthConstraint.addLimitConeAtIndex(1, new DVector(-.5, 1, 0), 0);
-    fourthConstraint.setAxialLimits(0,0);
-    fourthConstraint.enableAxialLimits();
-    fourthConstraint.enableOrientationalLimits();
+    fourthConstraint.addLimitConeAtIndex(0, new DVector(.5, 1, 0), .2d);
+    fourthConstraint.addLimitConeAtIndex(1, new DVector(-.5, 1, 0), PI/5);
+    fourthConstraint.setAxialLimits(0.1,2d);
+    fourthConstraint.enable();
     fourthBone.addConstraint(fourthConstraint);
     
     Kusudama fifthConstraint = new Kusudama(fifthBone);
-    fifthConstraint.addLimitConeAtIndex(0, new DVector(.5, 1, 0), 0);
-    fifthConstraint.addLimitConeAtIndex(1, new DVector(-.5, 1, 0), 0);
-    fifthConstraint.setAxialLimits(0,0);
-    fifthConstraint.enableAxialLimits();
-    fifthConstraint.enableOrientationalLimits();
+    fifthConstraint.addLimitConeAtIndex(0, new DVector(.5, 1, 0), PI/7);
+    fifthConstraint.addLimitConeAtIndex(1, new DVector(-.5, 1, 0), PI);
+    fifthConstraint.setAxialLimits(0.1,1.5d);
+    fifthConstraint.enable();
     fifthBone.addConstraint(fifthConstraint); 
+    
+    Kusudama bFourthConstraint = new Kusudama(bFourthBone);
+    bFourthConstraint.addLimitConeAtIndex(0, new DVector(.5, 1, 0), .5d);
+    bFourthConstraint.setAxialLimits(0.1,2d);
+    bFourthConstraint.enable();
+    bFourthBone.addConstraint(bFourthConstraint);
+    
   }
   
   
@@ -103,7 +112,7 @@ public void setBoneLimits() {
     
     String boneAngles = "";
     try {
-    double[] angleArr = bone.getXYZAngle();
+    double[] angleArr = bone.getXZYAngle();
      boneAngles += "  ( " + degrees((float)angleArr[0]) + ",   " + degrees((float)angleArr[1]) + ",   " + degrees((float)angleArr[2]) + "  )";
     fill(0);
     text(boneAngles,(float)bone.getBase().x, (float)bone.getBase().y); 
