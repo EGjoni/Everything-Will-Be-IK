@@ -28,7 +28,7 @@ import org.apache.commons.math3.geometry.euclidean.threed.Vector3D;
  * @author Eron Gjoni
  */
 public abstract class AbstractAxes implements AxisDependancy {
-	public static final boolean SLIP = true;
+public static final int NORMAL = 0, IGNORE = 1, FORWARD = 2;
 
 
 public Ray lx, ly, lz; //Relative To Parent
@@ -36,7 +36,8 @@ public DVector lorigin; //Relative To Parent
 public AbstractAxes parent = null;
 public AbstractAxes globalCoords = null; 
 
-boolean dirty = true;
+private int slipType = 0;
+public boolean dirty = true;
 
 public ArrayList<AxisDependancy> dependentsRegistry = new ArrayList<AxisDependancy>(); 
 
@@ -48,12 +49,19 @@ public AbstractAxes(Ray inX, Ray inY, Ray inZ) {
 }
 
 public AbstractAxes(Ray inX, Ray inY, Ray inZ, AbstractAxes parent) {
-	lx = new Ray(parent.getLocalOf(inX.p1), parent.getLocalOf(inX.p2)); 
-	ly = new Ray(parent.getLocalOf(inY.p1), parent.getLocalOf(inY.p2));
-	lz = new Ray(parent.getLocalOf(inZ.p1), parent.getLocalOf(inZ.p2));
-	lorigin = parent.getLocalOf(lx.origin());  
-	this.parent = parent;
-	this.parent.registerDependent(this); 
+	if(parent != null) {
+		lx = new Ray(parent.getLocalOf(inX.p1), parent.getLocalOf(inX.p2)); 
+		ly = new Ray(parent.getLocalOf(inY.p1), parent.getLocalOf(inY.p2));
+		lz = new Ray(parent.getLocalOf(inZ.p1), parent.getLocalOf(inZ.p2));
+		lorigin = parent.getLocalOf(lx.origin());  
+		this.parent = parent;
+		this.parent.registerDependent(this); 
+	} else {
+		lx = inX.copy();
+		ly = inY.copy();
+		lz = inZ.copy();
+		lorigin = lx.origin();
+	}
 	this.updateGlobal();
 }
 
@@ -115,6 +123,12 @@ public AbstractAxes getAbsolute() {
 	}
 }
 
+/**
+ * Sets the parentAxes for this axis globally.  
+ * in other words, globalX, globalY, and globalZ remain unchanged, but lx, ly, and lz 
+ * change.  
+ **/
+
 public void setParent(AbstractAxes par) {
 	AbstractAxes parRelCop = par.getLocalOf(this.getAbsoluteCopy());
 	this.slipTo(parRelCop);
@@ -124,6 +138,12 @@ public void setParent(AbstractAxes par) {
 	this.updateGlobal();
 }
 
+
+/**
+ * Sets the parentAxes for this axis locally. 
+ * in other words, lx,ly,lz remain unchanged, but globalX, globalY, and globalZ 
+ * change.  
+ **/
 public void setRelativeToParent(AbstractAxes par) {
 	this.parent = par;
 	this.parent.registerDependent(this);
@@ -159,6 +179,11 @@ public abstract AbstractAxes instantiate(DVector origin, DVector x, DVector y, D
 public abstract AbstractAxes instantiate(Ray x, Ray y, Ray z, AbstractAxes par);
 
 
+/**
+ * returns an axis representing the global location of this axis if the input axis were its parent.
+ * @param in
+ * @return
+ */
 public AbstractAxes relativeTo(AbstractAxes in) { 
 	return instantiate(new Ray (in.getGlobalOf(lx.p1), in.getGlobalOf(lx.p2)), new Ray (in.getGlobalOf(ly.p1), in.getGlobalOf(ly.p2)), new Ray (in.getGlobalOf(lz.p1), in.getGlobalOf(lz.p2)));         
 }
@@ -182,7 +207,7 @@ public Ray getLocalOf(Ray in) {
 }
 
 public AbstractAxes getLocalOf(AbstractAxes input) {
-	return instantiate(this.getLocalOf(input.lx), this.getLocalOf(input.ly), this.getLocalOf(input.lz)); 
+	return instantiate(this.getLocalOf(input.x()), this.getLocalOf(input.y()), this.getLocalOf(input.z())); 
 }
 
 public AbstractAxes getRelativeCopy() {
@@ -316,8 +341,23 @@ public AbstractAxes freeCopy() {
 
 public AbstractAxes attachedCopy(boolean slipAware) {
 	AbstractAxes copy = instantiate(this.x(), this.y(), this.z(), this.parent);  
-	if(slipAware) this.parent.registerDependent(copy); 
+	if(!slipAware) copy.setSlipType(IGNORE);
 	return copy;
+}
+
+public void setSlipType(int type) {
+	if(this.parent != null) {
+		if(type == IGNORE) {
+			this.parent.dependentsRegistry.remove(this);
+		} else if(type == NORMAL || type == NORMAL) {
+			this.parent.registerDependent(this);
+		} 
+	}
+	this.slipType = type;
+}
+
+public int getSlipType() {
+	return this.slipType;
 }
 
 public void rotateAboutX(double angle, boolean slip) {
@@ -378,6 +418,22 @@ public void rotateAboutZ(double angle) {
 }
 
 
+public void rotateAboutCustomLocal(DVector axis, double angle) {
+	this.updateGlobal();
+	Ray axisRay = new Ray(new DVector(0,0,0), axis);
+	rayRotation(lx, axisRay, angle); 
+	rayRotation(ly, axisRay, angle); 
+	rayRotation(lz, axisRay, angle);
+	orthogonalize();
+	this.markDirty();
+	this.updateGlobal();
+}
+
+public void rotateAboutCustomGlobal(DVector axis, double angle) {
+	Ray axisRay = new Ray(new DVector(0,0,0), axis);
+	this.rotateAboutCustomGlobal(axisRay, angle);
+}
+
 public void rotateAboutCustomLocal(Ray axis, double angle) {
 	this.updateGlobal();
 	rayRotation(lx, axis, angle); 
@@ -415,6 +471,25 @@ public void rotateAboutCustomGlobal(Ray axis, double angle) {
 		this.markDirty();
 		this.updateGlobal();
 	}
+}
+
+
+/**
+ * rotate about this axes parent frame
+ * (first translates to the frames origin,
+ * then rotates, then translates back to the 
+ * frame's origin)
+ * @param rotation
+ */
+public void locallyRotateTo(Rot rotation) {
+	this.lx.p2 = rotation.applyTo(lx.heading());
+	this.ly.p2 = rotation.applyTo(ly.heading());
+	this.lz.p2 = rotation.applyTo(lz.heading());
+	lx.heading(lx.p2);
+	ly.heading(ly.p2); 
+	lz.heading(lz.p2);
+	this.markDirty();
+	this.updateGlobal();
 }
 
 
@@ -479,7 +554,14 @@ public void rotateTo(Rot rotation) {
 	alignLocalsTo(rotated);	
 }
 
-
+/**
+ * sets these axes to have the same orientation and location relative to their parent
+ * axes as the input's axes do to the input's parent axes.
+ * 
+ * This function normalizes and orthogonalizes the axes.
+ * 
+ * @param targetAxes the Axes to make this Axis identical to
+ */
 public void alignLocalsTo(AbstractAxes targetAxes ) {
 	this.lx.p1 = targetAxes.lx.p1;
 	this.lx.p2 = targetAxes.lx.p2; 
@@ -588,20 +670,60 @@ public void registerDependent(AxisDependancy newDependent) {
 	}
 }
 
+/**
+ * unregisters this AbstractAxes from its current parent and 
+ * registers it to a new parent without changing its global position or orientation 
+ * when doing so.
+ * @param newParent
+ */
+
+public void transferToParent(AbstractAxes newParent) {
+	this.emancipate();
+	this.setParent(newParent);
+}
+
+/*
+ * unregisters this AbstractAxes from its parent, 
+ * but keeps its global position the same.
+ */
+public void emancipate() {
+	if(this.parent != null) {
+		this.updateGlobal();
+		this.lx = globalCoords.lx.copy();
+		this.ly = globalCoords.ly.copy();
+		this.lz = globalCoords.lz.copy();
+		this.lorigin = globalCoords.origin();
+		this.parent.disown(this);
+	}
+}
+
+public void disown(AbstractAxes child) {
+	if(dependentsRegistry.remove(child));
+}
+
+public void axisSlipWarning(AbstractAxes globalPriorToSlipping, AbstractAxes globalAfterSlipping, AbstractAxes actualAxis, ArrayList<Object>dontWarn) {
+	this.updateGlobal();
+	if(this.slipType == NORMAL ) {
+		if(this.parent != null) {
+			AbstractAxes globalVals = this.relativeTo(globalPriorToSlipping);
+			globalVals = globalPriorToSlipping.getLocalOf(globalVals); 
+			this.lx.p1 = globalVals.lx.p1;
+			this.lx.p2 = globalVals.lx.p2; 
+			this.ly.p1 = globalVals.ly.p1; 
+			this.ly.p2 = globalVals.ly.p2;
+			this.lz.p1 = globalVals.lz.p1; 
+			this.lz.p2 = globalVals.lz.p2;
+			this.lorigin = this.lx.p1;
+		}
+	} else if(this.slipType == FORWARD) {
+			AbstractAxes globalAfterVals = this.relativeTo(globalAfterSlipping);
+			this.notifyDependentsOfSlip(globalAfterVals, dontWarn);
+	}
+}
+
 
 public void axisSlipWarning(AbstractAxes globalPriorToSlipping, AbstractAxes globalAfterSlipping, AbstractAxes actualAxis) {
-	this.updateGlobal();
-	if(this.parent != null && actualAxis == this.parent) {
-		AbstractAxes globalVals = this.relativeTo(globalPriorToSlipping);
-		globalVals = globalPriorToSlipping.getLocalOf(globalVals); 
-		this.lx.p1 = globalVals.lx.p1;
-		this.lx.p2 = globalVals.lx.p2; 
-		this.ly.p1 = globalVals.ly.p1; 
-		this.ly.p2 = globalVals.ly.p2;
-		this.lz.p1 = globalVals.lz.p1; 
-		this.lz.p2 = globalVals.lz.p2;
-		this.lorigin = this.lx.p1;
-	}
+	
 }
 
 public void axisSlipCompletionNotice(AbstractAxes globalPriorToSlipping, AbstractAxes globalAfterSlipping, AbstractAxes thisAxis) {
@@ -632,6 +754,8 @@ public void slipTo(AbstractAxes newAxisGlobal) {
 	System.out.println("originalZ " + originalGlobal.z().heading());
 	System.out.println("newZ " + newAxisGlobal.z().heading());
 	System.out.println("confirmation " + this.getAbsoluteCopy().z().heading());*/
+	
+	
 	notifyDependentsOfSlipCompletion(originalGlobal);
 }
 
@@ -663,33 +787,42 @@ public void slipTo(AbstractAxes newAxisGlobal, ArrayList<Object> dontWarn) {
 }
 
 public void notifyDependentsOfSlip(AbstractAxes newAxisGlobal, ArrayList<Object> dontWarn) {
-	for(AxisDependancy dependent : dependentsRegistry) {
-		if(!dontWarn.contains(dependent))
-			dependent.axisSlipWarning(this.getAbsoluteCopy(), newAxisGlobal, this);
-		else 
-			System.out.println("skipping: " + dependent);
+	for(int i = 0; i<dependentsRegistry.size(); i++) {
+		if(!dontWarn.contains(dependentsRegistry.get(i))) {
+			AxisDependancy dependant = dependentsRegistry.get(i);
+			
+			//First we check if the dependent extends AbstractAxes
+			//so we know whether or not to pass the dontWarn list
+			if(this.getClass().isAssignableFrom(dependant.getClass())) { 
+				((AbstractAxes)dependant).axisSlipWarning(this.getAbsoluteCopy(), newAxisGlobal, this, dontWarn);
+			} else {
+				dependant.axisSlipWarning(this.getAbsoluteCopy(), newAxisGlobal, this);
+			}
+		} else {
+			System.out.println("skipping: " + dependentsRegistry.get(i));
+		}
 	}
 }
 
 public void notifyDependentsOfSlipCompletion(AbstractAxes globalAxisPriorToSlipping, ArrayList<Object> dontWarn) {
-	for(AxisDependancy dependent : dependentsRegistry) {
-		if(!dontWarn.contains(dependent))
-			dependent.axisSlipCompletionNotice(globalAxisPriorToSlipping, this.getAbsoluteCopy(), this);
+	for(int i = 0; i<dependentsRegistry.size(); i++) {
+		if(!dontWarn.contains(dependentsRegistry.get(i)))
+			dependentsRegistry.get(i).axisSlipCompletionNotice(globalAxisPriorToSlipping, this.getAbsoluteCopy(), this);
 		else 
-			System.out.println("skipping: " + dependent);
+			System.out.println("skipping: " + dependentsRegistry.get(i));
 	}
 }
 
 
 public void notifyDependentsOfSlip(AbstractAxes newAxisGlobal) {
-	for(AxisDependancy dependent : dependentsRegistry) {
-		dependent.axisSlipWarning(this.getAbsoluteCopy(), newAxisGlobal, this);
+	for(int i = 0; i<dependentsRegistry.size(); i++) {
+		dependentsRegistry.get(i).axisSlipWarning(this.getAbsoluteCopy(), newAxisGlobal, this);
 	}
 }
 
 public void notifyDependentsOfSlipCompletion(AbstractAxes globalAxisPriorToSlipping) {
-	for(AxisDependancy dependent : dependentsRegistry) {
-		dependent.axisSlipCompletionNotice(globalAxisPriorToSlipping, this.getAbsoluteCopy(), this);
+	for(int i = 0; i<dependentsRegistry.size(); i++) {//AxisDependancy dependent : dependentsRegistry) {
+		dependentsRegistry.get(i).axisSlipCompletionNotice(globalAxisPriorToSlipping, this.getAbsoluteCopy(), this);
 	}
 }
 

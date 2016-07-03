@@ -56,7 +56,22 @@ public class Ray {
 
 
 	public double distTo(DVector point) { 
-		//returns the distance between the input point and the point on this ray to which the input is closest.
+		
+		DVector inPoint = point.copy();
+		inPoint.sub(this.p1); 
+		DVector heading = this.heading();
+		double scale = (DVector.dot(inPoint, heading)/(heading.mag()*inPoint.mag()))*(inPoint.mag()/heading.mag());
+
+		return point.dist(this.getRayScaledBy(scale).p2); 
+	}
+	
+	/**
+	 * returns the distance between the input point and the point on this ray (treated as a lineSegment) to which the input is closest.
+	 * @param point
+	 * @return
+	 */
+	public double distToStrict(DVector point) { 
+		
 		DVector inPoint = point.copy();
 		inPoint.sub(this.p1); 
 		DVector heading = this.heading();
@@ -71,9 +86,33 @@ public class Ray {
 
 	}
 	
+	
+	/**
+	 * returns the distance between this ray treated as a line and the input ray treated as a line. 
+	 * @param r
+	 * @return
+	 */
+	public double distTo(Ray r) {
+		DVector closestOnThis = this.closestPointToRay3D(r);
+		return r.distTo(closestOnThis);
+	}
+	
+	/**
+	 * returns the distance between this ray as a line segment, and the input ray treated as a line segment
+	 */
+	
+	public double distToStrict(Ray r) {
+		DVector closestOnThis = this.closestPointToSegment3D(r);
+		return closestOnThis.dist(r.closestPointToStrict(closestOnThis));
+	}
 
+	/**
+	 * returns the distance between the input point and the point on this ray to which the input is closest.
+	 * @param point
+	 * @return
+	 */
 	public DVector closestPointTo(DVector point) { 
-		//returns the distance between the input point and the point on this ray to which the input is closest.
+	
 		DVector inPoint = point.copy();
 		inPoint.sub(this.p1); 
 		DVector heading = this.heading();
@@ -423,6 +462,135 @@ public class Ray {
 		if (position > 1 || position < 0) return null;
 
 		return result;
+	}
+	
+	/**
+	 * Given two planes specified by a1,a2,a3 and b1,b2,b3 returns a
+	 * ray representing the line along which the two planes intersect
+	 * 
+	 * @param a1 the first vertex of a triangle on the first plane
+	 * @param a2 the second vertex of a triangle on the first plane
+	 * @param a3 the third vertex od a triangle on the first plane
+	 * @param b1 the first vertex of a triangle on the second plane
+	 * @param b2 the second vertex of a triangle on the second plane
+	 * @param b3 the third vertex od a triangle on the second plane
+	 * @return a Ray along the line of intersection of these two planes, or null if inputs are coplanar
+	 */
+	public static Ray planePlaneIntersect(DVector a1, DVector a2, DVector a3, DVector b1, DVector b2, DVector b3) {
+		Ray a1a2 = new Ray(a1,a2);
+		Ray a1a3 = new Ray(a1,a3); 
+		Ray a2a3 = new Ray(a2,a3);
+		
+		DVector interceptsa1a2 = a1a2.intersectsPlane(b1, b2, b3);
+		DVector interceptsa1a3 = a1a3.intersectsPlane(b1, b2, b3);
+		DVector interceptsa2a3 = a2a3.intersectsPlane(b1, b2, b3);
+		
+		DVector[] notNullCandidates = {interceptsa1a2, interceptsa1a3, interceptsa2a3};
+		DVector notNull1 = null;  
+		DVector notNull2 = null; 
+		
+		for(int i=0; i<notNullCandidates.length; i++) {
+			if(notNullCandidates[i] != null) {
+				if(notNull1 == null) 
+					notNull1 = notNullCandidates[i]; 
+				else {
+					notNull2 = notNullCandidates[i];
+					break;
+				}
+			}
+		}		
+		if(notNull1 != null && notNull2 != null) 
+			return new Ray(notNull1, notNull2);
+		else 
+			return null;
+	}
+	
+	/**
+	 * @param ta the first vertex of a triangle on the plane
+	 * @param tb the second vertex of a triangle on the plane 
+	 * @param tc the third vertex of a triangle on the plane
+	 * @return the point where this ray intersects the plane specified by the triangle ta,tb,tc. 
+	 */
+	public DVector intersectsPlane(DVector ta, DVector tb, DVector tc) {
+		double[] uvw = new double[3]; 
+		return intersectsPlane(ta, tb, tc, uvw);
+	}
+	
+	public DVector intersectsPlane(DVector ta, DVector tb, DVector tc, double[] uvw) {
+		return DVector.add(planeIntersectTest(this.heading(), DVector.sub(ta, this.p1), DVector.sub(tb, this.p1), DVector.sub(tc, this.p1), uvw), this.p1);
+	}
+	
+	private static DVector planeIntersectTest(DVector R, DVector ta, DVector tb, DVector tc, double[] uvw) {
+			DVector I = new DVector();
+			DVector u = new DVector(tb.x, tb.y, tb.z); 
+			DVector v = new DVector(tc.x, tc.y, tc.z); 
+			DVector n ;
+			DVector dir = new DVector(R.x, R.y, R.z); 
+			DVector w0 = new DVector(); 
+			DVector w = new DVector();
+			double  r, a, b;
+			DVector.sub(u, ta, u);
+			DVector.sub(v, ta, v);
+			n = new DVector(); 
+			DVector.cross(u, v, n);
+
+			w0 = new DVector(0,0,0);
+			DVector.sub(w0, ta, w0);
+			a = -(new DVector(n.x, n.y, n.z).dot(w0));
+			b = new DVector(n.x, n.y, n.z).dot(dir);
+			r = a / b;
+			I = new DVector(0,0,0);
+			I.x += r * dir.x;
+			I.y += r * dir.y;
+			I.z += r * dir.z;
+			double[] barycentric = new double[3];
+			barycentric(ta, tb, tc, I, barycentric);
+
+			uvw[0]=barycentric[0];
+			uvw[1]=barycentric[1];
+			uvw[2]=barycentric[2];
+			return I;		
+	}
+	
+	public static void barycentric(DVector a, DVector b, DVector c, DVector p, double[] uvw) {
+		DVector m = new DVector();
+		DVector.cross(DVector.sub(b, c), DVector.sub(c, a), m);
+
+		double nu;
+		double nv;
+		double ood;
+
+		double x = Math.abs(m.x);
+		double y = Math.abs(m.y);
+		double z = Math.abs(m.z);
+
+		if (x >= y && x >= z) {
+			nu = triArea2D(p.y, p.z, b.y, b.z, c.y, c.z);
+			nv = triArea2D(p.y, p.z, c.y, c.z, a.y, a.z);
+			ood = 1.0f / m.x;
+		}
+		else if (y >= x && y >= z) {
+			nu = triArea2D(p.x, p.z, b.x, b.z, c.x, c.z);
+			nv = triArea2D(p.x, p.z, c.x, c.z, a.x, a.z);
+			ood = 1.0f / -m.y;
+		}
+		else {
+			nu = triArea2D(p.x, p.y, b.x, b.y, c.x, c.y);
+			nv = triArea2D(p.x, p.y, c.x, c.y, a.x, a.y);
+			ood = 1.0f / m.z;
+		}
+		uvw[0] = nu * ood;
+		uvw[1] = nv * ood;
+		uvw[2] = 1.0f - uvw[0] - uvw[1];
+	}
+	
+	@Override
+	public String toString() {
+		return "{"+this.p1+"} ----> {" + this.p2+"}";		
+	}
+	
+	public static double triArea2D(double x1, double y1, double x2, double y2, double x3, double y3) {
+		return (x1 - x2) * (y2 - y3) - (x2 - x3) * (y1 - y2);   
 	}
 	
 	public JSONObject toJSON() {
