@@ -18,13 +18,11 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 package IK;
 import sceneGraph.*;
-
+import sceneGraph.math.Quaternion;
+import sceneGraph.math.SGVec_3d;
 
 import java.util.ArrayList;
 
-import org.apache.commons.math3.complex.Quaternion;
-
-import processing.core.PVector;
 
 /**
  * @author Eron
@@ -99,57 +97,17 @@ public class G {
 		return in*in;  
 	}
 
-	public static DVector axisRotation(DVector point, DVector axis, double angle) {
+	public static SGVec_3d axisRotation(SGVec_3d point, SGVec_3d axis, double angle) {
 		//println("rotting");
 		Rot rotation = new Rot(axis, angle);
-		point = rotation.applyTo(point);
+		rotation.applyTo(point, point);
 		return point;
 	}
 
-	public static DVector[] axisRotation(DVector[] points, DVector axis, double angle) {
 
-		Rot rotation = new Rot(axis, angle);
-		for(DVector point : points) {
-			point = rotation.applyTo(point);
-		}
-		return points;
-	}
-
-
-
-	public static void rayRotation(DVector point, Ray r, double angle) {
-
-		DVector axis = DVector.sub(r.p2, r.p1);
-		point.sub(r.p1); 
-		point = axisRotation(point, axis, angle);
-		point.add(r.p1);
-
-	}
-
-	public static void rayRotation(Ray point, Ray axis, double angle) {
-		DVector result = point.heading().copy();   
-		result = axisRotation(result, axis.heading(), angle); 
-		point.heading(result);
-
-	}
-
-	public static void rayRotation(DVector[] points, Ray r, double angle) {
-
-		DVector axis = DVector.sub(r.p2, r.p1);
-		for(DVector point : points) {
-			point.sub(r.p1); 
-		}
-		points = axisRotation(points, axis, angle);
-		for(DVector point : points) {
-			point.add(r.p1); 
-		}
-
-	}
-
-
-	public static boolean isOverTriangle(DVector p1, DVector p2, DVector origin, Ray hoverRay, DVector intersectsAt) {
+	public static boolean isOverTriangle(SGVec_3d p1, SGVec_3d p2, SGVec_3d origin, sgRay hoverRay, SGVec_3d intersectsAt) {
 		double [] uvw = new double[3];
-		DVector intersectionResult = intersectTest(hoverRay, origin, p1, p2, uvw); 
+		SGVec_3d intersectionResult = intersectTest(hoverRay, origin, p1, p2, uvw); 
 		intersectsAt.x = intersectionResult.x; 
 		intersectsAt.y = intersectionResult.y;
 		intersectsAt.z = intersectionResult.z;
@@ -169,19 +127,19 @@ public class G {
 	 * @param hoverPoint
 	 * @return
 	 */
-	public static DVector closestPointOnGreatArc(DVector p1, DVector p2, DVector hoverPoint) {		
-		DVector normal = p1.cross(p2); 
-		Ray hoverRay = new Ray(hoverPoint, null); 
+	public static SGVec_3d closestPointOnGreatArc(SGVec_3d p1, SGVec_3d p2, SGVec_3d hoverPoint) {		
+		SGVec_3d normal = p1.crossCopy(p2); 
+		sgRay hoverRay = new sgRay(hoverPoint, null); 
 		hoverRay.heading(normal);
 		hoverRay.elongate();  
 
-		DVector intersectsAt = new DVector(); 
-		boolean isOverTriangle = isOverTriangle(p1, p2, new DVector(0,0,0), hoverRay, intersectsAt); 
+		SGVec_3d intersectsAt = new SGVec_3d(); 
+		boolean isOverTriangle = isOverTriangle(p1, p2, new SGVec_3d(0,0,0), hoverRay, intersectsAt); 
 
 		//println("isOverTriangle = " + isOverTriangle);
 
 		if(isOverTriangle == false) {
-			if(DVector.angleBetween(intersectsAt, p1) < DVector.angleBetween(intersectsAt, p2)) {
+			if(SGVec_3d.angleBetween(intersectsAt, p1) < SGVec_3d.angleBetween(intersectsAt, p2)) {
 				return p1;
 			} else {
 				return p2;
@@ -199,91 +157,91 @@ public class G {
 	 * @param hoverPoint
 	 * @return
 	 */
-	public static DVector closestPointOnGreatCircle(DVector p1, DVector p2, DVector hoverPoint) {
+	public static SGVec_3d closestPointOnGreatCircle(SGVec_3d p1, SGVec_3d p2, SGVec_3d hoverPoint) {
 		
-		DVector normal = p1.cross(p2); 
-		Ray hoverRay = new Ray(hoverPoint, null); 
+		SGVec_3d normal = p1.crossCopy(p2); 
+		sgRay hoverRay = new sgRay(hoverPoint, null); 
 		hoverRay.heading(normal);
 		hoverRay.elongate();  
 
-		DVector intersectsAt = new DVector(); 
-		isOverTriangle(p1, p2, new DVector(0,0,0), hoverRay, intersectsAt); 
+		SGVec_3d intersectsAt = new SGVec_3d(); 
+		isOverTriangle(p1, p2, new SGVec_3d(0,0,0), hoverRay, intersectsAt); 
 
 		//println("isOverTriangle = " + isOverTriangle); 
 		return intersectsAt;   
 
 	}
 
-	public static DVector intersectTest(Ray R, DVector ta, DVector tb, DVector tc) {
+	public static SGVec_3d intersectTest(sgRay R, SGVec_3d ta, SGVec_3d tb, SGVec_3d tc) {
 		double[] uvw = new double[3];
-		return DVector.add(planeIntersectTest(R.heading(), DVector.sub(ta, R.p1), DVector.sub(tb, R.p1), DVector.sub(tc, R.p1), uvw), R.p1);
+		return SGVec_3d.add(planeIntersectTest(R.heading(), SGVec_3d.sub(ta, R.p1), SGVec_3d.sub(tb, R.p1), SGVec_3d.sub(tc, R.p1), uvw), R.p1);
 		//println(uvw);
-		//return DVector.add(DVector.add(DVector.mult(ta, uvw[0]), DVector.mult(tb, uvw[1])), DVector.mult(tc, uvw[2]));
+		//return SGVec_3d.add(SGVec_3d.add(SGVec_3d.mult(ta, uvw[0]), SGVec_3d.mult(tb, uvw[1])), SGVec_3d.mult(tc, uvw[2]));
 	}
 
-	public static DVector planeIntersectTestStrict(Ray R, DVector ta, DVector tb, DVector tc) {
+	public static SGVec_3d planeIntersectTestStrict(sgRay R, SGVec_3d ta, SGVec_3d tb, SGVec_3d tc) {
 		//will return null if the ray is too short to intersect the plane;
 		double[] uvw = new double[3];
-		DVector result = DVector.add(planeIntersectTest(R.heading(), DVector.sub(ta, R.p1), DVector.sub(tb, R.p1), DVector.sub(tc, R.p1), uvw), R.p1);
-		Ray resultRay = new Ray(R.p1, result);
+		SGVec_3d result = SGVec_3d.add(planeIntersectTest(R.heading(), SGVec_3d.sub(ta, R.p1), SGVec_3d.sub(tb, R.p1), SGVec_3d.sub(tc, R.p1), uvw), R.p1);
+		sgRay resultRay = new sgRay(R.p1, result);
 		if(resultRay.mag() > R.mag()) {/*println(resultRay.mag() + " > " + R.mag());*/  return null;} 
 		else {/*println(resultRay.mag() + " < " + R.mag());*/ return result;}
 
 		//println(uvw);
-		//return DVector.add(DVector.add(DVector.mult(ta, uvw[0]), DVector.mult(tb, uvw[1])), DVector.mult(tc, uvw[2]));
+		//return SGVec_3d.add(SGVec_3d.add(SGVec_3d.mult(ta, uvw[0]), SGVec_3d.mult(tb, uvw[1])), SGVec_3d.mult(tc, uvw[2]));
 	}
 
-	public static DVector intersectTest(Ray R, DVector ta, DVector tb, DVector tc, double[] uvw) {
-		return DVector.add(planeIntersectTest(R.heading(), DVector.sub(ta, R.p1), DVector.sub(tb, R.p1), DVector.sub(tc, R.p1), uvw), R.p1);
+	public static SGVec_3d intersectTest(sgRay R, SGVec_3d ta, SGVec_3d tb, SGVec_3d tc, double[] uvw) {
+		return SGVec_3d.add(planeIntersectTest(R.heading(), SGVec_3d.sub(ta, R.p1), SGVec_3d.sub(tb, R.p1), SGVec_3d.sub(tc, R.p1), uvw), R.p1);
 		//println(uvw);
-		//return DVector.add(DVector.add(DVector.mult(ta, uvw[0]), DVector.mult(tb, uvw[1])), DVector.mult(tc, uvw[2]));
+		//return SGVec_3d.add(SGVec_3d.add(SGVec_3d.mult(ta, uvw[0]), SGVec_3d.mult(tb, uvw[1])), SGVec_3d.mult(tc, uvw[2]));
 	}
 
-	public static DVector triangleRayIntersectTest(Ray R, DVector ta, DVector tb, DVector tc) {
+	public static SGVec_3d triangleRayIntersectTest(sgRay R, SGVec_3d ta, SGVec_3d tb, SGVec_3d tc) {
 		double[] uvw = new double[3];
-		DVector result = triangleIntersectTest(R.heading(), DVector.sub(ta, R.p1), DVector.sub(tb, R.p1), DVector.sub(tc, R.p1), uvw); 
+		SGVec_3d result = triangleIntersectTest(R.heading(), SGVec_3d.sub(ta, R.p1), SGVec_3d.sub(tb, R.p1), SGVec_3d.sub(tc, R.p1), uvw); 
 		if(result != null) 
-			return DVector.add(result, R.p1);
+			return SGVec_3d.add(result, R.p1);
 		else return null;
 		//println(uvw);
-		//return DVector.add(DVector.add(DVector.mult(ta, uvw[0]), DVector.mult(tb, uvw[1])), DVector.mult(tc, uvw[2]));
+		//return SGVec_3d.add(SGVec_3d.add(SGVec_3d.mult(ta, uvw[0]), SGVec_3d.mult(tb, uvw[1])), SGVec_3d.mult(tc, uvw[2]));
 	}
 
-	public static  DVector triangleRayIntersectTest(Ray R, DVector ta, DVector tb, DVector tc, double[] uvw) {
+	public static  SGVec_3d triangleRayIntersectTest(sgRay R, SGVec_3d ta, SGVec_3d tb, SGVec_3d tc, double[] uvw) {
 
-		DVector result = triangleIntersectTest(R.heading(), DVector.sub(ta, R.p1), DVector.sub(tb, R.p1), DVector.sub(tc, R.p1), uvw); 
+		SGVec_3d result = triangleIntersectTest(R.heading(), SGVec_3d.sub(ta, R.p1), SGVec_3d.sub(tb, R.p1), SGVec_3d.sub(tc, R.p1), uvw); 
 		if(result != null) 
-			return DVector.add(result, R.p1);
+			return SGVec_3d.add(result, R.p1);
 		else return null;
 
 	}
 
-	public static  DVector planeIntersectTest(DVector R, DVector ta, DVector tb, DVector tc, double[] uvw) {
-		DVector I = new DVector();
-		DVector u = new DVector(tb.x, tb.y, tb.z); 
-		DVector v = new DVector(tc.x, tc.y, tc.z); 
-		DVector n ;
-		DVector dir = new DVector(R.x, R.y, R.z); 
-		DVector w0 = new DVector(); 
-		// DVector w = new DVector();
+	public static  SGVec_3d planeIntersectTest(SGVec_3d R, SGVec_3d ta, SGVec_3d tb, SGVec_3d tc, double[] uvw) {
+		SGVec_3d I = new SGVec_3d();
+		SGVec_3d u = new SGVec_3d(tb.x, tb.y, tb.z); 
+		SGVec_3d v = new SGVec_3d(tc.x, tc.y, tc.z); 
+		SGVec_3d n ;
+		SGVec_3d dir = new SGVec_3d(R.x, R.y, R.z); 
+		SGVec_3d w0 = new SGVec_3d(); 
+		// SGVec_3d w = new SGVec_3d();
 		double     r, a, b;
 
 		//u = ta;
-		DVector.sub(u, ta, u);
+		SGVec_3d.sub(u, ta, u);
 		//v = tc;
-		DVector.sub(v, ta, v);
-		n = new DVector(); // cross product
-		DVector.cross(u, v, n);
+		SGVec_3d.sub(v, ta, v);
+		n = new SGVec_3d(); // cross product
+		SGVec_3d.cross(u, v, n);
 
 
-		w0 = new DVector(0,0,0);
-		DVector.sub(w0, ta, w0);
-		a = -(new DVector(n.x, n.y, n.z).dot(w0));
-		b = new DVector(n.x, n.y, n.z).dot(dir);
+		w0 = new SGVec_3d(0,0,0);
+		SGVec_3d.sub(w0, ta, w0);
+		a = -(new SGVec_3d(n.x, n.y, n.z).dot(w0));
+		b = new SGVec_3d(n.x, n.y, n.z).dot(dir);
 
 		r = a / b;
 
-		I = new DVector(0,0,0);
+		I = new SGVec_3d(0,0,0);
 		I.x += r * dir.x;
 		I.y += r * dir.y;
 		I.z += r * dir.z;
@@ -297,31 +255,31 @@ public class G {
 		return I;
 	}
 
-	public static  DVector triangleIntersectTest(DVector R, DVector ta, DVector tb, DVector tc, double[] uvw) {
+	public static  SGVec_3d triangleIntersectTest(SGVec_3d R, SGVec_3d ta, SGVec_3d tb, SGVec_3d tc, double[] uvw) {
 
 		/*println("------------"+ta); 
 	        println("------------"+tb+ "-------------------" + tc);*/
-		DVector I = new DVector();
-		DVector u = new DVector(tb.x, tb.y, tb.z); 
-		DVector v = new DVector(tc.x, tc.y, tc.z); 
-		DVector n ;
-		DVector dir = new DVector(R.x, R.y, R.z); 
-		DVector w0 = new DVector(); 
+		SGVec_3d I = new SGVec_3d();
+		SGVec_3d u = new SGVec_3d(tb.x, tb.y, tb.z); 
+		SGVec_3d v = new SGVec_3d(tc.x, tc.y, tc.z); 
+		SGVec_3d n ;
+		SGVec_3d dir = new SGVec_3d(R.x, R.y, R.z); 
+		SGVec_3d w0 = new SGVec_3d(); 
 		double     r, a, b;
 
-		DVector.sub(u, ta, u);
-		DVector.sub(v, ta, v);
-		n = new DVector(); // cross product
-		DVector.cross(u, v, n);
+		SGVec_3d.sub(u, ta, u);
+		SGVec_3d.sub(v, ta, v);
+		n = new SGVec_3d(); // cross product
+		SGVec_3d.cross(u, v, n);
 
 		if (n.mag() == 0) {
 			return null;
 		}
 
-		w0 = new DVector(0,0,0);
-		DVector.sub(w0, ta, w0);
-		a = -(new DVector(n.x, n.y, n.z).dot(w0));
-		b = new DVector(n.x, n.y, n.z).dot(dir);
+		w0 = new SGVec_3d(0,0,0);
+		SGVec_3d.sub(w0, ta, w0);
+		a = -(new SGVec_3d(n.x, n.y, n.z).dot(w0));
+		b = new SGVec_3d(n.x, n.y, n.z).dot(dir);
 
 		if ((double)Math.abs(b) <  Double.MIN_VALUE) {
 			return null;
@@ -332,7 +290,7 @@ public class G {
 			return null;
 		}
 
-		I = new DVector(0,0,0);
+		I = new SGVec_3d(0,0,0);
 		I.x += r * dir.x;
 		I.y += r * dir.y;
 		I.z += r * dir.z;
@@ -349,29 +307,29 @@ public class G {
 		}
 	}
 
-	public static DVector intersectTest(DVector R, DVector ta, DVector tb, DVector tc, double[] uvw) {
+	public static SGVec_3d intersectTest(SGVec_3d R, SGVec_3d ta, SGVec_3d tb, SGVec_3d tc, double[] uvw) {
 
-		DVector I = new DVector();
-		DVector u = new DVector(tb.x, tb.y, tb.z); 
-		DVector v = new DVector(tc.x, tc.y, tc.z); 
-		DVector n ;
-		DVector dir = new DVector(R.x, R.y, R.z); 
-		DVector w0 = new DVector(); 
+		SGVec_3d I = new SGVec_3d();
+		SGVec_3d u = new SGVec_3d(tb.x, tb.y, tb.z); 
+		SGVec_3d v = new SGVec_3d(tc.x, tc.y, tc.z); 
+		SGVec_3d n ;
+		SGVec_3d dir = new SGVec_3d(R.x, R.y, R.z); 
+		SGVec_3d w0 = new SGVec_3d(); 
 		double     r, a, b;
 
-		DVector.sub(u, ta, u);
-		DVector.sub(v, ta, v);
-		n = new DVector(); // cross product
-		DVector.cross(u, v, n);
+		SGVec_3d.sub(u, ta, u);
+		SGVec_3d.sub(v, ta, v);
+		n = new SGVec_3d(); // cross product
+		SGVec_3d.cross(u, v, n);
 
 		if (n.mag() == 0) {
 			return null;
 		}
 
-		w0 = new DVector(0,0,0);
-		DVector.sub(w0, ta, w0);
-		a = -(new DVector(n.x, n.y, n.z).dot(w0));
-		b = new DVector(n.x, n.y, n.z).dot(dir);
+		w0 = new SGVec_3d(0,0,0);
+		SGVec_3d.sub(w0, ta, w0);
+		a = -(new SGVec_3d(n.x, n.y, n.z).dot(w0));
+		b = new SGVec_3d(n.x, n.y, n.z).dot(dir);
 
 		if ((double)Math.abs(b) < Double.MIN_VALUE) {
 			return null;
@@ -379,7 +337,7 @@ public class G {
 
 		r = a / b;
 
-		I = new DVector(0,0,0);
+		I = new SGVec_3d(0,0,0);
 		I.x += r * dir.x;
 		I.y += r * dir.y;
 		I.z += r * dir.z;
@@ -395,9 +353,9 @@ public class G {
 	}	
 
 
-	public static void barycentric(DVector a, DVector b, DVector c, DVector p, double[] uvw) {
-		DVector m = new DVector();
-		DVector.cross(DVector.sub(b, c), DVector.sub(c, a), m);
+	public static void barycentric(SGVec_3d a, SGVec_3d b, SGVec_3d c, SGVec_3d p, double[] uvw) {
+		SGVec_3d m = new SGVec_3d();
+		SGVec_3d.cross(SGVec_3d.sub(b, c), SGVec_3d.sub(c, a), m);
 
 		double nu;
 		double nv;
@@ -434,10 +392,10 @@ public class G {
 		uvw[2] = 1.0f - uvw[0] - uvw[1];
 	}
 	
-	public static DVector barycentricToCartesian(DVector ta, DVector tb, DVector tc, double[] uvw) {
-		DVector result = DVector.mult(ta, uvw[0]);
-		result.add(DVector.mult(tb, uvw[1]));
-		result.add(DVector.mult(tc, uvw[2]));
+	public static SGVec_3d barycentricToCartesian(SGVec_3d ta, SGVec_3d tb, SGVec_3d tc, double[] uvw) {
+		SGVec_3d result = SGVec_3d.mult(ta, uvw[0]);
+		result.add(SGVec_3d.mult(tb, uvw[1]));
+		result.add(SGVec_3d.mult(tc, uvw[2]));
 
 		return result;
 	}
@@ -455,11 +413,11 @@ public class G {
 	 * @param S2 reference to variable in which the second intersection will be placed
 	 * @return number of intersections found;
 	 */
-	public static int raySphereIntersection(Ray ray, double radius, DVector S1, DVector S2) {
-		DVector direction = ray.heading();
-		DVector e = new DVector(direction.x, direction.y, direction.z);   // e=ray.dir
+	public static int raySphereIntersection(sgRay ray, double radius, SGVec_3d S1, SGVec_3d S2) {
+		SGVec_3d direction = ray.heading();
+		SGVec_3d e = new SGVec_3d(direction.x, direction.y, direction.z);   // e=ray.dir
 		e.normalize();                            // e=g/|g|
-		DVector h = DVector.sub(new DVector(0,0,0),ray.p1);  // h=r.o-c.M
+		SGVec_3d h = SGVec_3d.sub(new SGVec_3d(0,0,0),ray.p1);  // h=r.o-c.M
 		double lf = e.dot(h);                      // lf=e.h
 		double s = sq(radius)-h.dot(h)+sq(lf);   // s=r^2-h^2+lf^2
 		if (s < 0.0) return 0;                    // no intersection points ?
@@ -473,8 +431,8 @@ public class G {
 		} }
 		else result = 2;                          // 2 intersection points
 
-		S1.set(DVector.mult(e, lf-s));  S1.add(ray.p1); // S1=A+e*(lf-s)
-		S2.set(DVector.mult(e, lf+s));  S2.add(ray.p1); // S2=A+e*(lf+s)
+		S1.set(SGVec_3d.mult(e, lf-s));  S1.add(ray.p1); // S1=A+e*(lf-s)
+		S2.set(SGVec_3d.mult(e, lf+s));  S2.add(ray.p1); // S2=A+e*(lf+s)
 
 		// only for testing
 
@@ -543,7 +501,7 @@ public class G {
 
 	public static Quaternion getSingleCoveredQuaternion(Quaternion inputQ, Quaternion targetQ) {
 		//targetQ is the Quaternion that exists on the target hemisphere
-		if(Quaternion.dotProduct(inputQ, targetQ) < 0d) {
+		if(inputQ.dot(targetQ) < 0d) {
 			return new Quaternion(-inputQ.getQ0(), -inputQ.getQ1(), -inputQ.getQ2(), -inputQ.getQ3());  
 		} else {
 			return inputQ;  
@@ -564,6 +522,11 @@ public class G {
 	public static Quaternion getNormalizedQuaternion(double iw, double ix, double iy, double iz) {
 		double lengthD = 1.0d / (iw*iw + ix*ix + iy*iy + iz*iz);
 		return new Quaternion(iw*lengthD, ix*lengthD, iy*lengthD, iz*lengthD);
+	}
+	
+	public static double smoothstep(double edge0, double edge1, double x) {
+		double t = Math.min(Math.max((x - edge0) / (edge1 - edge0), 0.0), 1.0);
+		return t * t * (3.0 - 2.0 * t);
 	}
 
 }

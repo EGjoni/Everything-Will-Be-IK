@@ -19,7 +19,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 package IK;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.WeakHashMap;
 
@@ -65,6 +64,7 @@ public class SegmentedArmature {
 	private void generateArmatureSegments() {
 		childSegments.clear();
 		//pinnedDescendants.clear();
+		tipPinned = false;
 		if(segmentRoot.parent != null && segmentRoot.parent.isPinned()) 
 			this.basePinned = true;
 		else 
@@ -75,10 +75,10 @@ public class SegmentedArmature {
 		while(true) {
 			this.chainLength++;
 			ArrayList<AbstractBone> childrenWithPinnedDescendants = tempSegmentTip.returnChildrenWithPinnedDescendants();
-
+			
 			if(childrenWithPinnedDescendants.size() > 1 || (tempSegmentTip.isPinned())) {
 				if(tempSegmentTip.isPinned()) tipPinned = true; 
-				else tipPinned = false;
+				//else tipPinned = false;
 				this.segmentTip = tempSegmentTip; 
 				
 				for(AbstractBone childBone: childrenWithPinnedDescendants) {
@@ -133,6 +133,7 @@ public class SegmentedArmature {
 		if(pinnedBone.isPinned()) {
 			result.add(pinnedBone);
 			AbstractBone currBone = pinnedBone.parent;
+			//note to self -- try removing the currbone.parent != null condition
 			while(currBone != null && currBone.parent != null) {
 				result.add(currBone);
 				if(currBone.parent.isPinned()) {
@@ -172,9 +173,9 @@ public class SegmentedArmature {
 		AbstractBone candidate = this.segmentTip; 
 		while(true) {
 			if(candidate == chainMember) return this;
-			if(candidate == segmentRoot || candidate.parent == null) {
+			if(/*candidate == segmentRoot ||*/ candidate.parent == null) {
 				break;
-			}
+			}		
 			candidate = candidate.parent;
 		}
 		SegmentedArmature result = null;
