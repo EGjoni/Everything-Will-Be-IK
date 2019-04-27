@@ -21,8 +21,12 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 package sceneGraph;
 
 public interface AxisDependancy {
-	public void axisSlipWarning(AbstractAxes globalPriorToSlipping, AbstractAxes globalAfterSlipping, AbstractAxes thisAxis);
-	public void axisSlipCompletionNotice(AbstractAxes globalPriorToSlipping, AbstractAxes globalAfterSlipping, AbstractAxes thisAxis);
-	public void markDirty();
-	public void markDependentsDirty();
+	default void emancipate() {};
+	default void axisSlipWarning(AbstractAxes globalPriorToSlipping, AbstractAxes globalAfterSlipping, AbstractAxes thisAxis) {};
+	default void axisSlipCompletionNotice(AbstractAxes globalPriorToSlipping, AbstractAxes globalAfterSlipping, AbstractAxes thisAxis) {};
+	default void  parentChangeWarning(AbstractAxes warningBy, AbstractAxes oldParent, AbstractAxes intendedParent, Object requestedBy) {};
+	default void parentChangeCompletionNotice(AbstractAxes warningBy, AbstractAxes oldParent, AbstractAxes intendedParent, Object requestedBy) {}; 
+	default void markDirty() {};
+	default void markDependentsDirty() {};
+	public AbstractAxes getParentAxes();
 }
