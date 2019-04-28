@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project default="javadoc">
+    <target name="javadoc">
+        <javadoc access="public" author="true" classpath="library/ewbIK.jar" destdir="doc" doctitle="Everything_Will_Be_IK " nodeprecated="false" nodeprecatedlist="false" noindex="false" nonavbar="false" notree="false" packagenames="IK,sceneGraph.math,sceneGraph.numerical,sceneGraph,extensionExamples,data" source="1.8" sourcepath="src" splitindex="true" stylesheetfile="C:\Users\rufsk\git\Everything-WIll-Be-IK-split\ewbIK\reference\customcss.css" use="true" version="true"/>
+    </target>
+</project>

@@ -1,9 +1,11 @@
 package IK;
 
-import org.apache.commons.math3.geometry.euclidean.threed.Rotation;
-import org.apache.commons.math3.geometry.euclidean.threed.RotationOrder;
 
 import sceneGraph.AbstractAxes;
+import sceneGraph.IKVector;
+import sceneGraph.MRotation;
+import sceneGraph.math.RotationOrder;
+import sceneGraph.math.SGVec_3d;
 
 public class EulerLimits implements Constraint {
 	
@@ -26,7 +28,7 @@ public class EulerLimits implements Constraint {
 	 * Additionally, this class does not bother noting that -1.5*PI is equivalent to 
 	 * +.5*PI. So you can get some behavior which is not only weird, but also exacerbates instabilities. Your second best bet for avoiding 
 	 * this is choosing a suitable orientation for the bone's majorRotationAxes given the limits you are trying to specify. 
-	 * Your BEST bet for avoiding this is to use Kusudama constraints instead.
+	 * Your BEST bet for avoiding this is to use KusudamaExample constraints instead.
 	 * <br><br>
 	 * Feel free to fix any of this and contribute the changes back if you really need to use Euler angles though. 
 	 * 
@@ -52,7 +54,7 @@ public class EulerLimits implements Constraint {
 		y = Math.min(y, maxY);		
 		
 		attachedTo.localAxes().alignLocalsTo(limitingAxes);
-		attachedTo.localAxes().rotateTo(new Rotation(RotationOrder.XZY, x, z, y));
+		attachedTo.localAxes().rotateBy(new MRotation(RotationOrder.XZY, x, z, y));
 	}
 	
 	
@@ -130,5 +132,18 @@ public class EulerLimits implements Constraint {
 		// TODO Auto-generated method stub
 		return false;
 	}
+
+	@Override
+	public double getRotationalFreedom() {
+		return (Math.abs(minX - maxX) / G.TAU) * (Math.abs(minY - maxY) / G.TAU) * (Math.abs(minZ - maxZ) / G.TAU);
+	}
+
+
+	@Override
+	public boolean isInLimits_(SGVec_3d globalPoint) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
 
 }
