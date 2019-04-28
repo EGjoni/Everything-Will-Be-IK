@@ -174,7 +174,7 @@ public class G {
 
 	public static SGVec_3d intersectTest(sgRay R, SGVec_3d ta, SGVec_3d tb, SGVec_3d tc) {
 		double[] uvw = new double[3];
-		return SGVec_3d.add(planeIntersectTest(R.heading(), SGVec_3d.sub(ta, R.p1), SGVec_3d.sub(tb, R.p1), SGVec_3d.sub(tc, R.p1), uvw), R.p1);
+		return SGVec_3d.add(planeIntersectTest(R.heading(), SGVec_3d.sub(ta, R.p1()), SGVec_3d.sub(tb, R.p1()), SGVec_3d.sub(tc, R.p1()), uvw), R.p1());
 		//println(uvw);
 		//return SGVec_3d.add(SGVec_3d.add(SGVec_3d.mult(ta, uvw[0]), SGVec_3d.mult(tb, uvw[1])), SGVec_3d.mult(tc, uvw[2]));
 	}
@@ -182,8 +182,8 @@ public class G {
 	public static SGVec_3d planeIntersectTestStrict(sgRay R, SGVec_3d ta, SGVec_3d tb, SGVec_3d tc) {
 		//will return null if the ray is too short to intersect the plane;
 		double[] uvw = new double[3];
-		SGVec_3d result = SGVec_3d.add(planeIntersectTest(R.heading(), SGVec_3d.sub(ta, R.p1), SGVec_3d.sub(tb, R.p1), SGVec_3d.sub(tc, R.p1), uvw), R.p1);
-		sgRay resultRay = new sgRay(R.p1, result);
+		SGVec_3d result = SGVec_3d.add(planeIntersectTest(R.heading(), SGVec_3d.sub(ta, R.p1()), SGVec_3d.sub(tb, R.p1()), SGVec_3d.sub(tc, R.p1()), uvw), R.p1());
+		sgRay resultRay = new sgRay(R.p1(), result);
 		if(resultRay.mag() > R.mag()) {/*println(resultRay.mag() + " > " + R.mag());*/  return null;} 
 		else {/*println(resultRay.mag() + " < " + R.mag());*/ return result;}
 
@@ -192,16 +192,16 @@ public class G {
 	}
 
 	public static SGVec_3d intersectTest(sgRay R, SGVec_3d ta, SGVec_3d tb, SGVec_3d tc, double[] uvw) {
-		return SGVec_3d.add(planeIntersectTest(R.heading(), SGVec_3d.sub(ta, R.p1), SGVec_3d.sub(tb, R.p1), SGVec_3d.sub(tc, R.p1), uvw), R.p1);
+		return SGVec_3d.add(planeIntersectTest(R.heading(), SGVec_3d.sub(ta, R.p1()), SGVec_3d.sub(tb, R.p1()), SGVec_3d.sub(tc, R.p1()), uvw), R.p1());
 		//println(uvw);
 		//return SGVec_3d.add(SGVec_3d.add(SGVec_3d.mult(ta, uvw[0]), SGVec_3d.mult(tb, uvw[1])), SGVec_3d.mult(tc, uvw[2]));
 	}
 
 	public static SGVec_3d triangleRayIntersectTest(sgRay R, SGVec_3d ta, SGVec_3d tb, SGVec_3d tc) {
 		double[] uvw = new double[3];
-		SGVec_3d result = triangleIntersectTest(R.heading(), SGVec_3d.sub(ta, R.p1), SGVec_3d.sub(tb, R.p1), SGVec_3d.sub(tc, R.p1), uvw); 
+		SGVec_3d result = triangleIntersectTest(R.heading(), SGVec_3d.sub(ta, R.p1()), SGVec_3d.sub(tb, R.p1()), SGVec_3d.sub(tc, R.p1()), uvw); 
 		if(result != null) 
-			return SGVec_3d.add(result, R.p1);
+			return SGVec_3d.add(result, R.p1());
 		else return null;
 		//println(uvw);
 		//return SGVec_3d.add(SGVec_3d.add(SGVec_3d.mult(ta, uvw[0]), SGVec_3d.mult(tb, uvw[1])), SGVec_3d.mult(tc, uvw[2]));
@@ -209,9 +209,9 @@ public class G {
 
 	public static  SGVec_3d triangleRayIntersectTest(sgRay R, SGVec_3d ta, SGVec_3d tb, SGVec_3d tc, double[] uvw) {
 
-		SGVec_3d result = triangleIntersectTest(R.heading(), SGVec_3d.sub(ta, R.p1), SGVec_3d.sub(tb, R.p1), SGVec_3d.sub(tc, R.p1), uvw); 
+		SGVec_3d result = triangleIntersectTest(R.heading(), SGVec_3d.sub(ta, R.p1()), SGVec_3d.sub(tb, R.p1()), SGVec_3d.sub(tc, R.p1()), uvw); 
 		if(result != null) 
-			return SGVec_3d.add(result, R.p1);
+			return SGVec_3d.add(result, R.p1());
 		else return null;
 
 	}
@@ -417,7 +417,7 @@ public class G {
 		SGVec_3d direction = ray.heading();
 		SGVec_3d e = new SGVec_3d(direction.x, direction.y, direction.z);   // e=ray.dir
 		e.normalize();                            // e=g/|g|
-		SGVec_3d h = SGVec_3d.sub(new SGVec_3d(0,0,0),ray.p1);  // h=r.o-c.M
+		SGVec_3d h = SGVec_3d.sub(new SGVec_3d(0,0,0),ray.p1());  // h=r.o-c.M
 		double lf = e.dot(h);                      // lf=e.h
 		double s = sq(radius)-h.dot(h)+sq(lf);   // s=r^2-h^2+lf^2
 		if (s < 0.0) return 0;                    // no intersection points ?
@@ -431,8 +431,8 @@ public class G {
 		} }
 		else result = 2;                          // 2 intersection points
 
-		S1.set(SGVec_3d.mult(e, lf-s));  S1.add(ray.p1); // S1=A+e*(lf-s)
-		S2.set(SGVec_3d.mult(e, lf+s));  S2.add(ray.p1); // S2=A+e*(lf+s)
+		S1.set(SGVec_3d.mult(e, lf-s));  S1.add(ray.p1()); // S1=A+e*(lf-s)
+		S2.set(SGVec_3d.mult(e, lf+s));  S2.add(ray.p1()); // S2=A+e*(lf+s)
 
 		// only for testing
 

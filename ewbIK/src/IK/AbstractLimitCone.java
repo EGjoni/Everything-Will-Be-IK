@@ -23,8 +23,8 @@ import sceneGraph.math.SGVec_3d;
 
 public abstract class AbstractLimitCone {
 
-	private SGVec_3d controlPoint; 
-	private SGVec_3d radialPoint; 
+	SGVec_3d controlPoint; 
+	SGVec_3d radialPoint; 
 	protected double radius;
 
 	public AbstractKusudama parentKusudama;
@@ -628,5 +628,9 @@ public abstract class AbstractLimitCone {
 	public void setRadius(double radius) {
 		this.radius = radius;
 		this.parentKusudama.constraintUpdateNotification();
+	}
+	
+	public AbstractKusudama getParentKusudama() {
+		return parentKusudama;
 	}
 }

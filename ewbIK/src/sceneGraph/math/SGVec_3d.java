@@ -19,6 +19,8 @@ package sceneGraph.math;
 import java.io.Serializable;
 
 import data.JSONArray;
+import sceneGraph.math.floatV.SGVec_3f;
+import sceneGraph.math.floatV.Vec3f;
 
 //import com.badlogic.gdx.utils.GdxRuntimeException;
 //import com.badlogic.gdx.utils.NumberUtils;
@@ -728,7 +730,7 @@ public class SGVec_3d implements Serializable, Vec3d<SGVec_3d> {
 	}
 
 	@Override
-	public Vec3f toSGVec3f() {
+	public SGVec_3f toSGVec3f() {
 		return new SGVec_3f((float)x,(float)y,(float)z);
 	}
 	

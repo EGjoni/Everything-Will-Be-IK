@@ -72,7 +72,7 @@ public abstract class AbstractKusudama implements Constraint{
 
 	/**
 	 * If true, automatically reOrients the limitingAxes 
-	 * to minimize potential for rotational degeneracies. 
+	 * to minimize potential for degenerate rotations. 
 	 */
 	protected boolean autoOptimize = true;
 
@@ -113,10 +113,10 @@ public abstract class AbstractKusudama implements Constraint{
 			limitingAxes.rotateBy(oldYtoNewY);
 
 			for(AbstractLimitCone lc : getLimitCones()) {
-				originalLimitingAxes.setToOrthoNormalizedGlobalOf(lc.getControlPoint(), lc.getControlPoint());
-				originalLimitingAxes.setToOrthoNormalizedGlobalOf(lc.getRadialPoint(), lc.getRadialPoint());
-				limitingAxes.setToOrthoNormalLocalOf(lc.getControlPoint(), lc.getControlPoint());
-				limitingAxes.setToOrthoNormalLocalOf(lc.getRadialPoint(), lc.getRadialPoint());
+				originalLimitingAxes.setToOrthoNormalizedGlobalOf(lc.controlPoint, lc.controlPoint);
+				originalLimitingAxes.setToOrthoNormalizedGlobalOf(lc.radialPoint, lc.radialPoint);
+				limitingAxes.setToOrthoNormalLocalOf(lc.controlPoint, lc.controlPoint);
+				limitingAxes.setToOrthoNormalLocalOf(lc.radialPoint, lc.radialPoint);
 			}
 
 			this.updateTangentRadii();			
@@ -393,15 +393,15 @@ public abstract class AbstractKusudama implements Constraint{
 	 */
 	public void setAxesToOrientationSnap(AbstractAxes toSet, AbstractAxes limitingAxes, Double snapStrength) {
 		double[] inBounds = {1d}; 
-		boneRay.p1.set(toSet.origin_()); boneRay.p2.set(toSet.y_().getScaledTo(attachedTo.boneHeight));    
-		SGVec_3d inLimits = this.pointInLimits(boneRay.p2, inBounds, limitingAxes);    
+		boneRay.p1().set(toSet.origin_()); boneRay.p2().set(toSet.y_().getScaledTo(attachedTo.boneHeight));    
+		SGVec_3d inLimits = this.pointInLimits(boneRay.p2(), inBounds, limitingAxes);    
 		/*if(inBounds[0] == -1) {
 			this.pointInLimits(boneRay.p2, inBounds, limitingAxes);   
 		}*/
 
 
 		if (inBounds[0] == -1 && inLimits != null) {     
-			constrainedRay.p1.set(boneRay.p1); constrainedRay.p2.set(inLimits); 
+			constrainedRay.p1().set(boneRay.p1()); constrainedRay.p2().set(inLimits); 
 			rectifiedRot.set(boneRay.heading(), constrainedRay.heading());      
 			
 			//if( snapStrength >= 1 || snapStrength == null || snapStrength <=0) {
@@ -417,14 +417,14 @@ public abstract class AbstractKusudama implements Constraint{
 
 
 	public void setAxesToSoftOrientationSnap(AbstractAxes currentBoneAxes, AbstractAxes targetBoneAxes, AbstractAxes limitingAxes, AbstractAxes resultAxes) {
-		boneRay.p1.set(currentBoneAxes.origin_()); boneRay.p2.set(currentBoneAxes.y_().getScaledTo(attachedTo.boneHeight));   
-		constrainedRay.p1.set(targetBoneAxes.origin_()); constrainedRay.p2.set(targetBoneAxes.y_().getScaledTo(attachedTo.boneHeight));   
+		boneRay.p1().set(currentBoneAxes.origin_()); boneRay.p2().set(currentBoneAxes.y_().getScaledTo(attachedTo.boneHeight));   
+		constrainedRay.p1().set(targetBoneAxes.origin_()); constrainedRay.p2().set(targetBoneAxes.y_().getScaledTo(attachedTo.boneHeight));   
 
 		Rot naiveRot = new Rot(boneRay.heading(), constrainedRay.heading());
 
-		SGVec_3d pointInSoftBound = pointInSoftBound(boneRay.p2, constrainedRay.p2, limitingAxes);
+		SGVec_3d pointInSoftBound = pointInSoftBound(boneRay.p2(), constrainedRay.p2(), limitingAxes);
 		sgRay resultRay = new sgRay(limitingAxes.origin_(), pointInSoftBound); 
-		resultRay.p2 = resultRay.getScaledTo(attachedTo.getBoneHeight());
+		resultRay.setP2(resultRay.getScaledTo(attachedTo.getBoneHeight()));
 		Rot rectifiedRot = new Rot(boneRay.heading(), resultRay.heading());
 		//if(resultAxes != targetBoneAxes) 
 		resultAxes.alignGlobalsTo(currentBoneAxes);

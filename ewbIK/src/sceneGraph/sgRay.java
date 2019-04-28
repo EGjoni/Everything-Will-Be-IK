@@ -22,7 +22,7 @@ package sceneGraph;
 
 import data.JSONObject;
 import sceneGraph.math.SGVec_3d;
-import sceneGraph.math.SGVec_3f;
+import sceneGraph.math.floatV.SGVec_3f;
 import sceneGraph.math.Vec3d;
 
 /**
@@ -31,7 +31,8 @@ import sceneGraph.math.Vec3d;
  */
 public class sgRay {
 	public static final int X=0, Y=1, Z=2;
-	public SGVec_3d  p1, p2; 
+	protected SGVec_3d  p1;
+	protected SGVec_3d p2; 
 
 	public sgRay() {
 		//this.p1 = new SGVec_3d();
@@ -913,6 +914,22 @@ public class sgRay {
 		result.setJSONArray("p1", p1.toJSONArray());
 		result.setJSONArray("p2", p2.toJSONArray());
 		return result;
+	}
+
+	public SGVec_3d p2() {
+		return p2;
+	}
+
+	public void setP2(SGVec_3d p2) {
+		this.p2 = p2;
+	}
+
+	public SGVec_3d p1() {
+		return p1;
+	}
+
+	public void setP1(SGVec_3d p1) {
+		this.p1 = p1;
 	}
 
 

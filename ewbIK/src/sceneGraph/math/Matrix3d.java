@@ -344,17 +344,17 @@ public class Matrix3d implements Serializable {
 	/** Sets this 3x3 matrix to the top left 3x3 corner of the provided 4x4 matrix.
 	 * @param mat The matrix whose top left corner will be copied. This matrix will not be modified.
 	 * @return This matrix for the purpose of chaining operations. */
-	public Matrix3d set (Matrix4f mat) {
+	public Matrix3d set (Matrix4d mat) {
 		double[] val = this.val;
-		val[M00] = mat.val[Matrix4f.M00];
-		val[M10] = mat.val[Matrix4f.M10];
-		val[M20] = mat.val[Matrix4f.M20];
-		val[M01] = mat.val[Matrix4f.M01];
-		val[M11] = mat.val[Matrix4f.M11];
-		val[M21] = mat.val[Matrix4f.M21];
-		val[M02] = mat.val[Matrix4f.M02];
-		val[M12] = mat.val[Matrix4f.M12];
-		val[M22] = mat.val[Matrix4f.M22];
+		val[M00] = mat.val[Matrix4d.M00];
+		val[M10] = mat.val[Matrix4d.M10];
+		val[M20] = mat.val[Matrix4d.M20];
+		val[M01] = mat.val[Matrix4d.M01];
+		val[M11] = mat.val[Matrix4d.M11];
+		val[M21] = mat.val[Matrix4d.M21];
+		val[M02] = mat.val[Matrix4d.M02];
+		val[M12] = mat.val[Matrix4d.M12];
+		val[M22] = mat.val[Matrix4d.M22];
 		return this;
 	}
 

@@ -26,8 +26,7 @@ import data.JSONArray;
 import sceneGraph.math.SGVec_3d;
 import sceneGraph.math.RotationOrder;
 import sceneGraph.math.SGVec_3d;
-import sceneGraph.math.SGVec_3f;
-import sceneGraph.math.SGVec_3d;
+import sceneGraph.math.floatV.SGVec_3f;
 
 public class Rot {
 	public MRotation rotation; 
@@ -202,9 +201,9 @@ public class Rot {
 	}
 
 	public sgRay applyToCopy(sgRay rIn) {
-		workingInput[0] = rIn.p2.x - rIn.p1.x;
-		workingInput[1] = rIn.p2.y - rIn.p1.y; 
-		workingInput[2] = rIn.p2.z - rIn.p1.z;
+		workingInput[0] = rIn.p2().x - rIn.p1().x;
+		workingInput[1] = rIn.p2().y - rIn.p1().y; 
+		workingInput[2] = rIn.p2().z - rIn.p1().z;
 		
 		this.rotation.applyTo(workingInput, workingOutput);
 		sgRay result = rIn.copy();
@@ -213,13 +212,13 @@ public class Rot {
 	}
 
 	public sgRay applyInverseTo(sgRay rIn) {
-		workingInput[0] = rIn.p2.x - rIn.p1.x;
-		workingInput[1] = rIn.p2.y - rIn.p1.y; 
-		workingInput[2] = rIn.p2.z - rIn.p1.z;		
+		workingInput[0] = rIn.p2().x - rIn.p1().x;
+		workingInput[1] = rIn.p2().y - rIn.p1().y; 
+		workingInput[2] = rIn.p2().z - rIn.p1().z;		
 
 		this.rotation.applyInverseTo(workingInput, workingOutput);
 		sgRay result = rIn.copy();
-		result.p2.add(workingOutput);
+		result.p2().add(workingOutput);
 		return result;
 	}
 
