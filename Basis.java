@@ -6,7 +6,7 @@ import sceneGraph.math.Matrix3d;
 import sceneGraph.math.Matrix4d;
 import sceneGraph.math.Quaternion;
 import sceneGraph.math.SGVec_3d;
-import sceneGraph.math.Vec3f;
+import sceneGraph.math.floatV.Vec3f;
 
 public class Basis {
 
@@ -100,7 +100,7 @@ public class Basis {
 	 */
 	public Basis(sgRay x, sgRay y, sgRay z) {
 		this.shearScaleMatrix.idt();
-		this.translate.set((SGVec_3d) x.p1.copy());
+		this.translate.set((SGVec_3d) x.p1().copy());
 
 		this.scale.x = x.mag();
 		this.scale.y = y.mag();
@@ -1137,9 +1137,9 @@ public class Basis {
 	}*/
 
 	private void updateRays() {			
-		xRay.p1 = this.translate; 		
-		yRay.p1 = this.translate;			
-		zRay.p1 = this.translate;
+		xRay.setP1(this.translate); 		
+		yRay.setP1(this.translate);			
+		zRay.setP1(this.translate);
 
 		setToComposedXBase(tempV_3);
 		xRay.heading(tempV_3);

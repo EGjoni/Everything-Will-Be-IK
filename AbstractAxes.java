@@ -431,19 +431,19 @@ public abstract class AbstractAxes implements AxisDependancy {
 
 	public sgRay x_norm_() {
 		this.updateGlobal();  
-		xTemp.p1.set(this.globalMBasis.getOrigin()); xTemp.heading(this.globalMBasis.getOrthonormalXHead());
+		xTemp.p1().set(this.globalMBasis.getOrigin()); xTemp.heading(this.globalMBasis.getOrthonormalXHead());
 		return xTemp;
 	}
 
 	public sgRay y_norm_() {
 		this.updateGlobal();  
-		yTemp.p1.set(this.globalMBasis.getOrigin()); yTemp.heading(this.globalMBasis.getOrthonormalYHead());
+		yTemp.p1().set(this.globalMBasis.getOrigin()); yTemp.heading(this.globalMBasis.getOrthonormalYHead());
 		return yTemp;
 	}
 
 	public sgRay z_norm_() {
 		this.updateGlobal();  
-		zTemp.p1.set(this.globalMBasis.getOrigin()); zTemp.heading(this.globalMBasis.getOrthonormalZHead());
+		zTemp.p1().set(this.globalMBasis.getOrigin()); zTemp.heading(this.globalMBasis.getOrthonormalZHead());
 		return zTemp;
 	}
 
@@ -750,14 +750,14 @@ public abstract class AbstractAxes implements AxisDependancy {
 
 	public void setToOrthoNormalizedGlobalOf(sgRay input, sgRay output) {
 		this.updateGlobal();
-		this.setToOrthoNormalizedGlobalOf(input.p1, output.p1);
-		this.setToOrthoNormalizedGlobalOf(input.p2, output.p2);
+		this.setToOrthoNormalizedGlobalOf(input.p1(), output.p1());
+		this.setToOrthoNormalizedGlobalOf(input.p2(), output.p2());
 	}
 
 	public void setToRawGlobalOf(sgRay input, sgRay output) {
 		this.updateGlobal();
-		this.setToRawGlobalOf(input.p1, output.p1);
-		this.setToRawGlobalOf(input.p2, output.p2);
+		this.setToRawGlobalOf(input.p1(), output.p1());
+		this.setToRawGlobalOf(input.p2(), output.p2());
 	}
 
 	/**
@@ -766,12 +766,12 @@ public abstract class AbstractAxes implements AxisDependancy {
 	 */
 	public void setToGlobalOf(sgRay input, sgRay output) {
 		this.updateGlobal();
-		this.setToGlobalOf(input.p1, output.p1);
-		this.setToGlobalOf(input.p2, output.p2);
+		this.setToGlobalOf(input.p1(), output.p1());
+		this.setToGlobalOf(input.p2(), output.p2());
 	}
 
 	public sgRay getGlobalOf(sgRay in) { 
-		return new sgRay(this.getGlobalOf( in.p1), this.getGlobalOf( in.p2));
+		return new sgRay(this.getGlobalOf( in.p1()), this.getGlobalOf( in.p2()));
 	}
 	
 	/**
@@ -831,18 +831,18 @@ public abstract class AbstractAxes implements AxisDependancy {
 	}
 
 	public sgRay getRawGlobalOf(sgRay input) {
-		return new sgRay(getRawGlobalOf(input.p1), getRawGlobalOf(input.p2));
+		return new sgRay(getRawGlobalOf(input.p1()), getRawGlobalOf(input.p2()));
 	}
 
 
 	public sgRay getRawLocalOf(sgRay input) {
-		return new sgRay(getRawLocalOf(input.p1), getRawLocalOf(input.p2));
+		return new sgRay(getRawLocalOf(input.p1()), getRawLocalOf(input.p2()));
 	}
 
 
 
 	public sgRay getOrthoNormalizedLocalOf(sgRay input) {
-		return new sgRay(getOrthoNormalizedLocalOf(input.p1), getOrthoNormalizedLocalOf(input.p2));
+		return new sgRay(getOrthoNormalizedLocalOf(input.p1()), getOrthoNormalizedLocalOf(input.p2()));
 	}
 
 	public SGVec_3d   getOrthoNormalizedLocalOf(SGVec_3d in) {
@@ -874,8 +874,8 @@ public abstract class AbstractAxes implements AxisDependancy {
 	}
 
 	public void setToRawLocalOf(sgRay input, sgRay output) {
-		this.setToRawLocalOf(input.p1, output.p1);
-		this.setToRawLocalOf(input.p2, output.p2);
+		this.setToRawLocalOf(input.p1(), output.p1());
+		this.setToRawLocalOf(input.p2(), output.p2());
 	}
 
 	public void setToRawLocalOf(Basis input, Basis output) {
@@ -889,7 +889,7 @@ public abstract class AbstractAxes implements AxisDependancy {
 	}
 
 
-	public SGVec_3d   getLocalOf(SGVec_3d in) {
+	public SGVec_3d getLocalOf(SGVec_3d in) {
 		SGVec_3d result =  in.copy();
 		setToLocalOf(in, result);
 		return  result;
@@ -928,8 +928,8 @@ public abstract class AbstractAxes implements AxisDependancy {
 	 */
 
 	public void setToLocalOf(sgRay in, sgRay out) {
-		this.setToLocalOf(in.p1, out.p1);
-		this.setToLocalOf(in.p2, out.p2);
+		this.setToLocalOf(in.p1(), out.p1());
+		this.setToLocalOf(in.p2(), out.p2());
 	}
 
 	public void setToLocalOf(Basis input, Basis output) {
@@ -937,7 +937,7 @@ public abstract class AbstractAxes implements AxisDependancy {
 	}
 
 	public sgRay getLocalOf(sgRay in) {
-		return new sgRay(this.getLocalOf(in.p1), this.getLocalOf(in.p2));  
+		return new sgRay(this.getLocalOf(in.p1()), this.getLocalOf(in.p2()));  
 	}
 
 
@@ -1143,8 +1143,8 @@ public abstract class AbstractAxes implements AxisDependancy {
 	 */	
 
 	public void setToOrthonormalLocalOf(sgRay global_input, sgRay local_output) {
-		this.setToOrthoNormalLocalOf(global_input.p1, local_output.p1);
-		this.setToOrthoNormalLocalOf(global_input.p2, local_output.p2);
+		this.setToOrthoNormalLocalOf(global_input.p1(), local_output.p1());
+		this.setToOrthoNormalLocalOf(global_input.p2(), local_output.p2());
 	}
 	
 	/**

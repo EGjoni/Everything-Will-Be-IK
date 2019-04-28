@@ -14,12 +14,16 @@
  * limitations under the License.
  ******************************************************************************/
 
-package sceneGraph.math;
+package sceneGraph.math.floatV;
+
+import sceneGraph.math.Interpolation;
 
 /** Encapsulates a general vector. Allows chaining operations by returning a reference to itself in all modification methods. See
  * {@link SGVec_2d} and {@link SGVec_3d} for specific implementations.
  * @author Xoppa */
-public interface Vecf<T extends Vecf<T>> extends Vec<T>{
+public interface Vecf<T extends Vecf<T>> {	
+
+	
 
 	/** @return The euclidean length */
 	float mag ();
@@ -60,12 +64,29 @@ public interface Vecf<T extends Vecf<T>> extends Vec<T>{
 	 * @param max Max length
 	 * @return This vector for chaining */
 	T clamp (float min, float max);
-	
+
+
 
 	/** @param v The other vector
 	 * @return The dot product between this and the other vector */
 	float dot (T v);
 
+	/**
+	 * ( begin auto-generated from SGVec_3d_div.xml )
+	 *
+	 * Divides a vector by a scalar or divides one vector by another.
+	 *
+	 * ( end auto-generated )
+	 *
+	 * @webref Vecd:method
+	 * @usage web_application
+	 * @brief Divide a vector by a scalar
+	 * @param n the number by which to divide the vector
+	 */
+	T div(float n);
+
+	
+	
 	/** Scales this vector by a scalar
 	 * @param scalar The scalar
 	 * @return This vector for chaining */
@@ -158,5 +179,7 @@ public interface Vecf<T extends Vecf<T>> extends Vec<T>{
 	 * @param v addition vector
 	 * @param scalar for scaling the addition vector */
 	T mulAdd (T v, float scalar);
+
+
 
 }

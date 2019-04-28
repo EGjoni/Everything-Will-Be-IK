@@ -1,6 +1,9 @@
 package sceneGraph.math;
 
 import sceneGraph.IKVector;
+import sceneGraph.math.floatV.SGVec_2f;
+import sceneGraph.math.floatV.Vec2f;
+import sceneGraph.math.floatV.Vec3f;
 
 public interface Vec2d<T extends Vec2d<T>> extends Vecd<T>{
 	
@@ -122,7 +125,7 @@ public interface Vec2d<T extends Vec2d<T>> extends Vecd<T>{
 	/**
 	 * @return a copy of this Vector cast to a single precision analog.
 	 */
-	public Vec2f toSGVec2f(); 
+	public <V extends Vec2f> V toSGVec2f(); 
 	
 	
 }

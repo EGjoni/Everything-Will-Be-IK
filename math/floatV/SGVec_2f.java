@@ -14,9 +14,11 @@
  * limitations under the License.
  ******************************************************************************/
 
-package sceneGraph.math;
+package sceneGraph.math.floatV;
 
 import java.io.Serializable;
+
+import sceneGraph.math.Interpolation;
 
 //import com.badlogic.gdx.utils.GdxRuntimeException;
 //import com.badlogic.gdx.utils.NumberUtils;
@@ -24,7 +26,6 @@ import java.io.Serializable;
 /** Encapsulates a 2D vector. Allows chaining methods by returning a reference to itself
  * @author badlogicgames@gmail.com */
 public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
-	public static final float degreesToRadians = (float)MathUtils.degreesToRadians;
 	private static final long serialVersionUID = 913902788239530931L;
 
 	public final static SGVec_2f X = new SGVec_2f(1, 0);
@@ -54,35 +55,36 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 		set(v);
 	}
 
-	
+	@Override
 	public SGVec_2f copy () {
 		return new SGVec_2f(this);
 	}
 
-	public static float mag (float x, float y) {
+	public static float len (float x, float y) {
 		return (float)Math.sqrt(x * x + y * y);
 	}
 
-	
+	@Override
 	public float mag () {
 		return (float)Math.sqrt(x * x + y * y);
 	}
 
-	public static float magSq (float x, float y) {
+	public static float len2 (float x, float y) {
 		return x * x + y * y;
 	}
 
-	
+	@Override
 	public float magSq () {
 		return x * x + y * y;
 	}
 
-	
+	@Override
 	public SGVec_2f set (SGVec_2f v) {
 		x = v.x;
 		y = v.y;
 		return this;
 	}
+	
 
 	/** Sets the components of this vector
 	 * @param x The x-component
@@ -93,19 +95,8 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 		this.y = y;
 		return this;
 	}
-	
-	/** Sets the components of this vector
-	 * @param x The x-component
-	 * @param y The y-component
-	 * @return This vector for chaining */
-	public SGVec_2f set (float[] v) {
-		this.x = v[0];
-		this.y = v[1];
-		return this;
-	}
 
-
-	
+	@Override
 	public SGVec_2f sub (SGVec_2f v) {
 		x -= v.x;
 		y -= v.y;
@@ -122,17 +113,17 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 		return this;
 	}
 
-	
+	@Override
 	public SGVec_2f normalize () {
-		float mag = mag();
-		if (mag != 0) {
-			x /= mag;
-			y /= mag;
+		float len = mag();
+		if (len != 0) {
+			x /= len;
+			y /= len;
 		}
 		return this;
 	}
 
-	
+	@Override
 	public SGVec_2f add (SGVec_2f v) {
 		x += v.x;
 		y += v.y;
@@ -153,7 +144,7 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 		return x1 * x2 + y1 * y2;
 	}
 
-	
+	@Override
 	public float dot (SGVec_2f v) {
 		return x * v.x + y * v.y;
 	}
@@ -162,7 +153,7 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 		return x * ox + y * oy;
 	}
 
-	
+	@Override
 	public SGVec_2f mult (float scalar) {
 		x *= scalar;
 		y *= scalar;
@@ -171,27 +162,27 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 
 	/** Multiplies this vector by a scalar
 	 * @return This vector for chaining */
-	public SGVec_2f scl (float x, float y) {
+	public SGVec_2f mult (float x, float y) {
 		this.x *= x;
 		this.y *= y;
 		return this;
 	}
 
-	
+	@Override
 	public SGVec_2f mult (SGVec_2f v) {
 		this.x *= v.x;
 		this.y *= v.y;
 		return this;
 	}
 
-	
+	@Override
 	public SGVec_2f mulAdd (SGVec_2f vec, float scalar) {
 		this.x += vec.x * scalar;
 		this.y += vec.y * scalar;
 		return this;
 	}
 
-	
+	@Override
 	public SGVec_2f mulAdd (SGVec_2f vec, SGVec_2f mulVec) {
 		this.x += vec.x * mulVec.x;
 		this.y += vec.y * mulVec.y;
@@ -204,7 +195,7 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 		return (float)Math.sqrt(x_d * x_d + y_d * y_d);
 	}
 
-	
+	@Override
 	public float dist (SGVec_2f v) {
 		final float x_d = v.x - x;
 		final float y_d = v.y - y;
@@ -226,7 +217,7 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 		return x_d * x_d + y_d * y_d;
 	}
 
-	
+	@Override
 	public float distSq (SGVec_2f v) {
 		final float x_d = v.x - x;
 		final float y_d = v.y - y;
@@ -242,45 +233,45 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 		return x_d * x_d + y_d * y_d;
 	}
 
-	
+	@Override
 	public SGVec_2f limit (float limit) {
 		return limitSq(limit * limit);
 	}
 
-	
-	public SGVec_2f limitSq (float limitSq) {
-		float magSq = magSq();
-		if (magSq > limitSq) {
-			return mult((float)Math.sqrt(limitSq / magSq));
+	@Override
+	public SGVec_2f limitSq (float limit2) {
+		float len2 = magSq();
+		if (len2 > limit2) {
+			return mult((float)Math.sqrt(limit2 / len2));
 		}
 		return this;
 	}
 
-	
+	@Override
 	public SGVec_2f clamp (float min, float max) {
-		final float magSq = magSq();
-		if (magSq == 0f) return this;
+		final float len2 = magSq();
+		if (len2 == 0f) return this;
 		float max2 = max * max;
-		if (magSq > max2) return mult((float)Math.sqrt(max2 / magSq));
+		if (len2 > max2) return mult((float)Math.sqrt(max2 / len2));
 		float min2 = min * min;
-		if (magSq < min2) return mult((float)Math.sqrt(min2 / magSq));
+		if (len2 < min2) return mult((float)Math.sqrt(min2 / len2));
 		return this;
 	}
 
-	
-	public SGVec_2f setMag (float mag) {
-		return setMagSq(mag * mag);
+	@Override
+	public SGVec_2f setMag (float len) {
+		return setMagSq(len * len);
 	}
 
-	
-	public SGVec_2f setMagSq (float magSq) {
+	@Override
+	public SGVec_2f setMagSq (float len2) {
 		float oldLen2 = magSq();
-		return (oldLen2 == 0 || oldLen2 == magSq) ? this : mult((float)Math.sqrt(magSq / oldLen2));
+		return (oldLen2 == 0 || oldLen2 == len2) ? this : mult((float)Math.sqrt(len2 / oldLen2));
 	}
 
-	/** Converts this {@code SGVec_2f} to a string in the format {@code (x,y)}.
+	/** Converts this {@code Vector2} to a string in the format {@code (x,y)}.
 	 * @return a string representation of this object. */
-	
+	@Override
 	public String toString () {
 		return "(" + x + "," + y + ")";
 	}
@@ -315,7 +306,7 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 	/** @return the angle in degrees of this vector (point) relative to the x-axis. Angles are towards the positive y-axis (typically
 	 *         counter-clockwise) and between 0 and 360. */
 	public float angle () {
-		float angle = (float)Math.atan2(y, x) * (float)MathUtils.radiansToDegrees;
+		float angle = (float)Math.atan2(y, x) * MathUtils.radiansToDegrees;
 		if (angle < 0) angle += 360;
 		return angle;
 	}
@@ -323,7 +314,7 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 	/** @return the angle in degrees of this vector (point) relative to the given vector. Angles are towards the positive y-axis
 	 *         (typically counter-clockwise.) between -180 and +180 */
 	public float angle (SGVec_2f reference) {
-		return (float)Math.atan2(crs(reference), dot(reference)) * (float)MathUtils.radiansToDegrees;
+		return (float)Math.atan2(crs(reference), dot(reference)) * MathUtils.radiansToDegrees;
 	}
 
 	/** @return the angle in radians of this vector (point) relative to the x-axis. Angles are towards the positive y-axis.
@@ -341,7 +332,7 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 	/** Sets the angle of the vector in degrees relative to the x-axis, towards the positive y-axis (typically counter-clockwise).
 	 * @param degrees The angle in degrees to set. */
 	public SGVec_2f setAngle (float degrees) {
-		return setAngleRad(degrees * degreesToRadians);
+		return setAngleRad(degrees * MathUtils.degreesToRadians);
 	}
 
 	/** Sets the angle of the vector in radians relative to the x-axis, towards the positive y-axis (typically counter-clockwise).
@@ -353,13 +344,13 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 		return this;
 	}
 
-	/** Rotates the SGVec_2f by the given angle, counter-clockwise assuming the y-axis points up.
+	/** Rotates the Vector2 by the given angle, counter-clockwise assuming the y-axis points up.
 	 * @param degrees the angle in degrees */
 	public SGVec_2f rotate (float degrees) {
-		return rotateRad(degrees * degreesToRadians);
+		return rotateRad(degrees * MathUtils.degreesToRadians);
 	}
 
-	/** Rotates the SGVec_2f by the given angle, counter-clockwise assuming the y-axis points up.
+	/** Rotates the Vector2 by the given angle, counter-clockwise assuming the y-axis points up.
 	 * @param radians the angle in radians */
 	public SGVec_2f rotateRad (float radians) {
 		float cos = (float)Math.cos(radians);
@@ -374,7 +365,7 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 		return this;
 	}
 
-	/** Rotates the SGVec_2f by 90 degrees in the specified direction, where >= 0 is counter-clockwise and < 0 is clockwise. */
+	/** Rotates the Vector2 by 90 degrees in the specified direction, where >= 0 is counter-clockwise and < 0 is clockwise. */
 	public SGVec_2f rotate90 (int dir) {
 		float x = this.x;
 		if (dir >= 0) {
@@ -387,7 +378,7 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 		return this;
 	}
 
-	
+	@Override
 	public SGVec_2f lerp (SGVec_2f target, float alpha) {
 		final float invAlpha = 1.0f - alpha;
 		this.x = (x * invAlpha) + (target.x * alpha);
@@ -395,18 +386,18 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 		return this;
 	}
 
-	
+	@Override
 	public SGVec_2f interpolate (SGVec_2f target, float alpha, Interpolation interpolation) {
 		return lerp(target, (float) interpolation.apply(alpha));
 	}
 
-/*	
-	public SGVec_2f setToRandomDirection () {
+/*	@Override
+	public Vector2 setToRandomDirection () {
 		float theta = MathUtils.random(0f, MathUtils.PI2);
 		return this.set(MathUtils.cos(theta), MathUtils.sin(theta));
 	}*/
 
-	/*
+	/*@Override
 	public int hashCode () {
 		final int prime = 31;
 		int result = 1;
@@ -415,18 +406,18 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 		return result;
 	}*/
 
-/*	
+/*	@Override
 	public boolean equals (Object obj) {
 		if (this == obj) return true;
 		if (obj == null) return false;
 		if (getClass() != obj.getClass()) return false;
-		SGVec_2f other = (SGVec_2f)obj;
+		Vector2 other = (Vector2)obj;
 		if (NumberUtils.floatToIntBits(x) != NumberUtils.floatToIntBits(other.x)) return false;
 		if (NumberUtils.floatToIntBits(y) != NumberUtils.floatToIntBits(other.y)) return false;
 		return true;
 	}*/
 
-	
+	@Override
 	public boolean epsilonEquals (SGVec_2f other, float epsilon) {
 		if (other == null) return false;
 		if (Math.abs(other.x - x) > epsilon) return false;
@@ -442,76 +433,77 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 		return true;
 	}
 
-	
+	@Override
 	public boolean isUnit () {
 		return isUnit(0.000000001f);
 	}
 
-	
+	@Override
 	public boolean isUnit (final float margin) {
 		return Math.abs(magSq() - 1f) < margin;
 	}
 
-	
+	@Override
 	public boolean isZero () {
 		return x == 0 && y == 0;
 	}
 
-	
+	@Override
 	public boolean isZero (final float margin) {
 		return magSq() < margin;
 	}
 
-	
+	@Override
 	public boolean isOnLine (SGVec_2f other) {
 		return MathUtils.isZero(x * other.y - y * other.x);
 	}
 
-	
+	@Override
 	public boolean isOnLine (SGVec_2f other, float epsilon) {
 		return MathUtils.isZero(x * other.y - y * other.x, epsilon);
 	}
 
-	
+	@Override
 	public boolean isCollinear (SGVec_2f other, float epsilon) {
 		return isOnLine(other, epsilon) && dot(other) > 0f;
 	}
 
-	
+	@Override
 	public boolean isCollinear (SGVec_2f other) {
 		return isOnLine(other) && dot(other) > 0f;
 	}
 
-	
+	@Override
 	public boolean isCollinearOpposite (SGVec_2f other, float epsilon) {
 		return isOnLine(other, epsilon) && dot(other) < 0f;
 	}
 
-	
+	@Override
 	public boolean isCollinearOpposite (SGVec_2f other) {
 		return isOnLine(other) && dot(other) < 0f;
 	}
 
-	
+	@Override
 	public boolean isPerpendicular (SGVec_2f vector) {
 		return MathUtils.isZero(dot(vector));
 	}
 
-	
+	@Override
 	public boolean isPerpendicular (SGVec_2f vector, float epsilon) {
 		return MathUtils.isZero(dot(vector), epsilon);
 	}
 
-	
+	@Override
 	public boolean hasSameDirection (SGVec_2f vector) {
 		return dot(vector) > 0;
 	}
 
-	
+	@Override
 	public boolean hasOppositeDirection (SGVec_2f vector) {
 		return dot(vector) < 0;
 	}
-	
+
+	@Override
 	public SGVec_2f setZero () {
 		this.x = 0;
 		this.y = 0;
@@ -519,26 +511,43 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 	}
 
 	@Override
+	public float getX_() {
+		return this.x;
+	}
+
+	@Override
+	public float getY_() {
+		return this.y; 
+	}
+	
+
+	@Override
 	public void setX_(float x) {
 		this.x = x;
 	}
+
 	@Override
 	public void setY_(float y) {
 		this.y = y;
 	}
+
 	@Override
-	public float getX_() {
-		return x;
-	}
-	@Override
-	public float getY_() {
-		return y;
+	public Vec2f toSGVec2f() {
+		return new SGVec_2f((float)x,(float) y);
 	}
 
 	@Override
-	public Vec2d toSGVec2d() {
-		return new SGVec_2d(x, y);
+	public SGVec_2f div(float n) {
+		x /= n;
+		y /= n;
+		return this;
 	}
 
+	@Override
+	public SGVec_2f set(float[] v) {
+		this.x = v[0];
+		this.y = v[1];		
+		return this;
+	}
 
 }

@@ -14,9 +14,10 @@
  * limitations under the License.
  ******************************************************************************/
 
-package sceneGraph.math;
+package sceneGraph.math.floatV;
 
 import java.io.Serializable;
+
 
 
 /** A 3x3 <a href="http://en.wikipedia.org/wiki/Row-major_order#Column-major_order">column major</a> matrix; useful for 2D
@@ -24,7 +25,6 @@ import java.io.Serializable;
  * 
  * @author mzechner */
 public class Matrix3f implements Serializable {
-	public static final float degreesToRadians = (float)MathUtils.degreesToRadians;
 	private static final long serialVersionUID = 7907569533774959788L;
 	public static final int M00 = 0;
 	public static final int M01 = 3;
@@ -144,7 +144,7 @@ public class Matrix3f implements Serializable {
 	 * @param degrees the angle in degrees.
 	 * @return This matrix for the purpose of chaining operations. */
 	public Matrix3f setToRotation (float degrees) {
-		return setToRotationRad(degreesToRadians * degrees);
+		return setToRotationRad(MathUtils.degreesToRadians * degrees);
 	}
 
 	/** Sets this matrix to a rotation matrix that will rotate any vector in counter-clockwise direction around the z-axis.
@@ -171,7 +171,7 @@ public class Matrix3f implements Serializable {
 	}
 
 	public Matrix3f setToRotation (SGVec_3f axis, float degrees) {
-		return setToRotation(axis, (float)MathUtils.cosDeg(degrees), (float)MathUtils.sinDeg(degrees));
+		return setToRotation(axis, MathUtils.cosDeg(degrees), MathUtils.sinDeg(degrees));
 	}
 
 	public Matrix3f setToRotation (SGVec_3f axis, float cos, float sin) {
@@ -281,11 +281,6 @@ public class Matrix3f implements Serializable {
 		return val[M00] * val[M11] * val[M22] + val[M01] * val[M12] * val[M20] + val[M02] * val[M10] * val[M21] - val[M00]
 			* val[M12] * val[M21] - val[M01] * val[M10] * val[M22] - val[M02] * val[M11] * val[M20];
 	}
-	
-	public float determinant() {
-		return det();
-	}
-	
 
 	/** Inverts this matrix given that the determinant is != 0.
 	 * @return This matrix for the purpose of chaining operations.
@@ -331,7 +326,7 @@ public class Matrix3f implements Serializable {
 	/*/** Copies the values from the provided affine matrix to this matrix. The last row is set to (0, 0, 1).
 	 * @param affine The affine matrix to copy.
 	 * @return This matrix for the purposes of chaining. 
-	public Matrix3 set (Affine2 affine) {
+	public Matrix3d set (Affine2 affine) {
 		float[] val = this.val;
 
 		val[M00] = affine.m00;
@@ -451,7 +446,7 @@ public class Matrix3f implements Serializable {
 	 * @param degrees The angle in degrees
 	 * @return This matrix for the purpose of chaining. */
 	public Matrix3f rotate (float degrees) {
-		return rotateRad(degreesToRadians * degrees);
+		return rotateRad(MathUtils.degreesToRadians * degrees);
 	}
 
 	/** Postmultiplies this matrix with a (counter-clockwise) rotation matrix. Postmultiplication is also used by OpenGL ES' 1.x
@@ -538,7 +533,7 @@ public class Matrix3f implements Serializable {
 	}
 
 	public float getRotation () {
-		return (float)MathUtils.radiansToDegrees * (float)Math.atan2(val[M10], val[M00]);
+		return MathUtils.radiansToDegrees * (float)Math.atan2(val[M10], val[M00]);
 	}
 
 	public float getRotationRad () {

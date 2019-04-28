@@ -18,6 +18,9 @@ package sceneGraph.math;
 
 import java.io.Serializable;
 
+import sceneGraph.math.floatV.SGVec_2f;
+import sceneGraph.math.floatV.Vec2f;
+
 //import com.badlogic.gdx.utils.GdxRuntimeException;
 //import com.badlogic.gdx.utils.NumberUtils;
 
@@ -529,8 +532,7 @@ public class SGVec_2d implements Serializable, Vec2d<SGVec_2d> {
 		this.y = y;
 	}
 
-	@Override
-	public Vec2f toSGVec2f() {
+	public SGVec_2f toSGVec2f() {
 		return new SGVec_2f((float)x,(float) y);
 	}
 

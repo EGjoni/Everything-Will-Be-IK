@@ -1,8 +1,8 @@
-package sceneGraph.math;
+package sceneGraph.math.floatV;
 
 import sceneGraph.IKVector;
 
-public interface Vec2f <T extends Vec2f<T>> extends Vecf<T>{
+public interface Vec2f<T extends Vec2f<T>> extends Vecf<T>{
 	
 	/** @return a copy of this vector */
 	T copy ();
@@ -50,9 +50,9 @@ public interface Vec2f <T extends Vec2f<T>> extends Vecf<T>{
 	 * vector implementation requires more than that. 
 	 * @param v
 	 */
-	public default void adoptValuesOf(Vec2d v) {
-		setX_((float)v.getX_());
-		setY_((float)v.getY_());
+	public default void adoptValuesOf(Vec2f v) {
+		setX_(v.getX_());
+		setY_(v.getY_());
 	}
 	
 	/**
@@ -62,11 +62,10 @@ public interface Vec2f <T extends Vec2f<T>> extends Vecf<T>{
 	 * vector implementation requires more than that. 
 	 * @param v
 	 */
-	public default void adoptValuesOf(Vec2f v) {
-		setX_(v.getX_());
-		setY_(v.getY_());
-	}
-	
+	public default void adoptValuesOf(Vec3f v) {
+		setX_(v.getX());
+		setY_(v.getY());
+	}	
 	
 	/**
 	 * sets this vector's x component to the input value
@@ -81,6 +80,7 @@ public interface Vec2f <T extends Vec2f<T>> extends Vecf<T>{
 	public void setY_(float y);
 	
 
+
 	/** make a copy of this vector and add the given vector to it, then return that copy.
 	 * @param v The vector
 	 * @return The resulting vector */
@@ -88,7 +88,6 @@ public interface Vec2f <T extends Vec2f<T>> extends Vecf<T>{
 		T cv = v.copy();
 		return cv.add(v);
 	};	
-
 
 
 	/** make a copy of this vector and subtract the given vector from it, then return that copy.
@@ -99,6 +98,7 @@ public interface Vec2f <T extends Vec2f<T>> extends Vecf<T>{
 		return cv.sub(v);
 	};
 
+
 	
 	/** makes a copy of this vector and multiplies it componentWise by the given vector, then returns that copy.
 	 * @param v The vector
@@ -107,6 +107,7 @@ public interface Vec2f <T extends Vec2f<T>> extends Vecf<T>{
 		T cv = v.copy();
 		return cv.mult(v);
 	};
+	
 	
 	
 	/**
@@ -119,8 +120,9 @@ public interface Vec2f <T extends Vec2f<T>> extends Vecf<T>{
 	public float getY_();
 	
 	/**
-	 * @return a copy of this Vector cast to a double precision analog.
+	 * @return a copy of this Vector cast to a single precision analog.
 	 */
-	public Vec2d toSGVec2d(); 
+	public Vec2f toSGVec2f(); 
+	
 	
 }

@@ -14,7 +14,7 @@
  * limitations under the License.
  ******************************************************************************/
 
-package sceneGraph.math;
+package sceneGraph.math.floatV;
 
 import java.io.Serializable;
 
@@ -22,12 +22,12 @@ import java.io.Serializable;
  * the {@link SGVec_3f} class it allows the chaining of methods by returning a reference to itself. For example:
  * 
  * <pre>
- * Matrix4 mat = new Matrix4().trn(position).mul(camera.combined);
+ * Matrix4f mat = new Matrix4f().trn(position).mul(camera.combined);
  * </pre>
  * 
  * @author badlogicgames@gmail.com */
 public class Matrix4f implements Serializable {
-	private static final long serialVersionUID = -2717655254359579617L;
+	private static final long serialVersionUID = -2717655254359578617L;
 	/** XX: Typically the unrotated X component for scaling, also the cosine of the angle when rotated on the Y and/or Z axis. On
 	 * Vector3 multiplication this value is multiplied with the source X component and added to the target X component. */
 	public static final int M00 = 0;
@@ -72,8 +72,8 @@ public class Matrix4f implements Serializable {
 
 	private static final float tmp[] = new float[16];
 	public final float val[] = new float[16];
-	
-	
+
+
 
 	/** Constructs an identity matrix */
 	public Matrix4f () {
@@ -128,6 +128,49 @@ public class Matrix4f implements Serializable {
 	public Matrix4f set (float[] values) {
 		System.arraycopy(values, 0, val, 0, val.length);
 		return this;
+	}
+
+	/**
+     * Copies the matrix values in the specified column into the array
+     * @param column  the matrix column
+     * @param v    the vector into which the matrix column values will be copied
+     */
+	public void getColumn(int column, float[] arrVec)
+	{
+		switch (column) {
+		case 0:
+			arrVec[0] = val[M00];
+			arrVec[1] = val[M10];
+			arrVec[2] = val[M20];
+			arrVec[3] = val[M30];
+			    break;
+                
+		case 1:
+			arrVec[0] = val[M01];
+			arrVec[1] = val[M11];
+			arrVec[2] = val[M21];
+			arrVec[3] = val[M31];
+			    break;
+                
+		case 2:
+			arrVec[0] = val[M02];
+			arrVec[1] = val[M12];
+			arrVec[2] = val[M22];
+			arrVec[3] = val[M32];
+			    break;
+                
+		case 3:
+			arrVec[0] = val[M03];
+			arrVec[1] = val[M13];
+			arrVec[2] = val[M23];
+			arrVec[3] = val[M33];
+			break;
+		}
+	}
+	
+	public void setColumn(int column, float[] v) 
+	{   
+		setColumn(column, v[0], v[1], v[2], v[3]);
 	}
 	
 	public void setColumn(int column, float x, float y, float z, float w)
@@ -187,7 +230,8 @@ public class Matrix4f implements Serializable {
 	 * @param orientation The rotation, must be normalized
 	 * @return This matrix for chaining */
 	public Matrix4f set (SGVec_3f position, Quaternionf orientation) {
-		return set(position.x, position.y, position.z, orientation.getQ1(), orientation.getQ2(), orientation.getQ3(), orientation.getQ0());
+		return set(position.x, position.y, position.z, 
+				orientation.getQ1(), orientation.getQ2(), orientation.getQ3(), orientation.getQ0());
 	}
 
 	/** Sets the matrix to a rotation matrix representing the translation and quaternion.
@@ -201,7 +245,7 @@ public class Matrix4f implements Serializable {
 	 * @param quaternionW The W component of the quaternion that is to be used to set this matrix.
 	 * @return This matrix for the purpose of chaining methods together. */
 	public Matrix4f set (float translationX, float translationY, float translationZ, float quaternionX, float quaternionY,
-		float quaternionZ, float quaternionW) {
+			float quaternionZ, float quaternionW) {
 		final float xs = quaternionX * 2f, ys = quaternionY * 2f, zs = quaternionZ * 2f;
 		final float wx = quaternionW * xs, wy = quaternionW * ys, wz = quaternionW * zs;
 		final float xx = quaternionX * xs, xy = quaternionX * ys, xz = quaternionX * zs;
@@ -235,8 +279,9 @@ public class Matrix4f implements Serializable {
 	 * @param scale The scale
 	 * @return This matrix for chaining */
 	public Matrix4f set (SGVec_3f position, Quaternionf orientation, SGVec_3f scale) {
-		return set(position.x, position.y, position.z, orientation.getQ1(), orientation.getQ2(), orientation.getQ3(), orientation.getQ0(), scale.x,
-			scale.y, scale.z);
+		return set(position.x, position.y, position.z, 
+				orientation.getQ1(), orientation.getQ2(), orientation.getQ3(), orientation.getQ0(), scale.x,
+				scale.y, scale.z);
 	}
 
 	/** Sets the matrix to a rotation matrix representing the translation and quaternion.
@@ -253,7 +298,7 @@ public class Matrix4f implements Serializable {
 	 * @param scaleZ The Z component of the scaling that is to be used to set this matrix.
 	 * @return This matrix for the purpose of chaining methods together. */
 	public Matrix4f set (float translationX, float translationY, float translationZ, float quaternionX, float quaternionY,
-		float quaternionZ, float quaternionW, float scaleX, float scaleY, float scaleZ) {
+			float quaternionZ, float quaternionW, float scaleX, float scaleY, float scaleZ) {
 		final float xs = quaternionX * 2f, ys = quaternionY * 2f, zs = quaternionZ * 2f;
 		final float wx = quaternionW * xs, wy = quaternionW * ys, wz = quaternionW * zs;
 		final float xx = quaternionX * xs, xy = quaternionX * ys, xz = quaternionX * zs;
@@ -354,6 +399,9 @@ public class Matrix4f implements Serializable {
 		mul(val, matrix.val);
 		return this;
 	}
+	
+
+
 
 	/** Premultiplies this matrix with the given matrix, storing the result in this matrix. For example:
 	 * 
@@ -421,48 +469,48 @@ public class Matrix4f implements Serializable {
 	 * @throws RuntimeException if the matrix is singular (not invertible) */
 	public Matrix4f inv () {
 		float l_det = val[M30] * val[M21] * val[M12] * val[M03] - val[M20] * val[M31] * val[M12] * val[M03] - val[M30] * val[M11]
-			* val[M22] * val[M03] + val[M10] * val[M31] * val[M22] * val[M03] + val[M20] * val[M11] * val[M32] * val[M03] - val[M10]
-			* val[M21] * val[M32] * val[M03] - val[M30] * val[M21] * val[M02] * val[M13] + val[M20] * val[M31] * val[M02] * val[M13]
-			+ val[M30] * val[M01] * val[M22] * val[M13] - val[M00] * val[M31] * val[M22] * val[M13] - val[M20] * val[M01] * val[M32]
-			* val[M13] + val[M00] * val[M21] * val[M32] * val[M13] + val[M30] * val[M11] * val[M02] * val[M23] - val[M10] * val[M31]
-			* val[M02] * val[M23] - val[M30] * val[M01] * val[M12] * val[M23] + val[M00] * val[M31] * val[M12] * val[M23] + val[M10]
-			* val[M01] * val[M32] * val[M23] - val[M00] * val[M11] * val[M32] * val[M23] - val[M20] * val[M11] * val[M02] * val[M33]
-			+ val[M10] * val[M21] * val[M02] * val[M33] + val[M20] * val[M01] * val[M12] * val[M33] - val[M00] * val[M21] * val[M12]
-			* val[M33] - val[M10] * val[M01] * val[M22] * val[M33] + val[M00] * val[M11] * val[M22] * val[M33];
+				* val[M22] * val[M03] + val[M10] * val[M31] * val[M22] * val[M03] + val[M20] * val[M11] * val[M32] * val[M03] - val[M10]
+						* val[M21] * val[M32] * val[M03] - val[M30] * val[M21] * val[M02] * val[M13] + val[M20] * val[M31] * val[M02] * val[M13]
+								+ val[M30] * val[M01] * val[M22] * val[M13] - val[M00] * val[M31] * val[M22] * val[M13] - val[M20] * val[M01] * val[M32]
+										* val[M13] + val[M00] * val[M21] * val[M32] * val[M13] + val[M30] * val[M11] * val[M02] * val[M23] - val[M10] * val[M31]
+												* val[M02] * val[M23] - val[M30] * val[M01] * val[M12] * val[M23] + val[M00] * val[M31] * val[M12] * val[M23] + val[M10]
+														* val[M01] * val[M32] * val[M23] - val[M00] * val[M11] * val[M32] * val[M23] - val[M20] * val[M11] * val[M02] * val[M33]
+																+ val[M10] * val[M21] * val[M02] * val[M33] + val[M20] * val[M01] * val[M12] * val[M33] - val[M00] * val[M21] * val[M12]
+																		* val[M33] - val[M10] * val[M01] * val[M22] * val[M33] + val[M00] * val[M11] * val[M22] * val[M33];
 		if (l_det == 0f) throw new RuntimeException("non-invertible matrix");
 		float inv_det = 1.0f / l_det;
 		tmp[M00] = val[M12] * val[M23] * val[M31] - val[M13] * val[M22] * val[M31] + val[M13] * val[M21] * val[M32] - val[M11]
-			* val[M23] * val[M32] - val[M12] * val[M21] * val[M33] + val[M11] * val[M22] * val[M33];
+				* val[M23] * val[M32] - val[M12] * val[M21] * val[M33] + val[M11] * val[M22] * val[M33];
 		tmp[M01] = val[M03] * val[M22] * val[M31] - val[M02] * val[M23] * val[M31] - val[M03] * val[M21] * val[M32] + val[M01]
-			* val[M23] * val[M32] + val[M02] * val[M21] * val[M33] - val[M01] * val[M22] * val[M33];
+				* val[M23] * val[M32] + val[M02] * val[M21] * val[M33] - val[M01] * val[M22] * val[M33];
 		tmp[M02] = val[M02] * val[M13] * val[M31] - val[M03] * val[M12] * val[M31] + val[M03] * val[M11] * val[M32] - val[M01]
-			* val[M13] * val[M32] - val[M02] * val[M11] * val[M33] + val[M01] * val[M12] * val[M33];
+				* val[M13] * val[M32] - val[M02] * val[M11] * val[M33] + val[M01] * val[M12] * val[M33];
 		tmp[M03] = val[M03] * val[M12] * val[M21] - val[M02] * val[M13] * val[M21] - val[M03] * val[M11] * val[M22] + val[M01]
-			* val[M13] * val[M22] + val[M02] * val[M11] * val[M23] - val[M01] * val[M12] * val[M23];
+				* val[M13] * val[M22] + val[M02] * val[M11] * val[M23] - val[M01] * val[M12] * val[M23];
 		tmp[M10] = val[M13] * val[M22] * val[M30] - val[M12] * val[M23] * val[M30] - val[M13] * val[M20] * val[M32] + val[M10]
-			* val[M23] * val[M32] + val[M12] * val[M20] * val[M33] - val[M10] * val[M22] * val[M33];
+				* val[M23] * val[M32] + val[M12] * val[M20] * val[M33] - val[M10] * val[M22] * val[M33];
 		tmp[M11] = val[M02] * val[M23] * val[M30] - val[M03] * val[M22] * val[M30] + val[M03] * val[M20] * val[M32] - val[M00]
-			* val[M23] * val[M32] - val[M02] * val[M20] * val[M33] + val[M00] * val[M22] * val[M33];
+				* val[M23] * val[M32] - val[M02] * val[M20] * val[M33] + val[M00] * val[M22] * val[M33];
 		tmp[M12] = val[M03] * val[M12] * val[M30] - val[M02] * val[M13] * val[M30] - val[M03] * val[M10] * val[M32] + val[M00]
-			* val[M13] * val[M32] + val[M02] * val[M10] * val[M33] - val[M00] * val[M12] * val[M33];
+				* val[M13] * val[M32] + val[M02] * val[M10] * val[M33] - val[M00] * val[M12] * val[M33];
 		tmp[M13] = val[M02] * val[M13] * val[M20] - val[M03] * val[M12] * val[M20] + val[M03] * val[M10] * val[M22] - val[M00]
-			* val[M13] * val[M22] - val[M02] * val[M10] * val[M23] + val[M00] * val[M12] * val[M23];
+				* val[M13] * val[M22] - val[M02] * val[M10] * val[M23] + val[M00] * val[M12] * val[M23];
 		tmp[M20] = val[M11] * val[M23] * val[M30] - val[M13] * val[M21] * val[M30] + val[M13] * val[M20] * val[M31] - val[M10]
-			* val[M23] * val[M31] - val[M11] * val[M20] * val[M33] + val[M10] * val[M21] * val[M33];
+				* val[M23] * val[M31] - val[M11] * val[M20] * val[M33] + val[M10] * val[M21] * val[M33];
 		tmp[M21] = val[M03] * val[M21] * val[M30] - val[M01] * val[M23] * val[M30] - val[M03] * val[M20] * val[M31] + val[M00]
-			* val[M23] * val[M31] + val[M01] * val[M20] * val[M33] - val[M00] * val[M21] * val[M33];
+				* val[M23] * val[M31] + val[M01] * val[M20] * val[M33] - val[M00] * val[M21] * val[M33];
 		tmp[M22] = val[M01] * val[M13] * val[M30] - val[M03] * val[M11] * val[M30] + val[M03] * val[M10] * val[M31] - val[M00]
-			* val[M13] * val[M31] - val[M01] * val[M10] * val[M33] + val[M00] * val[M11] * val[M33];
+				* val[M13] * val[M31] - val[M01] * val[M10] * val[M33] + val[M00] * val[M11] * val[M33];
 		tmp[M23] = val[M03] * val[M11] * val[M20] - val[M01] * val[M13] * val[M20] - val[M03] * val[M10] * val[M21] + val[M00]
-			* val[M13] * val[M21] + val[M01] * val[M10] * val[M23] - val[M00] * val[M11] * val[M23];
+				* val[M13] * val[M21] + val[M01] * val[M10] * val[M23] - val[M00] * val[M11] * val[M23];
 		tmp[M30] = val[M12] * val[M21] * val[M30] - val[M11] * val[M22] * val[M30] - val[M12] * val[M20] * val[M31] + val[M10]
-			* val[M22] * val[M31] + val[M11] * val[M20] * val[M32] - val[M10] * val[M21] * val[M32];
+				* val[M22] * val[M31] + val[M11] * val[M20] * val[M32] - val[M10] * val[M21] * val[M32];
 		tmp[M31] = val[M01] * val[M22] * val[M30] - val[M02] * val[M21] * val[M30] + val[M02] * val[M20] * val[M31] - val[M00]
-			* val[M22] * val[M31] - val[M01] * val[M20] * val[M32] + val[M00] * val[M21] * val[M32];
+				* val[M22] * val[M31] - val[M01] * val[M20] * val[M32] + val[M00] * val[M21] * val[M32];
 		tmp[M32] = val[M02] * val[M11] * val[M30] - val[M01] * val[M12] * val[M30] - val[M02] * val[M10] * val[M31] + val[M00]
-			* val[M12] * val[M31] + val[M01] * val[M10] * val[M32] - val[M00] * val[M11] * val[M32];
+				* val[M12] * val[M31] + val[M01] * val[M10] * val[M32] - val[M00] * val[M11] * val[M32];
 		tmp[M33] = val[M01] * val[M12] * val[M20] - val[M02] * val[M11] * val[M20] + val[M02] * val[M10] * val[M21] - val[M00]
-			* val[M12] * val[M21] - val[M01] * val[M10] * val[M22] + val[M00] * val[M11] * val[M22];
+				* val[M12] * val[M21] - val[M01] * val[M10] * val[M22] + val[M00] * val[M11] * val[M22];
 		val[M00] = tmp[M00] * inv_det;
 		val[M01] = tmp[M01] * inv_det;
 		val[M02] = tmp[M02] * inv_det;
@@ -482,28 +530,31 @@ public class Matrix4f implements Serializable {
 		return this;
 	}
 
+	/**
+	 * Sets the value of this matrix to the matrix inverse of the passed (user declared) matrix m1
+	 * @param m1 matrix to invert
+	 * */
+	public void toInverseOf(Matrix4f m1) {
+		inv(m1.val, val);
+	}
+
 	/** @return The determinant of this matrix */
 	public float det () {
 		return val[M30] * val[M21] * val[M12] * val[M03] - val[M20] * val[M31] * val[M12] * val[M03] - val[M30] * val[M11]
-			* val[M22] * val[M03] + val[M10] * val[M31] * val[M22] * val[M03] + val[M20] * val[M11] * val[M32] * val[M03] - val[M10]
-			* val[M21] * val[M32] * val[M03] - val[M30] * val[M21] * val[M02] * val[M13] + val[M20] * val[M31] * val[M02] * val[M13]
-			+ val[M30] * val[M01] * val[M22] * val[M13] - val[M00] * val[M31] * val[M22] * val[M13] - val[M20] * val[M01] * val[M32]
-			* val[M13] + val[M00] * val[M21] * val[M32] * val[M13] + val[M30] * val[M11] * val[M02] * val[M23] - val[M10] * val[M31]
-			* val[M02] * val[M23] - val[M30] * val[M01] * val[M12] * val[M23] + val[M00] * val[M31] * val[M12] * val[M23] + val[M10]
-			* val[M01] * val[M32] * val[M23] - val[M00] * val[M11] * val[M32] * val[M23] - val[M20] * val[M11] * val[M02] * val[M33]
-			+ val[M10] * val[M21] * val[M02] * val[M33] + val[M20] * val[M01] * val[M12] * val[M33] - val[M00] * val[M21] * val[M12]
-			* val[M33] - val[M10] * val[M01] * val[M22] * val[M33] + val[M00] * val[M11] * val[M22] * val[M33];
-	}
-	
-	/** @return The determinant of this matrix */
-	public float  determinant() {
-		return det();
+				* val[M22] * val[M03] + val[M10] * val[M31] * val[M22] * val[M03] + val[M20] * val[M11] * val[M32] * val[M03] - val[M10]
+						* val[M21] * val[M32] * val[M03] - val[M30] * val[M21] * val[M02] * val[M13] + val[M20] * val[M31] * val[M02] * val[M13]
+								+ val[M30] * val[M01] * val[M22] * val[M13] - val[M00] * val[M31] * val[M22] * val[M13] - val[M20] * val[M01] * val[M32]
+										* val[M13] + val[M00] * val[M21] * val[M32] * val[M13] + val[M30] * val[M11] * val[M02] * val[M23] - val[M10] * val[M31]
+												* val[M02] * val[M23] - val[M30] * val[M01] * val[M12] * val[M23] + val[M00] * val[M31] * val[M12] * val[M23] + val[M10]
+														* val[M01] * val[M32] * val[M23] - val[M00] * val[M11] * val[M32] * val[M23] - val[M20] * val[M11] * val[M02] * val[M33]
+																+ val[M10] * val[M21] * val[M02] * val[M33] + val[M20] * val[M01] * val[M12] * val[M33] - val[M00] * val[M21] * val[M12]
+																		* val[M33] - val[M10] * val[M01] * val[M22] * val[M33] + val[M00] * val[M11] * val[M22] * val[M33];
 	}
 
 	/** @return The determinant of the 3x3 upper left matrix */
 	public float det3x3 () {
 		return val[M00] * val[M11] * val[M22] + val[M01] * val[M12] * val[M20] + val[M02] * val[M10] * val[M21] - val[M00]
-			* val[M12] * val[M21] - val[M01] * val[M10] * val[M22] - val[M02] * val[M11] * val[M20];
+				* val[M12] * val[M21] - val[M01] * val[M10] * val[M22] - val[M02] * val[M11] * val[M20];
 	}
 
 	/** Sets the matrix to a projection matrix with a near- and far plane, a field of view in degrees and an aspect ratio. Note that
@@ -586,7 +637,7 @@ public class Matrix4f implements Serializable {
 	 * @param width The width
 	 * @param height The height
 	 * @return This matrix for the purpose of chaining methods together. */
-	public Matrix4f setToOrtho2D (float x, float y, float width, float height) {
+	public Matrix4f setToOrtho2f (float x, float y, float width, float height) {
 		setToOrtho(x, x + width, y, y + height, 0, 1);
 		return this;
 	}
@@ -601,7 +652,7 @@ public class Matrix4f implements Serializable {
 	 * @param near The near plane
 	 * @param far The far plane
 	 * @return This matrix for the purpose of chaining methods together. */
-	public Matrix4f setToOrtho2D (float x, float y, float width, float height, float near, float far) {
+	public Matrix4f setToOrtho2f (float x, float y, float width, float height, float near, float far) {
 		setToOrtho(x, x + width, y, y + height, near, far);
 		return this;
 	}
@@ -727,7 +778,7 @@ public class Matrix4f implements Serializable {
 	 * @param scalingZ The x-component of the scaling vector
 	 * @return This matrix for the purpose of chaining methods together. */
 	public Matrix4f setToTranslationAndScaling (float translationX, float translationY, float translationZ, float scalingX,
-		float scalingY, float scalingZ) {
+			float scalingY, float scalingZ) {
 		idt();
 		val[M03] = translationX;
 		val[M13] = translationY;
@@ -826,7 +877,7 @@ public class Matrix4f implements Serializable {
 		quat.setEulerAngles(yaw, pitch, roll);
 		return set(quat);
 	}
-	
+
 	/** Sets this matrix to a rotation matrix from the given euler angles.
 	 * @param yaw the yaw in radians
 	 * @param pitch the pitch in radians
@@ -923,9 +974,10 @@ public class Matrix4f implements Serializable {
 	}
 
 	public String toString () {
-		return "[" + val[M00] + "|" + val[M01] + "|" + val[M02] + "|" + val[M03] + "]\n" + "[" + val[M10] + "|" + val[M11] + "|"
-			+ val[M12] + "|" + val[M13] + "]\n" + "[" + val[M20] + "|" + val[M21] + "|" + val[M22] + "|" + val[M23] + "]\n" + "["
-			+ val[M30] + "|" + val[M31] + "|" + val[M32] + "|" + val[M33] + "]\n";
+		return "[" + val[M00] + ", " + val[M01] + ", " + val[M02] + ", " + val[M03] + "]\n" + 
+					"[" + val[M10] + ", " + val[M11] + ", "	+  val[M12] + ", " + val[M13] + "]\n" +
+					"[ "+ val[M20] + ", " + val[M21] + ", " + val[M22] + ", " + val[M23] + "]\n" +
+					"["+  val[M30] + ", " + val[M31] + ", " + val[M32] + ", " + val[M33] + "]\n";
 	}
 
 	/** Linearly interpolates between this matrix and the given matrix mixing by alpha
@@ -1095,19 +1147,19 @@ public class Matrix4f implements Serializable {
 	/** @return the scale factor on the X axis (non-negative) */
 	public float getScaleX () {
 		return (MathUtils.isZero(val[Matrix4f.M01]) && MathUtils.isZero(val[Matrix4f.M02])) ? Math.abs(val[Matrix4f.M00])
-			: (float)Math.sqrt(getScaleXSquared());
+				: (float)Math.sqrt(getScaleXSquared());
 	}
 
 	/** @return the scale factor on the Y axis (non-negative) */
 	public float getScaleY () {
 		return (MathUtils.isZero(val[Matrix4f.M10]) && MathUtils.isZero(val[Matrix4f.M12])) ? Math.abs(val[Matrix4f.M11])
-			: (float)Math.sqrt(getScaleYSquared());
+				: (float)Math.sqrt(getScaleYSquared());
 	}
 
 	/** @return the scale factor on the X axis (non-negative) */
 	public float getScaleZ () {
 		return (MathUtils.isZero(val[Matrix4f.M20]) && MathUtils.isZero(val[Matrix4f.M21])) ? Math.abs(val[Matrix4f.M22])
-			: (float)Math.sqrt(getScaleZSquared());
+				: (float)Math.sqrt(getScaleZSquared());
 	}
 
 	/** @param scale The vector which will receive the (non-negative) scale components on each axis.
@@ -1129,7 +1181,7 @@ public class Matrix4f implements Serializable {
 	#include <memory.h>
 	#include <stdio.h>
 	#include <string.h>
-	
+
 	#define M00 0
 	#define M01 4
 	#define M02 8
@@ -1146,7 +1198,7 @@ public class Matrix4f implements Serializable {
 	#define M31 7
 	#define M32 11
 	#define M33 15
-	
+
 	static inline void matrix4_mul(float* mata, float* matb) {
 		float tmp[16];
 		tmp[M00] = mata[M00] * matb[M00] + mata[M01] * matb[M10] + mata[M02] * matb[M20] + mata[M03] * matb[M30];
@@ -1167,55 +1219,55 @@ public class Matrix4f implements Serializable {
 		tmp[M33] = mata[M30] * matb[M03] + mata[M31] * matb[M13] + mata[M32] * matb[M23] + mata[M33] * matb[M33];
 		memcpy(mata, tmp, sizeof(float) *  16);
 	}
-	
+
 	static inline float matrix4_det(float* val) {
 		return val[M30] * val[M21] * val[M12] * val[M03] - val[M20] * val[M31] * val[M12] * val[M03] - val[M30] * val[M11]
-				* val[M22] * val[M03] + val[M10] * val[M31] * val[M22] * val[M03] + val[M20] * val[M11] * val[M32] * val[M03] - val[M10]
-				* val[M21] * val[M32] * val[M03] - val[M30] * val[M21] * val[M02] * val[M13] + val[M20] * val[M31] * val[M02] * val[M13]
+	 * val[M22] * val[M03] + val[M10] * val[M31] * val[M22] * val[M03] + val[M20] * val[M11] * val[M32] * val[M03] - val[M10]
+	 * val[M21] * val[M32] * val[M03] - val[M30] * val[M21] * val[M02] * val[M13] + val[M20] * val[M31] * val[M02] * val[M13]
 				+ val[M30] * val[M01] * val[M22] * val[M13] - val[M00] * val[M31] * val[M22] * val[M13] - val[M20] * val[M01] * val[M32]
-				* val[M13] + val[M00] * val[M21] * val[M32] * val[M13] + val[M30] * val[M11] * val[M02] * val[M23] - val[M10] * val[M31]
-				* val[M02] * val[M23] - val[M30] * val[M01] * val[M12] * val[M23] + val[M00] * val[M31] * val[M12] * val[M23] + val[M10]
-				* val[M01] * val[M32] * val[M23] - val[M00] * val[M11] * val[M32] * val[M23] - val[M20] * val[M11] * val[M02] * val[M33]
+	 * val[M13] + val[M00] * val[M21] * val[M32] * val[M13] + val[M30] * val[M11] * val[M02] * val[M23] - val[M10] * val[M31]
+	 * val[M02] * val[M23] - val[M30] * val[M01] * val[M12] * val[M23] + val[M00] * val[M31] * val[M12] * val[M23] + val[M10]
+	 * val[M01] * val[M32] * val[M23] - val[M00] * val[M11] * val[M32] * val[M23] - val[M20] * val[M11] * val[M02] * val[M33]
 				+ val[M10] * val[M21] * val[M02] * val[M33] + val[M20] * val[M01] * val[M12] * val[M33] - val[M00] * val[M21] * val[M12]
-				* val[M33] - val[M10] * val[M01] * val[M22] * val[M33] + val[M00] * val[M11] * val[M22] * val[M33];
+	 * val[M33] - val[M10] * val[M01] * val[M22] * val[M33] + val[M00] * val[M11] * val[M22] * val[M33];
 	}
-	
+
 	static inline bool matrix4_inv(float* val) {
 		float tmp[16];
 		float l_det = matrix4_det(val);
 		if (l_det == 0) return false;
 		tmp[M00] = val[M12] * val[M23] * val[M31] - val[M13] * val[M22] * val[M31] + val[M13] * val[M21] * val[M32] - val[M11]
-			* val[M23] * val[M32] - val[M12] * val[M21] * val[M33] + val[M11] * val[M22] * val[M33];
+	 * val[M23] * val[M32] - val[M12] * val[M21] * val[M33] + val[M11] * val[M22] * val[M33];
 		tmp[M01] = val[M03] * val[M22] * val[M31] - val[M02] * val[M23] * val[M31] - val[M03] * val[M21] * val[M32] + val[M01]
-			* val[M23] * val[M32] + val[M02] * val[M21] * val[M33] - val[M01] * val[M22] * val[M33];
+	 * val[M23] * val[M32] + val[M02] * val[M21] * val[M33] - val[M01] * val[M22] * val[M33];
 		tmp[M02] = val[M02] * val[M13] * val[M31] - val[M03] * val[M12] * val[M31] + val[M03] * val[M11] * val[M32] - val[M01]
-			* val[M13] * val[M32] - val[M02] * val[M11] * val[M33] + val[M01] * val[M12] * val[M33];
+	 * val[M13] * val[M32] - val[M02] * val[M11] * val[M33] + val[M01] * val[M12] * val[M33];
 		tmp[M03] = val[M03] * val[M12] * val[M21] - val[M02] * val[M13] * val[M21] - val[M03] * val[M11] * val[M22] + val[M01]
-			* val[M13] * val[M22] + val[M02] * val[M11] * val[M23] - val[M01] * val[M12] * val[M23];
+	 * val[M13] * val[M22] + val[M02] * val[M11] * val[M23] - val[M01] * val[M12] * val[M23];
 		tmp[M10] = val[M13] * val[M22] * val[M30] - val[M12] * val[M23] * val[M30] - val[M13] * val[M20] * val[M32] + val[M10]
-			* val[M23] * val[M32] + val[M12] * val[M20] * val[M33] - val[M10] * val[M22] * val[M33];
+	 * val[M23] * val[M32] + val[M12] * val[M20] * val[M33] - val[M10] * val[M22] * val[M33];
 		tmp[M11] = val[M02] * val[M23] * val[M30] - val[M03] * val[M22] * val[M30] + val[M03] * val[M20] * val[M32] - val[M00]
-			* val[M23] * val[M32] - val[M02] * val[M20] * val[M33] + val[M00] * val[M22] * val[M33];
+	 * val[M23] * val[M32] - val[M02] * val[M20] * val[M33] + val[M00] * val[M22] * val[M33];
 		tmp[M12] = val[M03] * val[M12] * val[M30] - val[M02] * val[M13] * val[M30] - val[M03] * val[M10] * val[M32] + val[M00]
-			* val[M13] * val[M32] + val[M02] * val[M10] * val[M33] - val[M00] * val[M12] * val[M33];
+	 * val[M13] * val[M32] + val[M02] * val[M10] * val[M33] - val[M00] * val[M12] * val[M33];
 		tmp[M13] = val[M02] * val[M13] * val[M20] - val[M03] * val[M12] * val[M20] + val[M03] * val[M10] * val[M22] - val[M00]
-			* val[M13] * val[M22] - val[M02] * val[M10] * val[M23] + val[M00] * val[M12] * val[M23];
+	 * val[M13] * val[M22] - val[M02] * val[M10] * val[M23] + val[M00] * val[M12] * val[M23];
 		tmp[M20] = val[M11] * val[M23] * val[M30] - val[M13] * val[M21] * val[M30] + val[M13] * val[M20] * val[M31] - val[M10]
-			* val[M23] * val[M31] - val[M11] * val[M20] * val[M33] + val[M10] * val[M21] * val[M33];
+	 * val[M23] * val[M31] - val[M11] * val[M20] * val[M33] + val[M10] * val[M21] * val[M33];
 		tmp[M21] = val[M03] * val[M21] * val[M30] - val[M01] * val[M23] * val[M30] - val[M03] * val[M20] * val[M31] + val[M00]
-			* val[M23] * val[M31] + val[M01] * val[M20] * val[M33] - val[M00] * val[M21] * val[M33];
+	 * val[M23] * val[M31] + val[M01] * val[M20] * val[M33] - val[M00] * val[M21] * val[M33];
 		tmp[M22] = val[M01] * val[M13] * val[M30] - val[M03] * val[M11] * val[M30] + val[M03] * val[M10] * val[M31] - val[M00]
-			* val[M13] * val[M31] - val[M01] * val[M10] * val[M33] + val[M00] * val[M11] * val[M33];
+	 * val[M13] * val[M31] - val[M01] * val[M10] * val[M33] + val[M00] * val[M11] * val[M33];
 		tmp[M23] = val[M03] * val[M11] * val[M20] - val[M01] * val[M13] * val[M20] - val[M03] * val[M10] * val[M21] + val[M00]
-			* val[M13] * val[M21] + val[M01] * val[M10] * val[M23] - val[M00] * val[M11] * val[M23];
+	 * val[M13] * val[M21] + val[M01] * val[M10] * val[M23] - val[M00] * val[M11] * val[M23];
 		tmp[M30] = val[M12] * val[M21] * val[M30] - val[M11] * val[M22] * val[M30] - val[M12] * val[M20] * val[M31] + val[M10]
-			* val[M22] * val[M31] + val[M11] * val[M20] * val[M32] - val[M10] * val[M21] * val[M32];
+	 * val[M22] * val[M31] + val[M11] * val[M20] * val[M32] - val[M10] * val[M21] * val[M32];
 		tmp[M31] = val[M01] * val[M22] * val[M30] - val[M02] * val[M21] * val[M30] + val[M02] * val[M20] * val[M31] - val[M00]
-			* val[M22] * val[M31] - val[M01] * val[M20] * val[M32] + val[M00] * val[M21] * val[M32];
+	 * val[M22] * val[M31] - val[M01] * val[M20] * val[M32] + val[M00] * val[M21] * val[M32];
 		tmp[M32] = val[M02] * val[M11] * val[M30] - val[M01] * val[M12] * val[M30] - val[M02] * val[M10] * val[M31] + val[M00]
-			* val[M12] * val[M31] + val[M01] * val[M10] * val[M32] - val[M00] * val[M11] * val[M32];
+	 * val[M12] * val[M31] + val[M01] * val[M10] * val[M32] - val[M00] * val[M11] * val[M32];
 		tmp[M33] = val[M01] * val[M12] * val[M20] - val[M02] * val[M11] * val[M20] + val[M02] * val[M10] * val[M21] - val[M00]
-			* val[M12] * val[M21] - val[M01] * val[M10] * val[M22] + val[M00] * val[M11] * val[M22];
+	 * val[M12] * val[M21] - val[M01] * val[M10] * val[M22] + val[M00] * val[M11] * val[M22];
 
 		float inv_det = 1.0f / l_det;
 		val[M00] = tmp[M00] * inv_det;
@@ -1245,7 +1297,7 @@ public class Matrix4f implements Serializable {
 		vec[1] = y;
 		vec[2] = z;
 	}
-	
+
 	static inline void matrix4_proj(float* mat, float* vec) {
 		float inv_w = 1.0f / (vec[0] * mat[M30] + vec[1] * mat[M31] + vec[2] * mat[M32] + mat[M33]);
 		float x = (vec[0] * mat[M00] + vec[1] * mat[M01] + vec[2] * mat[M02] + mat[M03]) * inv_w;
@@ -1255,7 +1307,7 @@ public class Matrix4f implements Serializable {
 		vec[1] = y;
 		vec[2] = z;
 	}
-	
+
 	static inline void matrix4_rot(float* mat, float* vec) {
 		float x = vec[0] * mat[M00] + vec[1] * mat[M01] + vec[2] * mat[M02];
 		float y = vec[0] * mat[M10] + vec[1] * mat[M11] + vec[2] * mat[M12];
@@ -1289,13 +1341,42 @@ public class Matrix4f implements Serializable {
 		tmp[M31] = mata[M30] * matb[M01] + mata[M31] * matb[M11] + mata[M32] * matb[M21] + mata[M33] * matb[M31];
 		tmp[M32] = mata[M30] * matb[M02] + mata[M31] * matb[M12] + mata[M32] * matb[M22] + mata[M33] * matb[M32];
 		tmp[M33] = mata[M30] * matb[M03] + mata[M31] * matb[M13] + mata[M32] * matb[M23] + mata[M33] * matb[M33];
-		
+
 		for(int i = 0; i<mata.length; i++) mata[i] = tmp[i];
 	}
-		/*-{ }-*/; /*
+	
+	/** Multiplies the matrix mata with matrix matb, storing the result in this matrix. The arrays are assumed to hold 4x4 column major
+	 * matrices as you can get from {@link Matrix4f#val}. This is the same as {@link Matrix4f#mul(Matrix4f)}.
+	 *
+	 * @param mata the first matrix.
+	 * @param matb the second matrix. */
+	public void setToMulOf (Matrix4f matA, Matrix4f matB) {		
+		float[] mata = matA.val; float[] matb = matB.val;
+		float[] tmp = matA != matB ? this.val : new float[16];
+		tmp[M00] = mata[M00] * matb[M00] + mata[M01] * matb[M10] + mata[M02] * matb[M20] + mata[M03] * matb[M30];
+		tmp[M01] = mata[M00] * matb[M01] + mata[M01] * matb[M11] + mata[M02] * matb[M21] + mata[M03] * matb[M31];
+		tmp[M02] = mata[M00] * matb[M02] + mata[M01] * matb[M12] + mata[M02] * matb[M22] + mata[M03] * matb[M32];
+		tmp[M03] = mata[M00] * matb[M03] + mata[M01] * matb[M13] + mata[M02] * matb[M23] + mata[M03] * matb[M33];
+		tmp[M10] = mata[M10] * matb[M00] + mata[M11] * matb[M10] + mata[M12] * matb[M20] + mata[M13] * matb[M30];
+		tmp[M11] = mata[M10] * matb[M01] + mata[M11] * matb[M11] + mata[M12] * matb[M21] + mata[M13] * matb[M31];
+		tmp[M12] = mata[M10] * matb[M02] + mata[M11] * matb[M12] + mata[M12] * matb[M22] + mata[M13] * matb[M32];
+		tmp[M13] = mata[M10] * matb[M03] + mata[M11] * matb[M13] + mata[M12] * matb[M23] + mata[M13] * matb[M33];
+		tmp[M20] = mata[M20] * matb[M00] + mata[M21] * matb[M10] + mata[M22] * matb[M20] + mata[M23] * matb[M30];
+		tmp[M21] = mata[M20] * matb[M01] + mata[M21] * matb[M11] + mata[M22] * matb[M21] + mata[M23] * matb[M31];
+		tmp[M22] = mata[M20] * matb[M02] + mata[M21] * matb[M12] + mata[M22] * matb[M22] + mata[M23] * matb[M32];
+		tmp[M23] = mata[M20] * matb[M03] + mata[M21] * matb[M13] + mata[M22] * matb[M23] + mata[M23] * matb[M33];
+		tmp[M30] = mata[M30] * matb[M00] + mata[M31] * matb[M10] + mata[M32] * matb[M20] + mata[M33] * matb[M30];
+		tmp[M31] = mata[M30] * matb[M01] + mata[M31] * matb[M11] + mata[M32] * matb[M21] + mata[M33] * matb[M31];
+		tmp[M32] = mata[M30] * matb[M02] + mata[M31] * matb[M12] + mata[M32] * matb[M22] + mata[M33] * matb[M32];
+		tmp[M33] = mata[M30] * matb[M03] + mata[M31] * matb[M13] + mata[M32] * matb[M23] + mata[M33] * matb[M33];
+
+		if(matB == matA)
+			for(int i = 0; i<mata.length; i++) this.val[i] = tmp[i];
+	}
+	/*-{ }-*/; /*
 	}
 		matrix4_mul(mata, matb);
-	*/
+	 */
 
 	/** Multiplies the vector with the given matrix. The matrix array is assumed to hold a 4x4 column major matrix as you can get
 	 * from {@link Matrix4f#val}. The vector array is assumed to hold a 3-component vector, with x being the first element, y being
@@ -1311,16 +1392,41 @@ public class Matrix4f implements Serializable {
 		vec[1] = y;
 		vec[2] = z;
 	}
-		/*-{ }-*/; /*
+	
+	
+	/** Multiplies the vector with the given matrix. The matrix array is assumed to hold a 4x4 column major matrix as you can get
+	 * from {@link Matrix4f#val}. The vector array is assumed to hold a 3-component vector, with x being the first element, y being
+	 * the second and z being the last component. The result is stored in the vector array. This is the same as
+	 * {@link SGVec_3f#mul(Matrix4f)}.
+	 * @param mat the matrix
+	 * @param vec the vector. */
+	public static  void mulVec (float[] mat, SGVec_3f vecIn, SGVec_3f vecOut) {
+		float x = vecIn.x * mat[M00] + vecIn.y * mat[M01] + vecIn.z * mat[M02] + mat[M03];
+		float y = vecIn.x * mat[M10] + vecIn.y * mat[M11] + vecIn.z * mat[M12] + mat[M13];
+		float z = vecIn.x * mat[M20] + vecIn.y * mat[M21] + vecIn.z * mat[M22] + mat[M23];
+		vecOut.x = x;
+		vecOut.y = y;
+		vecOut.z = z;
+	}
+	
+	
+	/**Transforms the vector by this matrix and stores the result in the vector
+	 * {@link SGVec_3f#mul(Matrix4f)}.
+	 * @param mat the matrix
+	 * @param vec the vector. */
+	public  void transform (SGVec_3f input, SGVec_3f output) {
+		mulVec(this.val, input, output);
+	}
+	/*-{ }-*/; /*
 	}
 		matrix4_mulVec(mat, vec);
-	*/
+	 */
 
 	/** Multiplies the vectors with the given matrix. The matrix array is assumed to hold a 4x4 column major matrix as you can get
-	 * from {@link Matrix4#val}. The vectors array is assumed to hold 3-component vectors. Offset specifies the offset into the
+	 * from {@link Matrix4f#val}. The vectors array is assumed to hold 3-component vectors. Offset specifies the offset into the
 	 * array where the x-component of the first vector is located. The numVecs parameter specifies the number of vectors stored in
 	 * the vectors array. The stride parameter specifies the number of floats between subsequent vectors and must be >= 3. This is
-	 * the same as {@link Vector3#mul(Matrix4)} applied to multiple vectors.
+	 * the same as {@link Vector3#mul(Matrix4f)} applied to multiple vectors.
 	 * 
 	 * @param mat the matrix
 	 * @param vecs the vectors
@@ -1328,13 +1434,13 @@ public class Matrix4f implements Serializable {
 	 * @param numVecs the number of vectors
 	 * @param stride the stride between vectors in floats */
 	//public static native void mulVec (float[] mat, float[] vecs, int offset, int numVecs, int stride) /*-{ }-*/; 
-		/*
+	/*
 		float* vecPtr = vecs + offset;
 		for(int i = 0; i < numVecs; i++) {
 			matrix4_mulVec(mat, vecPtr);
 			vecPtr += stride;
 		}
-	*/
+	 */
 
 	/** Multiplies the vector with the given matrix, performing a division by w. The matrix array is assumed to hold a 4x4 column
 	 * major matrix as you can get from {@link Matrix4f#val}. The vector array is assumed to hold a 3-component vector, with x being
@@ -1351,16 +1457,16 @@ public class Matrix4f implements Serializable {
 		vec[1] = y;
 		vec[2] = z;
 	}
-		/*-{ }-*/; /*
+	/*-{ }-*/; /*
 	}
 		matrix4_proj(mat, vec);
-	*/
+	 */
 
 	/** Multiplies the vectors with the given matrix, , performing a division by w. The matrix array is assumed to hold a 4x4 column
-	 * major matrix as you can get from {@link Matrix4#val}. The vectors array is assumed to hold 3-component vectors. Offset
+	 * major matrix as you can get from {@link Matrix4f#val}. The vectors array is assumed to hold 3-component vectors. Offset
 	 * specifies the offset into the array where the x-component of the first vector is located. The numVecs parameter specifies
 	 * the number of vectors stored in the vectors array. The stride parameter specifies the number of floats between subsequent
-	 * vectors and must be >= 3. This is the same as {@link Vector3#prj(Matrix4)} applied to multiple vectors.
+	 * vectors and must be >= 3. This is the same as {@link Vector3#prj(Matrix4f)} applied to multiple vectors.
 	 * 
 	 * @param mat the matrix
 	 * @param vecs the vectors
@@ -1374,7 +1480,7 @@ public class Matrix4f implements Serializable {
 			matrix4_proj(mat, vecPtr);
 			vecPtr += stride;
 		}
-	*/
+	 */
 
 	/** Multiplies the vector with the top most 3x3 sub-matrix of the given matrix. The matrix array is assumed to hold a 4x4 column
 	 * major matrix as you can get from {@link Matrix4f#val}. The vector array is assumed to hold a 3-component vector, with x being
@@ -1389,18 +1495,18 @@ public class Matrix4f implements Serializable {
 		vec[0] = x;
 		vec[1] = y;
 		vec[2] = z;
-	
+
 	}
-		/*-{ }-*/; /*
+	/*-{ }-*/; /*
 	}
 		matrix4_rot(mat, vec);
-	*/
+	 */
 
 	/** Multiplies the vectors with the top most 3x3 sub-matrix of the given matrix. The matrix array is assumed to hold a 4x4
-	 * column major matrix as you can get from {@link Matrix4#val}. The vectors array is assumed to hold 3-component vectors.
+	 * column major matrix as you can get from {@link Matrix4f#val}. The vectors array is assumed to hold 3-component vectors.
 	 * Offset specifies the offset into the array where the x-component of the first vector is located. The numVecs parameter
 	 * specifies the number of vectors stored in the vectors array. The stride parameter specifies the number of floats between
-	 * subsequent vectors and must be >= 3. This is the same as {@link Vector3#rot(Matrix4)} applied to multiple vectors.
+	 * subsequent vectors and must be >= 3. This is the same as {@link Vector3#rot(Matrix4f)} applied to multiple vectors.
 	 * 
 	 * @param mat the matrix
 	 * @param vecs the vectors
@@ -1408,13 +1514,13 @@ public class Matrix4f implements Serializable {
 	 * @param numVecs the number of vectors
 	 * @param stride the stride between vectors in floats */
 	//public static  void rot (float[] mat, float[] vecs, int offset, int numVecs, int stride) /*-{ }-*/; 
-		/*
+	/*
 		float* vecPtr = vecs + offset;
 		for(int i = 0; i < numVecs; i++) {
 			matrix4_rot(mat, vecPtr);
 			vecPtr += stride;
 		}
-	*/
+	 */
 
 	/** Computes the inverse of the given matrix. The matrix array is assumed to hold a 4x4 column major matrix as you can get from
 	 * {@link Matrix4f#val}.
@@ -1425,37 +1531,37 @@ public class Matrix4f implements Serializable {
 		float l_det = det(val);
 		if (l_det == 0) return false;
 		tmp[M00] = val[M12] * val[M23] * val[M31] - val[M13] * val[M22] * val[M31] + val[M13] * val[M21] * val[M32] - val[M11]
-			* val[M23] * val[M32] - val[M12] * val[M21] * val[M33] + val[M11] * val[M22] * val[M33];
+				* val[M23] * val[M32] - val[M12] * val[M21] * val[M33] + val[M11] * val[M22] * val[M33];
 		tmp[M01] = val[M03] * val[M22] * val[M31] - val[M02] * val[M23] * val[M31] - val[M03] * val[M21] * val[M32] + val[M01]
-			* val[M23] * val[M32] + val[M02] * val[M21] * val[M33] - val[M01] * val[M22] * val[M33];
+				* val[M23] * val[M32] + val[M02] * val[M21] * val[M33] - val[M01] * val[M22] * val[M33];
 		tmp[M02] = val[M02] * val[M13] * val[M31] - val[M03] * val[M12] * val[M31] + val[M03] * val[M11] * val[M32] - val[M01]
-			* val[M13] * val[M32] - val[M02] * val[M11] * val[M33] + val[M01] * val[M12] * val[M33];
+				* val[M13] * val[M32] - val[M02] * val[M11] * val[M33] + val[M01] * val[M12] * val[M33];
 		tmp[M03] = val[M03] * val[M12] * val[M21] - val[M02] * val[M13] * val[M21] - val[M03] * val[M11] * val[M22] + val[M01]
-			* val[M13] * val[M22] + val[M02] * val[M11] * val[M23] - val[M01] * val[M12] * val[M23];
+				* val[M13] * val[M22] + val[M02] * val[M11] * val[M23] - val[M01] * val[M12] * val[M23];
 		tmp[M10] = val[M13] * val[M22] * val[M30] - val[M12] * val[M23] * val[M30] - val[M13] * val[M20] * val[M32] + val[M10]
-			* val[M23] * val[M32] + val[M12] * val[M20] * val[M33] - val[M10] * val[M22] * val[M33];
+				* val[M23] * val[M32] + val[M12] * val[M20] * val[M33] - val[M10] * val[M22] * val[M33];
 		tmp[M11] = val[M02] * val[M23] * val[M30] - val[M03] * val[M22] * val[M30] + val[M03] * val[M20] * val[M32] - val[M00]
-			* val[M23] * val[M32] - val[M02] * val[M20] * val[M33] + val[M00] * val[M22] * val[M33];
+				* val[M23] * val[M32] - val[M02] * val[M20] * val[M33] + val[M00] * val[M22] * val[M33];
 		tmp[M12] = val[M03] * val[M12] * val[M30] - val[M02] * val[M13] * val[M30] - val[M03] * val[M10] * val[M32] + val[M00]
-			* val[M13] * val[M32] + val[M02] * val[M10] * val[M33] - val[M00] * val[M12] * val[M33];
+				* val[M13] * val[M32] + val[M02] * val[M10] * val[M33] - val[M00] * val[M12] * val[M33];
 		tmp[M13] = val[M02] * val[M13] * val[M20] - val[M03] * val[M12] * val[M20] + val[M03] * val[M10] * val[M22] - val[M00]
-			* val[M13] * val[M22] - val[M02] * val[M10] * val[M23] + val[M00] * val[M12] * val[M23];
+				* val[M13] * val[M22] - val[M02] * val[M10] * val[M23] + val[M00] * val[M12] * val[M23];
 		tmp[M20] = val[M11] * val[M23] * val[M30] - val[M13] * val[M21] * val[M30] + val[M13] * val[M20] * val[M31] - val[M10]
-			* val[M23] * val[M31] - val[M11] * val[M20] * val[M33] + val[M10] * val[M21] * val[M33];
+				* val[M23] * val[M31] - val[M11] * val[M20] * val[M33] + val[M10] * val[M21] * val[M33];
 		tmp[M21] = val[M03] * val[M21] * val[M30] - val[M01] * val[M23] * val[M30] - val[M03] * val[M20] * val[M31] + val[M00]
-			* val[M23] * val[M31] + val[M01] * val[M20] * val[M33] - val[M00] * val[M21] * val[M33];
+				* val[M23] * val[M31] + val[M01] * val[M20] * val[M33] - val[M00] * val[M21] * val[M33];
 		tmp[M22] = val[M01] * val[M13] * val[M30] - val[M03] * val[M11] * val[M30] + val[M03] * val[M10] * val[M31] - val[M00]
-			* val[M13] * val[M31] - val[M01] * val[M10] * val[M33] + val[M00] * val[M11] * val[M33];
+				* val[M13] * val[M31] - val[M01] * val[M10] * val[M33] + val[M00] * val[M11] * val[M33];
 		tmp[M23] = val[M03] * val[M11] * val[M20] - val[M01] * val[M13] * val[M20] - val[M03] * val[M10] * val[M21] + val[M00]
-			* val[M13] * val[M21] + val[M01] * val[M10] * val[M23] - val[M00] * val[M11] * val[M23];
+				* val[M13] * val[M21] + val[M01] * val[M10] * val[M23] - val[M00] * val[M11] * val[M23];
 		tmp[M30] = val[M12] * val[M21] * val[M30] - val[M11] * val[M22] * val[M30] - val[M12] * val[M20] * val[M31] + val[M10]
-			* val[M22] * val[M31] + val[M11] * val[M20] * val[M32] - val[M10] * val[M21] * val[M32];
+				* val[M22] * val[M31] + val[M11] * val[M20] * val[M32] - val[M10] * val[M21] * val[M32];
 		tmp[M31] = val[M01] * val[M22] * val[M30] - val[M02] * val[M21] * val[M30] + val[M02] * val[M20] * val[M31] - val[M00]
-			* val[M22] * val[M31] - val[M01] * val[M20] * val[M32] + val[M00] * val[M21] * val[M32];
+				* val[M22] * val[M31] - val[M01] * val[M20] * val[M32] + val[M00] * val[M21] * val[M32];
 		tmp[M32] = val[M02] * val[M11] * val[M30] - val[M01] * val[M12] * val[M30] - val[M02] * val[M10] * val[M31] + val[M00]
-			* val[M12] * val[M31] + val[M01] * val[M10] * val[M32] - val[M00] * val[M11] * val[M32];
+				* val[M12] * val[M31] + val[M01] * val[M10] * val[M32] - val[M00] * val[M11] * val[M32];
 		tmp[M33] = val[M01] * val[M12] * val[M20] - val[M02] * val[M11] * val[M20] + val[M02] * val[M10] * val[M21] - val[M00]
-			* val[M12] * val[M21] - val[M01] * val[M10] * val[M22] + val[M00] * val[M11] * val[M22];
+				* val[M12] * val[M21] - val[M01] * val[M10] * val[M22] + val[M00] * val[M11] * val[M22];
 
 		float inv_det = 1.0f / l_det;
 		val[M00] = tmp[M00] * inv_det;
@@ -1476,10 +1582,74 @@ public class Matrix4f implements Serializable {
 		val[M33] = tmp[M33] * inv_det;
 		return true;
 	}
-		/*-{ }-*/; /*
+
+	/** Computes the inverse of m1, and stores the value in storeIn. The matrix array is assumed to hold a 4x4 column major matrix as you can get from
+	 * {@link Matrix4f#val}.
+	 * @param values the matrix values.
+	 * @return false in case the inverse could not be calculated, true otherwise. */
+	public static  boolean inv (float[] m1, float[] storeIn) {
+		float[] tmp = storeIn; 
+		float[] val = m1; 
+		float l_det = det(val);
+		if (l_det == 0) return false;
+		tmp[M00] = val[M12] * val[M23] * val[M31] - val[M13] * val[M22] * val[M31] + val[M13] * val[M21] * val[M32] - val[M11]
+				* val[M23] * val[M32] - val[M12] * val[M21] * val[M33] + val[M11] * val[M22] * val[M33];
+		tmp[M01] = val[M03] * val[M22] * val[M31] - val[M02] * val[M23] * val[M31] - val[M03] * val[M21] * val[M32] + val[M01]
+				* val[M23] * val[M32] + val[M02] * val[M21] * val[M33] - val[M01] * val[M22] * val[M33];
+		tmp[M02] = val[M02] * val[M13] * val[M31] - val[M03] * val[M12] * val[M31] + val[M03] * val[M11] * val[M32] - val[M01]
+				* val[M13] * val[M32] - val[M02] * val[M11] * val[M33] + val[M01] * val[M12] * val[M33];
+		tmp[M03] = val[M03] * val[M12] * val[M21] - val[M02] * val[M13] * val[M21] - val[M03] * val[M11] * val[M22] + val[M01]
+				* val[M13] * val[M22] + val[M02] * val[M11] * val[M23] - val[M01] * val[M12] * val[M23];
+		tmp[M10] = val[M13] * val[M22] * val[M30] - val[M12] * val[M23] * val[M30] - val[M13] * val[M20] * val[M32] + val[M10]
+				* val[M23] * val[M32] + val[M12] * val[M20] * val[M33] - val[M10] * val[M22] * val[M33];
+		tmp[M11] = val[M02] * val[M23] * val[M30] - val[M03] * val[M22] * val[M30] + val[M03] * val[M20] * val[M32] - val[M00]
+				* val[M23] * val[M32] - val[M02] * val[M20] * val[M33] + val[M00] * val[M22] * val[M33];
+		tmp[M12] = val[M03] * val[M12] * val[M30] - val[M02] * val[M13] * val[M30] - val[M03] * val[M10] * val[M32] + val[M00]
+				* val[M13] * val[M32] + val[M02] * val[M10] * val[M33] - val[M00] * val[M12] * val[M33];
+		tmp[M13] = val[M02] * val[M13] * val[M20] - val[M03] * val[M12] * val[M20] + val[M03] * val[M10] * val[M22] - val[M00]
+				* val[M13] * val[M22] - val[M02] * val[M10] * val[M23] + val[M00] * val[M12] * val[M23];
+		tmp[M20] = val[M11] * val[M23] * val[M30] - val[M13] * val[M21] * val[M30] + val[M13] * val[M20] * val[M31] - val[M10]
+				* val[M23] * val[M31] - val[M11] * val[M20] * val[M33] + val[M10] * val[M21] * val[M33];
+		tmp[M21] = val[M03] * val[M21] * val[M30] - val[M01] * val[M23] * val[M30] - val[M03] * val[M20] * val[M31] + val[M00]
+				* val[M23] * val[M31] + val[M01] * val[M20] * val[M33] - val[M00] * val[M21] * val[M33];
+		tmp[M22] = val[M01] * val[M13] * val[M30] - val[M03] * val[M11] * val[M30] + val[M03] * val[M10] * val[M31] - val[M00]
+				* val[M13] * val[M31] - val[M01] * val[M10] * val[M33] + val[M00] * val[M11] * val[M33];
+		tmp[M23] = val[M03] * val[M11] * val[M20] - val[M01] * val[M13] * val[M20] - val[M03] * val[M10] * val[M21] + val[M00]
+				* val[M13] * val[M21] + val[M01] * val[M10] * val[M23] - val[M00] * val[M11] * val[M23];
+		tmp[M30] = val[M12] * val[M21] * val[M30] - val[M11] * val[M22] * val[M30] - val[M12] * val[M20] * val[M31] + val[M10]
+				* val[M22] * val[M31] + val[M11] * val[M20] * val[M32] - val[M10] * val[M21] * val[M32];
+		tmp[M31] = val[M01] * val[M22] * val[M30] - val[M02] * val[M21] * val[M30] + val[M02] * val[M20] * val[M31] - val[M00]
+				* val[M22] * val[M31] - val[M01] * val[M20] * val[M32] + val[M00] * val[M21] * val[M32];
+		tmp[M32] = val[M02] * val[M11] * val[M30] - val[M01] * val[M12] * val[M30] - val[M02] * val[M10] * val[M31] + val[M00]
+				* val[M12] * val[M31] + val[M01] * val[M10] * val[M32] - val[M00] * val[M11] * val[M32];
+		tmp[M33] = val[M01] * val[M12] * val[M20] - val[M02] * val[M11] * val[M20] + val[M02] * val[M10] * val[M21] - val[M00]
+				* val[M12] * val[M21] - val[M01] * val[M10] * val[M22] + val[M00] * val[M11] * val[M22];
+
+		float inv_det = 1.0f / l_det;
+		storeIn[M00] = tmp[M00] * inv_det;
+		storeIn[M01] = tmp[M01] * inv_det;
+		storeIn[M02] = tmp[M02] * inv_det;
+		storeIn[M03] = tmp[M03] * inv_det;
+		storeIn[M10] = tmp[M10] * inv_det;
+		storeIn[M11] = tmp[M11] * inv_det;
+		storeIn[M12] = tmp[M12] * inv_det;
+		storeIn[M13] = tmp[M13] * inv_det;
+		storeIn[M20] = tmp[M20] * inv_det;
+		storeIn[M21] = tmp[M21] * inv_det;
+		storeIn[M22] = tmp[M22] * inv_det;
+		storeIn[M23] = tmp[M23] * inv_det;
+		storeIn[M30] = tmp[M30] * inv_det;
+		storeIn[M31] = tmp[M31] * inv_det;
+		storeIn[M32] = tmp[M32] * inv_det;
+		storeIn[M33] = tmp[M33] * inv_det;
+		return true;
+	}
+
+
+	/*-{ }-*/; /*
 	}
 		return matrix4_inv(values);
-	*/
+	 */
 
 	/** Computes the determinante of the given matrix. The matrix array is assumed to hold a 4x4 column major matrix as you can get
 	 * from {@link Matrix4f#val}.
@@ -1488,18 +1658,23 @@ public class Matrix4f implements Serializable {
 	public static  float det (float[] val) {
 		return val[M30] * val[M21] * val[M12] * val[M03] - val[M20] * val[M31] * val[M12] * val[M03] - val[M30] * val[M11]
 				* val[M22] * val[M03] + val[M10] * val[M31] * val[M22] * val[M03] + val[M20] * val[M11] * val[M32] * val[M03] - val[M10]
-				* val[M21] * val[M32] * val[M03] - val[M30] * val[M21] * val[M02] * val[M13] + val[M20] * val[M31] * val[M02] * val[M13]
-				+ val[M30] * val[M01] * val[M22] * val[M13] - val[M00] * val[M31] * val[M22] * val[M13] - val[M20] * val[M01] * val[M32]
-				* val[M13] + val[M00] * val[M21] * val[M32] * val[M13] + val[M30] * val[M11] * val[M02] * val[M23] - val[M10] * val[M31]
-				* val[M02] * val[M23] - val[M30] * val[M01] * val[M12] * val[M23] + val[M00] * val[M31] * val[M12] * val[M23] + val[M10]
-				* val[M01] * val[M32] * val[M23] - val[M00] * val[M11] * val[M32] * val[M23] - val[M20] * val[M11] * val[M02] * val[M33]
-				+ val[M10] * val[M21] * val[M02] * val[M33] + val[M20] * val[M01] * val[M12] * val[M33] - val[M00] * val[M21] * val[M12]
-				* val[M33] - val[M10] * val[M01] * val[M22] * val[M33] + val[M00] * val[M11] * val[M22] * val[M33];
+						* val[M21] * val[M32] * val[M03] - val[M30] * val[M21] * val[M02] * val[M13] + val[M20] * val[M31] * val[M02] * val[M13]
+								+ val[M30] * val[M01] * val[M22] * val[M13] - val[M00] * val[M31] * val[M22] * val[M13] - val[M20] * val[M01] * val[M32]
+										* val[M13] + val[M00] * val[M21] * val[M32] * val[M13] + val[M30] * val[M11] * val[M02] * val[M23] - val[M10] * val[M31]
+												* val[M02] * val[M23] - val[M30] * val[M01] * val[M12] * val[M23] + val[M00] * val[M31] * val[M12] * val[M23] + val[M10]
+														* val[M01] * val[M32] * val[M23] - val[M00] * val[M11] * val[M32] * val[M23] - val[M20] * val[M11] * val[M02] * val[M33]
+																+ val[M10] * val[M21] * val[M02] * val[M33] + val[M20] * val[M01] * val[M12] * val[M33] - val[M00] * val[M21] * val[M12]
+																		* val[M33] - val[M10] * val[M01] * val[M22] * val[M33] + val[M00] * val[M11] * val[M22] * val[M33];
 	}
-		/*-{ }-*/; /*
+	
+	/** @return The determinant of this matrix */
+	public float  determinant() {
+		return det();
+	}
+	/*-{ }-*/; /*
 	}
 		return matrix4_det(values);
-	*/
+	 */
 
 	// @on
 	/** Postmultiplies this matrix by a translation matrix. Postmultiplication is also used by OpenGL ES'
@@ -1655,7 +1830,7 @@ public class Matrix4f implements Serializable {
 	/** @return True if this matrix has any rotation or scaling, false otherwise */
 	public boolean hasRotationOrScaling () {
 		return !(MathUtils.isEqual(val[M00], 1) && MathUtils.isEqual(val[M11], 1) && MathUtils.isEqual(val[M22], 1)
-			&& MathUtils.isZero(val[M01]) && MathUtils.isZero(val[M02]) && MathUtils.isZero(val[M10]) && MathUtils.isZero(val[M12])
-			&& MathUtils.isZero(val[M20]) && MathUtils.isZero(val[M21]));
+				&& MathUtils.isZero(val[M01]) && MathUtils.isZero(val[M02]) && MathUtils.isZero(val[M10]) && MathUtils.isZero(val[M12])
+				&& MathUtils.isZero(val[M20]) && MathUtils.isZero(val[M21]));
 	}
 }
