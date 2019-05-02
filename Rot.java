@@ -23,9 +23,9 @@ package sceneGraph;
 import org.apache.commons.math3.complex.*;
 
 import data.JSONArray;
-import sceneGraph.math.SGVec_3d;
 import sceneGraph.math.RotationOrder;
-import sceneGraph.math.SGVec_3d;
+import sceneGraph.math.doubleV.SGVec_3d;
+import sceneGraph.math.doubleV.sgRayd;
 import sceneGraph.math.floatV.SGVec_3f;
 
 public class Rot {
@@ -200,24 +200,24 @@ public class Rot {
 		return new Rot(new MRotation(r.getQ0(), r.getQ1(), r.getQ2(), r.getQ3(), true));
 	}
 
-	public sgRay applyToCopy(sgRay rIn) {
+	public sgRayd applyToCopy(sgRayd rIn) {
 		workingInput[0] = rIn.p2().x - rIn.p1().x;
 		workingInput[1] = rIn.p2().y - rIn.p1().y; 
 		workingInput[2] = rIn.p2().z - rIn.p1().z;
 		
 		this.rotation.applyTo(workingInput, workingOutput);
-		sgRay result = rIn.copy();
+		sgRayd result = rIn.copy();
 		result.heading(workingOutput);
 		return result;
 	}
 
-	public sgRay applyInverseTo(sgRay rIn) {
+	public sgRayd applyInverseTo(sgRayd rIn) {
 		workingInput[0] = rIn.p2().x - rIn.p1().x;
 		workingInput[1] = rIn.p2().y - rIn.p1().y; 
 		workingInput[2] = rIn.p2().z - rIn.p1().z;		
 
 		this.rotation.applyInverseTo(workingInput, workingOutput);
-		sgRay result = rIn.copy();
+		sgRayd result = rIn.copy();
 		result.p2().add(workingOutput);
 		return result;
 	}

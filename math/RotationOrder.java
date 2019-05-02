@@ -1,6 +1,8 @@
 package sceneGraph.math;
 
 import sceneGraph.IKVector;
+import sceneGraph.math.doubleV.SGVec_3d;
+import sceneGraph.math.doubleV.Vec3d;
 
 public final class RotationOrder {
 	

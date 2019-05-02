@@ -1,4 +1,4 @@
-package sceneGraph.math;
+package sceneGraph.math.doubleV;
 
 import data.CanLoad;
 import data.JSONArray;

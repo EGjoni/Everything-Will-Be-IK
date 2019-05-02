@@ -1,4 +1,4 @@
-package sceneGraph.math;
+package sceneGraph.math.doubleV;
 
 import sceneGraph.IKVector;
 import sceneGraph.math.floatV.SGVec_2f;

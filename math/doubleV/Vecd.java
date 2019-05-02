@@ -14,8 +14,10 @@
  * limitations under the License.
  ******************************************************************************/
 
-package sceneGraph.math;
+package sceneGraph.math.doubleV;
 
+import sceneGraph.math.Interpolation;
+import sceneGraph.math.Vec;
 
 /** Encapsulates a general vector. Allows chaining operations by returning a reference to itself in all modification methods. See
  * {@link SGVec_2d} and {@link SGVec_3d} for specific implementations.
