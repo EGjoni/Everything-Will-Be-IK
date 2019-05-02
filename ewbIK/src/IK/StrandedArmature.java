@@ -2,7 +2,7 @@ package IK;
 
 import java.util.*;
 import sceneGraph.*;
-import sceneGraph.math.SGVec_3d;
+import sceneGraph.math.doubleV.SGVec_3d;
 
 public class StrandedArmature
 {

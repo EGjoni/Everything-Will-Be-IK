@@ -4,7 +4,7 @@ import data.CanLoad;
 import data.JSONArray;
 import data.JSONObject;
 import sceneGraph.IKVector;
-import sceneGraph.math.Vec3d;
+import sceneGraph.math.doubleV.Vec3d;
 
 public interface Vec3f<T extends Vec3f<T>> extends Vecf<T> {
 		

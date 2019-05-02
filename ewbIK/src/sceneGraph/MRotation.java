@@ -15,8 +15,7 @@ import org.apache.commons.math3.util.FastMath;
 import org.apache.commons.math3.util.MathArrays;
 
 import sceneGraph.math.RotationOrder;
-import sceneGraph.math.SGVec_3d;
-import sceneGraph.math.SGVec_3d ;
+import sceneGraph.math.doubleV.SGVec_3d;
 import sceneGraph.numerical.Precision;
 
 

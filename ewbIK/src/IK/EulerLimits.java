@@ -5,7 +5,7 @@ import sceneGraph.AbstractAxes;
 import sceneGraph.IKVector;
 import sceneGraph.MRotation;
 import sceneGraph.math.RotationOrder;
-import sceneGraph.math.SGVec_3d;
+import sceneGraph.math.doubleV.SGVec_3d;
 
 public class EulerLimits implements Constraint {
 	

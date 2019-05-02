@@ -4,14 +4,19 @@
 package IK;
 import java.util.ArrayList;
 
+import data.EWBIKLoader;
+import data.EWBIKSaver;
+import data.JSONObject;
+import data.Saveable;
 import sceneGraph.*;
-import sceneGraph.math.SGVec_3d;
-import sceneGraph.math.Vec3d;
+import sceneGraph.math.doubleV.SGVec_3d;
+import sceneGraph.math.doubleV.Vec3d;
+import sceneGraph.math.doubleV.sgRayd;
 /**
  * @author Eron
  *
  */
-public abstract class AbstractKusudama implements Constraint{
+public abstract class AbstractKusudama implements Constraint, Saveable {
 
 
 	protected AbstractAxes limitingAxes; 
@@ -107,7 +112,7 @@ public abstract class AbstractKusudama implements Constraint{
 				newY = new SGVec_3d(0,1d,0);
 			}
 
-			sgRay newYRay = new sgRay(new SGVec_3d(0,0,0), newY);
+			sgRayd newYRay = new sgRayd(new SGVec_3d(0,0,0), newY);
 
 			Rot oldYtoNewY = new Rot(limitingAxes.y_().heading(), originalLimitingAxes.getGlobalOf(newYRay).heading());
 			limitingAxes.rotateBy(oldYtoNewY);
@@ -330,8 +335,8 @@ public abstract class AbstractKusudama implements Constraint{
 	}
 
 
-	sgRay boneRay = new sgRay(new SGVec_3d(), new SGVec_3d());
-	sgRay constrainedRay = new sgRay(new SGVec_3d(), new SGVec_3d());
+	sgRayd boneRay = new sgRayd(new SGVec_3d(), new SGVec_3d());
+	sgRayd constrainedRay = new sgRayd(new SGVec_3d(), new SGVec_3d());
 	Rot rectifiedRot = new Rot(MRotation.IDENTITY);
 	/**
 	 * Snaps the bone this KusudamaExample is constraining to be within the KusudamaExample's orientational and axial limits. 
@@ -423,7 +428,7 @@ public abstract class AbstractKusudama implements Constraint{
 		Rot naiveRot = new Rot(boneRay.heading(), constrainedRay.heading());
 
 		SGVec_3d pointInSoftBound = pointInSoftBound(boneRay.p2(), constrainedRay.p2(), limitingAxes);
-		sgRay resultRay = new sgRay(limitingAxes.origin_(), pointInSoftBound); 
+		sgRayd resultRay = new sgRayd(limitingAxes.origin_(), pointInSoftBound); 
 		resultRay.setP2(resultRay.getScaledTo(attachedTo.getBoneHeight()));
 		Rot rectifiedRot = new Rot(boneRay.heading(), resultRay.heading());
 		//if(resultAxes != targetBoneAxes) 
@@ -960,6 +965,42 @@ public abstract class AbstractKusudama implements Constraint{
 
 	public ArrayList<? extends AbstractLimitCone> getLimitCones() {
 		return this.limitCones;
+	}
+	
+	@Override
+	public void makeSaveable() {
+		EWBIKSaver.addToSaveState(this);
+		for(AbstractLimitCone lc : limitCones) {
+			lc.makeSaveable();
+		}
+	}
+	
+	@Override
+	public JSONObject getSaveJSON() {
+		JSONObject saveJSON = new JSONObject(); 
+		saveJSON.setString("identityHash", this.getIdentityHash());
+		saveJSON.setString("limitAxes", limitingAxes().getIdentityHash()); 
+		saveJSON.setString("attachedTo", attachedTo().getIdentityHash());
+		saveJSON.setJSONArray("limitCones", EWBIKSaver.arrayListToJSONArray(limitCones));
+		saveJSON.setDouble("minAxialAngle", minAxialAngle); 
+		saveJSON.setDouble("axialRange", range);
+		saveJSON.setBoolean("axiallyConstrained", this.axiallyConstrained);
+		saveJSON.setBoolean("orientationallyConstrained", this.orientationallyConstrained);
+		return saveJSON;
+	}
+	
+	
+	public void loadFromJSONObject(JSONObject j) {
+		this.limitingAxes = EWBIKLoader.getObjectFor(limitingAxes().getClass(), j, j.getString("identityHash"));
+		this.attachedTo = EWBIKLoader.getObjectFor(attachedTo().getClass(), j, j.getString("attachedTo"));
+		
+		limitCones = new ArrayList<>();
+		EWBIKLoader.arrayListFromJSONArray(j.getJSONArray("limitCones"), limitCones, AbstractLimitCone.class);
+		
+		this.minAxialAngle = j.getDouble("minAxialAngle");
+		this.range = j.getDouble("axialRange");
+		this.axiallyConstrained = j.getBoolean("axiallyConstrained"); 
+		this.orientationallyConstrained = j.getBoolean("orientationallyConstrained");
 	}
 }
 

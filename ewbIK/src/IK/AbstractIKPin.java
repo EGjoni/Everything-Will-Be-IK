@@ -2,10 +2,14 @@ package IK;
 
 import java.util.ArrayList;
 
+import data.EWBIKLoader;
+import data.EWBIKSaver;
+import data.JSONObject;
+import data.Saveable;
 import sceneGraph.AbstractAxes;
-import sceneGraph.math.SGVec_3d;
+import sceneGraph.math.doubleV.SGVec_3d;
 
-public abstract class AbstractIKPin {
+public abstract class AbstractIKPin implements Saveable {
 	
 	protected boolean isEnabled; 
 	protected AbstractAxes axes;
@@ -183,6 +187,32 @@ public abstract class AbstractIKPin {
 	 * 
 	 */
 	public void setPinWeight(double weight) {
+		
+	}
+	
+	@Override
+	public void makeSaveable() {
+		EWBIKSaver.addToSaveState(this);
+		getAxes().makeSaveable();
+	}
+	
+	@Override
+	public JSONObject getSaveJSON() {
+		JSONObject saveJSON = new JSONObject(); 
+		saveJSON.setString("identityHash", this.getIdentityHash());
+		saveJSON.setString("axes", getAxes().getIdentityHash()); 
+		saveJSON.setString("forBone", forBone.getIdentityHash());
+		saveJSON.setBoolean("isEnabled", this.isEnabled());
+		saveJSON.setDouble("pinWeight", this.pinWeight);
+		return saveJSON;
+	}
+	
+	
+	public void loadFromJSONObject(JSONObject j) {
+		this.axes = (AbstractAxes) EWBIKLoader.getObjectFromClassMaps(this.getAxes().getClass(), j.getString("axes"));
+		this.isEnabled = j.getBoolean("isEnabled"); 
+		this.pinWeight = j.getDouble("pinWeight");
+		this.forBone = (AbstractBone) EWBIKLoader.getObjectFromClassMaps(this.forBone().getClass(), j.getString("forBone")); 
 		
 	}
 

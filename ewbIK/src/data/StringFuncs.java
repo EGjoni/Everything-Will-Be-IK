@@ -57,6 +57,8 @@ import data.*;
 
 public class StringFuncs implements Constants {
 
+	
+		
 
 	  /**
 	   * @webref input:files
@@ -117,7 +119,7 @@ public class StringFuncs implements Constants {
 	   * @see StringFuncs#loadJSONArray(String)
 	   * @see StringFuncs#saveJSONArray(JSONArray, String)
 	   */
-	  public boolean saveJSONObject(JSONObject json, String filename) {
+	  public static boolean saveJSONObject(JSONObject json, String filename) {
 	    return saveJSONObject(json, filename, null);
 	  }
 
@@ -125,7 +127,7 @@ public class StringFuncs implements Constants {
 	  /**
 	   * @param options "compact" and "indent=N", replace N with the number of spaces
 	   */
-	  public boolean saveJSONObject(JSONObject json, String filename, String options) {
+	  public static boolean saveJSONObject(JSONObject json, String filename, String options) {
 	    return json.save(saveFile(filename), options);
 	  }
 
@@ -618,7 +620,7 @@ public class StringFuncs implements Constants {
 	   * my some other main() or by other code. For proper use of init(),
 	   * see the examples in the main description text for StringFuncs.
 	   */
-	  public String sketchPath(String where) {
+	  public static String sketchPath(String where) {
 	    //if (sketchPath() == null) {
 	      return where;
 	    //}
@@ -1354,7 +1356,7 @@ public class StringFuncs implements Constants {
 	   * If you know you're running locally, and want to save to the data folder,
 	   * use <TT>saveXxxx("data/blah.dat")</TT>.
 	   */
-	  public String savePath(String where) {
+	  public static String savePath(String where) {
 	    if (where == null) return null;
 	    String filename = sketchPath(where);
 	    createPath(filename);
@@ -1365,7 +1367,7 @@ public class StringFuncs implements Constants {
 	  /**
 	   * Identical to savePath(), but returns a File object.
 	   */
-	  public File saveFile(String where) {
+	  public static File saveFile(String where) {
 	    return new File(savePath(where));
 	  }
 

@@ -2,10 +2,11 @@ package sceneGraph;
 
 
 
-import sceneGraph.math.Matrix3d;
-import sceneGraph.math.Matrix4d;
-import sceneGraph.math.Quaternion;
-import sceneGraph.math.SGVec_3d;
+import sceneGraph.math.doubleV.Matrix3d;
+import sceneGraph.math.doubleV.Matrix4d;
+import sceneGraph.math.doubleV.Quaternion;
+import sceneGraph.math.doubleV.SGVec_3d;
+import sceneGraph.math.doubleV.sgRayd;
 import sceneGraph.math.floatV.Vec3f;
 
 public class Basis {
@@ -98,7 +99,7 @@ public class Basis {
 	 * @param y the y ray. it's p1 value is ignored for any purpose other than determining direction.
 	 * @param z the z ray. it's p1 value is ignored for any purpose other than determining direction.
 	 */
-	public Basis(sgRay x, sgRay y, sgRay z) {
+	public Basis(sgRayd x, sgRayd y, sgRayd z) {
 		this.shearScaleMatrix.idt();
 		this.translate.set((SGVec_3d) x.p1().copy());
 
@@ -833,19 +834,19 @@ public class Basis {
 			return Math.min(val, -0.0000000000001d);
 	}
 
-	private sgRay xRay = new sgRay(new SGVec_3d(0,0,0), new SGVec_3d(1,0,0)); 
-	private sgRay yRay = new sgRay(new SGVec_3d(0,0,0), new SGVec_3d(0,1,0)); 
-	private sgRay zRay = new sgRay(new SGVec_3d(0,0,0), new SGVec_3d(0,0,1)); 
+	private sgRayd xRay = new sgRayd(new SGVec_3d(0,0,0), new SGVec_3d(1,0,0)); 
+	private sgRayd yRay = new sgRayd(new SGVec_3d(0,0,0), new SGVec_3d(0,1,0)); 
+	private sgRayd zRay = new sgRayd(new SGVec_3d(0,0,0), new SGVec_3d(0,0,1)); 
 
-	public sgRay getXRay() {
+	public sgRayd getXRay() {
 		return xRay; 
 	}
 
-	public sgRay getYRay() {
+	public sgRayd getYRay() {
 		return yRay; 
 	}
 
-	public sgRay getZRay() {
+	public sgRayd getZRay() {
 		return zRay; 
 	}
 
@@ -854,38 +855,38 @@ public class Basis {
 	}
 
 
-	public sgRay getInverseXRay() {
+	public sgRayd getInverseXRay() {
 		SGVec_3d inverseX = new SGVec_3d();
 		Matrix4d updatedInverseComposed = this.getInverseComposedMatrix();
 		inverseX.setX_(updatedInverseComposed.val[M00]); 
 		inverseX.setY_(updatedInverseComposed.val[M10]); 
 		inverseX.setZ_(updatedInverseComposed.val[M20]);
 
-		sgRay inverseXRay = new sgRay(SGVec_3d.mult(this.translate, -1), null); 
+		sgRayd inverseXRay = new sgRayd(SGVec_3d.mult(this.translate, -1), null); 
 		inverseXRay.heading(inverseX);
 
 		return inverseXRay; 
 	}
 
-	public sgRay getInverseYRay() {
+	public sgRayd getInverseYRay() {
 		SGVec_3d inverseY = new SGVec_3d();
 		Matrix4d updatedInverseComposed = this.getInverseComposedMatrix();
 		inverseY.setX_(updatedInverseComposed.val[M01]); 
 		inverseY.setY_(updatedInverseComposed.val[M11]); 
 		inverseY.setZ_(updatedInverseComposed.val[M21]);
 
-		sgRay inverseYRay = new sgRay(SGVec_3d.mult(this.translate, -1), null); 
+		sgRayd inverseYRay = new sgRayd(SGVec_3d.mult(this.translate, -1), null); 
 		inverseYRay.heading(inverseY);
 		return inverseYRay; 
 	}
 
-	public sgRay getInverseZRay() {
+	public sgRayd getInverseZRay() {
 		SGVec_3d inverseZ = new SGVec_3d();
 		Matrix4d updatedInverseComposed = this.getInverseComposedMatrix();
 		inverseZ.setX_(updatedInverseComposed.val[M02]); 
 		inverseZ.setY_(updatedInverseComposed.val[M12]); 
 		inverseZ.setZ_(updatedInverseComposed.val[M22]);
-		sgRay inverseZRay = new sgRay(SGVec_3d.mult(this.translate, -1), null); 
+		sgRayd inverseZRay = new sgRayd(SGVec_3d.mult(this.translate, -1), null); 
 		inverseZRay.heading(inverseZ);
 		return inverseZRay; 
 	}

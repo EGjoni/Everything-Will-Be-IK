@@ -18,8 +18,9 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 package IK;
 import sceneGraph.*;
-import sceneGraph.math.Quaternion;
-import sceneGraph.math.SGVec_3d;
+import sceneGraph.math.doubleV.Quaternion;
+import sceneGraph.math.doubleV.SGVec_3d;
+import sceneGraph.math.doubleV.sgRayd;
 
 import java.util.ArrayList;
 
@@ -105,7 +106,7 @@ public class G {
 	}
 
 
-	public static boolean isOverTriangle(SGVec_3d p1, SGVec_3d p2, SGVec_3d origin, sgRay hoverRay, SGVec_3d intersectsAt) {
+	public static boolean isOverTriangle(SGVec_3d p1, SGVec_3d p2, SGVec_3d origin, sgRayd hoverRay, SGVec_3d intersectsAt) {
 		double [] uvw = new double[3];
 		SGVec_3d intersectionResult = intersectTest(hoverRay, origin, p1, p2, uvw); 
 		intersectsAt.x = intersectionResult.x; 
@@ -129,7 +130,7 @@ public class G {
 	 */
 	public static SGVec_3d closestPointOnGreatArc(SGVec_3d p1, SGVec_3d p2, SGVec_3d hoverPoint) {		
 		SGVec_3d normal = p1.crossCopy(p2); 
-		sgRay hoverRay = new sgRay(hoverPoint, null); 
+		sgRayd hoverRay = new sgRayd(hoverPoint, null); 
 		hoverRay.heading(normal);
 		hoverRay.elongate();  
 
@@ -160,7 +161,7 @@ public class G {
 	public static SGVec_3d closestPointOnGreatCircle(SGVec_3d p1, SGVec_3d p2, SGVec_3d hoverPoint) {
 		
 		SGVec_3d normal = p1.crossCopy(p2); 
-		sgRay hoverRay = new sgRay(hoverPoint, null); 
+		sgRayd hoverRay = new sgRayd(hoverPoint, null); 
 		hoverRay.heading(normal);
 		hoverRay.elongate();  
 
@@ -172,18 +173,18 @@ public class G {
 
 	}
 
-	public static SGVec_3d intersectTest(sgRay R, SGVec_3d ta, SGVec_3d tb, SGVec_3d tc) {
+	public static SGVec_3d intersectTest(sgRayd R, SGVec_3d ta, SGVec_3d tb, SGVec_3d tc) {
 		double[] uvw = new double[3];
 		return SGVec_3d.add(planeIntersectTest(R.heading(), SGVec_3d.sub(ta, R.p1()), SGVec_3d.sub(tb, R.p1()), SGVec_3d.sub(tc, R.p1()), uvw), R.p1());
 		//println(uvw);
 		//return SGVec_3d.add(SGVec_3d.add(SGVec_3d.mult(ta, uvw[0]), SGVec_3d.mult(tb, uvw[1])), SGVec_3d.mult(tc, uvw[2]));
 	}
 
-	public static SGVec_3d planeIntersectTestStrict(sgRay R, SGVec_3d ta, SGVec_3d tb, SGVec_3d tc) {
+	public static SGVec_3d planeIntersectTestStrict(sgRayd R, SGVec_3d ta, SGVec_3d tb, SGVec_3d tc) {
 		//will return null if the ray is too short to intersect the plane;
 		double[] uvw = new double[3];
 		SGVec_3d result = SGVec_3d.add(planeIntersectTest(R.heading(), SGVec_3d.sub(ta, R.p1()), SGVec_3d.sub(tb, R.p1()), SGVec_3d.sub(tc, R.p1()), uvw), R.p1());
-		sgRay resultRay = new sgRay(R.p1(), result);
+		sgRayd resultRay = new sgRayd(R.p1(), result);
 		if(resultRay.mag() > R.mag()) {/*println(resultRay.mag() + " > " + R.mag());*/  return null;} 
 		else {/*println(resultRay.mag() + " < " + R.mag());*/ return result;}
 
@@ -191,13 +192,13 @@ public class G {
 		//return SGVec_3d.add(SGVec_3d.add(SGVec_3d.mult(ta, uvw[0]), SGVec_3d.mult(tb, uvw[1])), SGVec_3d.mult(tc, uvw[2]));
 	}
 
-	public static SGVec_3d intersectTest(sgRay R, SGVec_3d ta, SGVec_3d tb, SGVec_3d tc, double[] uvw) {
+	public static SGVec_3d intersectTest(sgRayd R, SGVec_3d ta, SGVec_3d tb, SGVec_3d tc, double[] uvw) {
 		return SGVec_3d.add(planeIntersectTest(R.heading(), SGVec_3d.sub(ta, R.p1()), SGVec_3d.sub(tb, R.p1()), SGVec_3d.sub(tc, R.p1()), uvw), R.p1());
 		//println(uvw);
 		//return SGVec_3d.add(SGVec_3d.add(SGVec_3d.mult(ta, uvw[0]), SGVec_3d.mult(tb, uvw[1])), SGVec_3d.mult(tc, uvw[2]));
 	}
 
-	public static SGVec_3d triangleRayIntersectTest(sgRay R, SGVec_3d ta, SGVec_3d tb, SGVec_3d tc) {
+	public static SGVec_3d triangleRayIntersectTest(sgRayd R, SGVec_3d ta, SGVec_3d tb, SGVec_3d tc) {
 		double[] uvw = new double[3];
 		SGVec_3d result = triangleIntersectTest(R.heading(), SGVec_3d.sub(ta, R.p1()), SGVec_3d.sub(tb, R.p1()), SGVec_3d.sub(tc, R.p1()), uvw); 
 		if(result != null) 
@@ -207,7 +208,7 @@ public class G {
 		//return SGVec_3d.add(SGVec_3d.add(SGVec_3d.mult(ta, uvw[0]), SGVec_3d.mult(tb, uvw[1])), SGVec_3d.mult(tc, uvw[2]));
 	}
 
-	public static  SGVec_3d triangleRayIntersectTest(sgRay R, SGVec_3d ta, SGVec_3d tb, SGVec_3d tc, double[] uvw) {
+	public static  SGVec_3d triangleRayIntersectTest(sgRayd R, SGVec_3d ta, SGVec_3d tb, SGVec_3d tc, double[] uvw) {
 
 		SGVec_3d result = triangleIntersectTest(R.heading(), SGVec_3d.sub(ta, R.p1()), SGVec_3d.sub(tb, R.p1()), SGVec_3d.sub(tc, R.p1()), uvw); 
 		if(result != null) 
@@ -413,7 +414,7 @@ public class G {
 	 * @param S2 reference to variable in which the second intersection will be placed
 	 * @return number of intersections found;
 	 */
-	public static int raySphereIntersection(sgRay ray, double radius, SGVec_3d S1, SGVec_3d S2) {
+	public static int raySphereIntersection(sgRayd ray, double radius, SGVec_3d S1, SGVec_3d S2) {
 		SGVec_3d direction = ray.heading();
 		SGVec_3d e = new SGVec_3d(direction.x, direction.y, direction.z);   // e=ray.dir
 		e.normalize();                            // e=g/|g|

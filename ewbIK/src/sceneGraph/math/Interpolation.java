@@ -16,6 +16,8 @@
 
 package sceneGraph.math;
 
+import sceneGraph.math.doubleV.MathUtils;
+
 /** Takes a linear value in the range of 0-1 and outputs a (usually) non-linear, interpolated value.
  * @author Nathan Sweet */
 public abstract class Interpolation {

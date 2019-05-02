@@ -18,32 +18,30 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 
-package sceneGraph;
+package sceneGraph.math.doubleV;
 
 import data.JSONObject;
-import sceneGraph.math.SGVec_3d;
 import sceneGraph.math.floatV.SGVec_3f;
-import sceneGraph.math.Vec3d;
 
 /**
  * @author Eron Gjoni
  *
  */
-public class sgRay {
+public class sgRayd {
 	public static final int X=0, Y=1, Z=2;
 	protected SGVec_3d  p1;
 	protected SGVec_3d p2; 
 
-	public sgRay() {
+	public sgRayd() {
 		//this.p1 = new SGVec_3d();
 	}
 	
-	public sgRay(SGVec_3d origin) {
+	public sgRayd(SGVec_3d origin) {
 		this.workingVector =  origin.copy();
 		this.p1 =  origin.copy();
 	}
 
-	public sgRay(SGVec_3d p1, SGVec_3d p2) {
+	public sgRayd(SGVec_3d p1, SGVec_3d p2) {
 		this.workingVector =  p1.copy();
 		this.p1 =  p1.copy();
 		if(p2 != null)
@@ -88,7 +86,7 @@ public class sgRay {
 	 * @param r
 	 * @return
 	 */
-	public double distTo(sgRay r) {
+	public double distTo(sgRayd r) {
 		SGVec_3d closestOnThis = this.closestPointToRay3D(r);
 		return r.distTo(closestOnThis);
 	}
@@ -96,7 +94,7 @@ public class sgRay {
 	/**
 	 * returns the distance between this ray as a line segment, and the input ray treated as a line segment
 	 */	
-	public double distToStrict(sgRay r) {
+	public double distToStrict(sgRayd r) {
 		SGVec_3d closestOnThis = this.closestPointToSegment3D(r);
 		return closestOnThis.dist(r.closestPointToStrict(closestOnThis));
 	}
@@ -154,7 +152,7 @@ public class sgRay {
 	 * creating a new variable. 
 	 * @param target
 	 */
-	public void alignTo(sgRay target) {
+	public void alignTo(sgRayd target) {
 		p1.set(target.p1);
 		p2.set(target.p2);
 	}
@@ -192,8 +190,8 @@ public class sgRay {
 	/**
 	 * @return a copy of this ray with its z-component set to 0;
 	 */
-	public sgRay get2DCopy() {
-		return this.get2DCopy(sgRay.Z);
+	public sgRayd get2DCopy() {
+		return this.get2DCopy(sgRayd.Z);
 	}
 
 	/**
@@ -202,17 +200,17 @@ public class sgRay {
 	 * @param collapseOnAxis the axis on which to collapse the ray.
 	 * @return
 	 */
-	public sgRay get2DCopy(int collapseOnAxis) {
-		sgRay result = this.copy(); 
-		if(collapseOnAxis == sgRay.X) {
+	public sgRayd get2DCopy(int collapseOnAxis) {
+		sgRayd result = this.copy(); 
+		if(collapseOnAxis == sgRayd.X) {
 			result.p1.setX_(0); 
 			result.p2.setX_(0);
 		}
-		if(collapseOnAxis == sgRay.Y) {
+		if(collapseOnAxis == sgRayd.Y) {
 			result.p1.setY_(0);
 			result.p2.setY_(0);
 		}
-		if(collapseOnAxis == sgRay.Z) {
+		if(collapseOnAxis == sgRayd.Z) {
 			result.p1.setZ_(0);
 			result.p2.setZ_(0);
 		}
@@ -352,16 +350,16 @@ public class sgRay {
  * scale the ray outward in both directions by a large amount. (900000)
  */
 	public void elongate() {
-		sgRay reverseRay = new sgRay(this.p2.copy(), this.p1.copy()); 
-		sgRay result = this.getRayScaledTo(900000); 
+		sgRayd reverseRay = new sgRayd(this.p2.copy(), this.p1.copy()); 
+		sgRayd result = this.getRayScaledTo(900000); 
 		reverseRay = reverseRay.getRayScaledTo(900000);
 		result.p1 = reverseRay.p2.copy();
 		this.p1.set(result.p1); 
 		this.p2.set(result.p2);
 	}
 
-	public sgRay copy() {
-		return new sgRay(this.p1, this.p2);  
+	public sgRayd copy() {
+		return new sgRayd(this.p1, this.p2);  
 	}
 
 	public void reverse() {
@@ -370,12 +368,12 @@ public class sgRay {
 		this.p2 = temp; 
 	}
 
-	public sgRay getReversed() {
-		return new sgRay(this.p2, this.p1);
+	public sgRayd getReversed() {
+		return new sgRayd(this.p2, this.p1);
 	}
 
-	public sgRay getRayScaledTo(double scalar) {
-		return new sgRay(p1, this.getScaledTo(scalar));
+	public sgRayd getRayScaledTo(double scalar) {
+		return new sgRayd(p1, this.getScaledTo(scalar));
 	}
 
 	/*
@@ -383,16 +381,16 @@ public class sgRay {
 	 * has a positive dot product with the heading of r
 	 * if dot product is already positive, does nothing.
 	 */
-	public void pointWith(sgRay r) {
+	public void pointWith(sgRayd r) {
 		if(this.heading().dot(r.heading()) < 0) this.reverse(); 
 	}
 
 	public void pointWith(SGVec_3d heading) {
 		if(this.heading().dot(heading) < 0) this.reverse(); 
 	}
-	public sgRay getRayScaledBy(double scalar) {
+	public sgRayd getRayScaledBy(double scalar) {
 
-		return new sgRay(p1, this.getMultipledBy(scalar));
+		return new sgRayd(p1, this.getMultipledBy(scalar));
 	}
 
 	public void contractTo(double percent) {
@@ -429,7 +427,7 @@ public class sgRay {
 		this.mag(1);  
 	}
 
-	public SGVec_3d intercepts2D (sgRay r) {
+	public SGVec_3d intercepts2D (sgRayd r) {
 		SGVec_3d result =  p1.copy();
 		
 		double p0_x = this.p1.x;
@@ -487,7 +485,7 @@ public class sgRay {
 	 * @param r
 	 * @return
 	 */
-	public SGVec_3d closestPointToSegment3D(sgRay r) {
+	public SGVec_3d closestPointToSegment3D(sgRayd r) {
 		SGVec_3d closestToThis =  r.closestPointToRay3DStrict(this); 
 		return this.closestPointTo(closestToThis);
 	}
@@ -502,7 +500,7 @@ public class sgRay {
 	 * @return
 	 */
 
-	public SGVec_3d closestPointToRay3D(sgRay r) {
+	public SGVec_3d closestPointToRay3D(sgRayd r) {
 		SGVec_3d result = null;
 		
 		workingVector.set(p2);
@@ -533,7 +531,7 @@ public class sgRay {
 		return result;
 	}
 
-	public SGVec_3d closestPointToRay3DStrict(sgRay r) {
+	public SGVec_3d closestPointToRay3DStrict(sgRayd r) {
 		SGVec_3d result = null;
 
 		workingVector.set(p2);
@@ -574,7 +572,7 @@ public class sgRay {
 	 * @param r
 	 * @return
 	 */
-	public SGVec_3d closestPointToRay3DBounded(sgRay r) {
+	public SGVec_3d closestPointToRay3DBounded(sgRayd r) {
 		SGVec_3d result = null;
 
 		workingVector.set(p2);
@@ -609,14 +607,14 @@ public class sgRay {
 	}
 
 	//returns a ray perpendicular to this ray on the XY plane;
-	public sgRay getPerpendicular2D() {
+	public sgRayd getPerpendicular2D() {
 		SGVec_3d heading = this.heading(); 
 		workingVector.set(heading.x-1d, heading.x, 0d);
 		SGVec_3d perpHeading = workingVector;
-		return new sgRay(this.p1,  workingVector.add(this.p1));
+		return new sgRayd(this.p1,  workingVector.add(this.p1));
 	}
 
-	public SGVec_3d intercepts2DStrict(sgRay r) { 
+	public SGVec_3d intercepts2DStrict(sgRayd r) { 
 		//will also return null if the intersection does not occur on the 
 		//line segment specified by the ray.
 		SGVec_3d result =  p1.copy();
@@ -659,10 +657,10 @@ public class sgRay {
 	 * @param b3 the third vertex od a triangle on the second plane
 	 * @return a sgRay along the line of intersection of these two planes, or null if inputs are coplanar
 	 */
-	public static sgRay planePlaneIntersect(SGVec_3d a1, SGVec_3d  a2, SGVec_3d  a3, SGVec_3d  b1, SGVec_3d  b2, SGVec_3d  b3) {
-		sgRay a1a2 = new sgRay(a1,a2);
-		sgRay a1a3 = new sgRay(a1,a3); 
-		sgRay a2a3 = new sgRay(a2,a3);
+	public static sgRayd planePlaneIntersect(SGVec_3d a1, SGVec_3d  a2, SGVec_3d  a3, SGVec_3d  b1, SGVec_3d  b2, SGVec_3d  b3) {
+		sgRayd a1a2 = new sgRayd(a1,a2);
+		sgRayd a1a3 = new sgRayd(a1,a3); 
+		sgRayd a2a3 = new sgRayd(a2,a3);
 
 		SGVec_3d interceptsa1a2 =  a1a2.intersectsPlane(b1, b2, b3);
 		SGVec_3d interceptsa1a3 =  a1a3.intersectsPlane(b1, b2, b3);
@@ -683,7 +681,7 @@ public class sgRay {
 			}
 		}		
 		if(notNull1 != null && notNull2 != null) 
-			return new sgRay(notNull1, notNull2);
+			return new sgRayd(notNull1, notNull2);
 		else 
 			return null;
 	}

@@ -16,6 +16,9 @@
 
 package sceneGraph.math;
 
+import sceneGraph.math.doubleV.SGVec_2d;
+import sceneGraph.math.doubleV.SGVec_3d;
+
 /** Encapsulates a general vector. Allows chaining operations by returning a reference to itself in all modification methods. See
  * {@link SGVec_2d} and {@link SGVec_3d} for specific implementations.
  * @author Xoppa */

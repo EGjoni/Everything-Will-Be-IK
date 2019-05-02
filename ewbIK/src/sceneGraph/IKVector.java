@@ -9,9 +9,9 @@ import data.CanLoad;
 import data.JSONArray;
 import data.JSONObject;
 import sceneGraph.math.floatV.SGVec_2f;
-import sceneGraph.math.SGVec_3d;
 import sceneGraph.math.floatV.SGVec_3f;
-import sceneGraph.math.Vec3d;
+import sceneGraph.math.doubleV.SGVec_3d;
+import sceneGraph.math.doubleV.Vec3d;
 
 
 

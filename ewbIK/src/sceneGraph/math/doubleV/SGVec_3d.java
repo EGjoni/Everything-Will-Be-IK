@@ -14,11 +14,14 @@
  * limitations under the License.
  ******************************************************************************/
 
-package sceneGraph.math;
+package sceneGraph.math.doubleV;
 
 import java.io.Serializable;
 
+import data.CanLoad;
 import data.JSONArray;
+import data.JSONObject;
+import sceneGraph.math.Interpolation;
 import sceneGraph.math.floatV.SGVec_3f;
 import sceneGraph.math.floatV.Vec3f;
 
@@ -27,7 +30,7 @@ import sceneGraph.math.floatV.Vec3f;
 
 /** Encapsulates a 3D vector. Allows chaining operations by returning a reference to itself in all modification methods.
  * @author badlogicgames@gmail.com */
-public class SGVec_3d implements Serializable, Vec3d<SGVec_3d> {
+public class SGVec_3d implements Serializable, Vec3d<SGVec_3d>, CanLoad {
 	private static final long serialVersionUID = 3840054589595372522L;
 
 	/** the x-component of this vector **/
@@ -52,6 +55,13 @@ public class SGVec_3d implements Serializable, Vec3d<SGVec_3d> {
 	public SGVec_3d (double x, double y, double z) {
 		this.set(x, y, z);
 	}
+	
+	public SGVec_3d(JSONObject j) {
+		JSONArray components = j.getJSONArray("vec");
+		this.x = components.getDouble(0);
+		this.y = components.getDouble(1);
+		this.z = components.getDouble(2);
+	}
 
 	/** Creates a vector from the given vector
 	 * @param vector The vector */
@@ -72,6 +82,11 @@ public class SGVec_3d implements Serializable, Vec3d<SGVec_3d> {
 		this.set(values[0], values[1], values[2]);
 	}
 
+	public SGVec_3d (JSONArray j) {
+		this.x = j.getDouble(0);
+		this.y = j.getDouble(1);
+		this.z = j.getDouble(2);
+	}
 
 
 	/** Sets the vector to the given components
@@ -889,6 +904,26 @@ public class SGVec_3d implements Serializable, Vec3d<SGVec_3d> {
 		JSONArray vec = new JSONArray();
 		vec.append(this.x); vec.append(this.y); vec.append(this.z);
 		return vec;
+	}
+
+	@Override
+	public CanLoad populateSelfFromJSON(JSONObject j) {
+		JSONArray components = j.getJSONArray("vec");
+		this.x = components.getDouble(0);
+		this.y = components.getDouble(1);
+		this.z = components.getDouble(2);
+		return this;
+	}
+
+	@Override
+	public JSONObject toJSONObject() {
+		JSONObject j = new JSONObject(); 
+		JSONArray components = new JSONArray(); 
+		components.append(this.x);
+		components.append(this.y);
+		components.append(this.z);
+		j.setJSONArray("vec", components); 
+		return j;
 	}
 
 }

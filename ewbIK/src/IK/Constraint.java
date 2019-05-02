@@ -1,7 +1,7 @@
 package IK;
 
 import sceneGraph.AbstractAxes;
-import sceneGraph.math.SGVec_3d;
+import sceneGraph.math.doubleV.SGVec_3d;
 
 public interface Constraint {
 	

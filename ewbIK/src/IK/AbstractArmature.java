@@ -21,16 +21,18 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import IK.StrandedArmature.Strand;
+import data.EWBIKLoader;
+import data.EWBIKSaver;
+import data.JSONObject;
+import data.Saveable;
 import sceneGraph.*;
-import sceneGraph.math.Quaternion;
-import sceneGraph.math.SGVec_3d;
-import sceneGraph.math.SGVec_3d;
+import sceneGraph.math.doubleV.*;
 /**
  * @author Eron Gjoni
  *
  */
 
-public abstract class AbstractArmature {
+public abstract class AbstractArmature implements Saveable {
 	
 	
 	/**This solver aims to minimize the total distance to the target pins, however if the pins
@@ -425,7 +427,7 @@ public abstract class AbstractArmature {
 		if(!chain.basePinned) {
 			SGVec_3d translateBy = new SGVec_3d(0,0,0);
 			for(SegmentedArmature pc : pinnedChains) {
-				sgRay tipToTargetRay = new sgRay(pc.segmentTip.getTip_(), pc.segmentTip.pinnedTo());
+				sgRayd tipToTargetRay = new sgRayd(pc.segmentTip.getTip_(), pc.segmentTip.pinnedTo());
 				translateBy.add((SGVec_3d)tipToTargetRay.heading());
 			}
 			translateBy.div((double)pinnedChains.size());
@@ -477,8 +479,8 @@ public abstract class AbstractArmature {
 		AbstractBone currentBone = tipBone;
 		ArrayList<Rot> rotations = new ArrayList<Rot>();
 
-		sgRay currentRay = new sgRay(); 
-		sgRay goalRay = new sgRay(); 
+		sgRayd currentRay = new sgRayd(); 
+		sgRayd goalRay = new sgRayd(); 
 
 		//tempWorkingAxes.alignGlobalsTo(tipBone.localAxes());
 		//tempWorkingAxes.translateTo(tipBone.getTip());
@@ -583,7 +585,7 @@ public abstract class AbstractArmature {
 		for(int i =0; i<iterations; i++) {
 			if(!collection.basePinned) {
 				SGVec_3d translateBy = new SGVec_3d(0,0,0);
-				sgRay tipToTargetRay = new sgRay(translateBy.copy(), null);
+				sgRayd tipToTargetRay = new sgRayd(translateBy.copy(), null);
 				for(Strand s : strands) {
 					tipToTargetRay.setP1(s.strandTip.getTip_());
 					tipToTargetRay.setP2(s.strandTip.pinnedTo());
@@ -675,8 +677,8 @@ public abstract class AbstractArmature {
 
 		//SGVec_3d strandTip = chain.strandTip.getTip();
 		SGVec_3d strandTipPin = chain.strandTip.pinnedTo();
-		sgRay currentRay = new sgRay(new SGVec_3d(0,0,0), null);
-		sgRay goalRay = new sgRay(new SGVec_3d(0,0,0), null);
+		sgRayd currentRay = new sgRayd(new SGVec_3d(0,0,0), null);
+		sgRayd goalRay = new sgRayd(new SGVec_3d(0,0,0), null);
 
 		SGVec_3d origXHead = new SGVec_3d(0,0,0);
 		SGVec_3d origYHead = new SGVec_3d(0,0,0);
@@ -841,8 +843,8 @@ public abstract class AbstractArmature {
 		SGVec_3d pinLocation = strandTargetAxes.getGlobalOf(pointOnTarget);
 		AbstractBone currentBone = startFrom;
 		if(currentBone != null) {
-			sgRay currentBoneDirRay = new sgRay(new SGVec_3d(), new SGVec_3d());
-			sgRay goalRay = new sgRay(new SGVec_3d(), new SGVec_3d());
+			sgRayd currentBoneDirRay = new sgRayd(new SGVec_3d(), new SGVec_3d());
+			sgRayd goalRay = new sgRayd(new SGVec_3d(), new SGVec_3d());
 
 			double boneCount = 1d;
 			double bonesInChain = chain.bones.size();
@@ -1137,6 +1139,42 @@ public abstract class AbstractArmature {
 					"average solution time: " + (averageSolutionTime)+  "ms \n");
 		}
 		
+	}
+	
+	@Override
+	public void makeSaveable() {
+		EWBIKSaver.addToSaveState(this);
+		this.localAxes().makeSaveable(); 
+		this.rootBone.makeSaveable();
+	}
+	
+	@Override
+	public JSONObject getSaveJSON() {
+		JSONObject saveJSON = new JSONObject(); 
+		saveJSON.setString("identityHash", this.getIdentityHash());
+		saveJSON.setString("localAxes", localAxes().getIdentityHash()); 
+		saveJSON.setString("rootBone", getRootBone().getIdentityHash());
+		saveJSON.setInt("defaultIterations", getDefaultIterations()); 
+		saveJSON.setDouble("dampening", this.getDampening());
+		saveJSON.setInt("defaultSolver", this.getDefaultSolverType());
+		saveJSON.setBoolean("inverseWeighted", this.isInverseWeighted());
+		saveJSON.setBoolean("satisfyOrientation", this.isSatisfyOrientation());
+		saveJSON.setBoolean("satisfyTwist",  this.isSatisfyTwist());
+		saveJSON.setString("tag", this.getTag());
+		return saveJSON;
+	}
+	
+	
+	public void loadFromJSONObject(JSONObject j) {
+		this.localAxes = EWBIKLoader.getObjectFor(localAxes().getClass(), j, j.getString("localAxes"));
+		this.rootBone = EWBIKLoader.getObjectFor(getRootBone().getClass(), j, j.getString("rootBone"));
+		this.setDefaultIterations(j.getInt("defaultIterations"));
+		this.setDefaultDampening(j.getDouble("defaultDampening"));
+		this.setDefaultIKType(j.getInt("defaultSolver"));	
+		this.setSatisfyOrientation(j.getBoolean("satisfyOrientation"));
+		this.setSatifyTwist(j.getBoolean("satisfyTwist"));
+		this.setInverseWeighted(j.getBoolean("inverseWeighted"));
+		this.tag = j.getString("tag");
 	}
 
 

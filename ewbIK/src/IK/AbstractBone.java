@@ -20,17 +20,24 @@ package IK;
 import java.util.ArrayList;
 
 import IK.IKExceptions.NullParentForBoneException;
+import data.CanLoad;
+import data.EWBIKLoader;
+import data.EWBIKSaver;
+import data.JSONArray;
+import data.JSONObject;
+import data.Saveable;
 import sceneGraph.*;
 import sceneGraph.math.RotationOrder;
-import sceneGraph.math.SGVec_3d;
-import sceneGraph.math.Vec3d;
+import sceneGraph.math.doubleV.SGVec_3d;
+import sceneGraph.math.doubleV.Vec3d;
+import sceneGraph.math.doubleV.sgRayd;
 
 
 /**
  * @author Eron Gjoni
  *
  */
-public abstract class AbstractBone {
+public abstract class AbstractBone implements Saveable {
 	
 	public static enum frameType {GLOBAL, RELATIVE};
 
@@ -81,8 +88,8 @@ public abstract class AbstractBone {
 			} else this.tag = inputTag;
 			this.boneHeight = inputBoneHeight;
 
-			sgRay tipHeadingRay = new sgRay(par.getTip_(), tipHeading);
-			sgRay rollHeadingRay = new sgRay(par.getTip_(), rollHeading);
+			sgRayd tipHeadingRay = new sgRayd(par.getTip_(), tipHeading);
+			sgRayd rollHeadingRay = new sgRayd(par.getTip_(), rollHeading);
 			SGVec_3d tempTip = new SGVec_3d(); 
 			SGVec_3d tempRoll = new SGVec_3d(); 
 			SGVec_3d tempX = new SGVec_3d(); 
@@ -209,8 +216,8 @@ public abstract class AbstractBone {
 				this.tag = Integer.toString(System.identityHashCode(this));			
 			} else this.tag = inputTag;
 
-			sgRay tipHeadingRay = new sgRay(par.getTip_(), tipHeading);
-			sgRay rollHeadingRay = new sgRay(par.getTip_(), rollHeading);
+			sgRayd tipHeadingRay = new sgRayd(par.getTip_(), tipHeading);
+			sgRayd rollHeadingRay = new sgRayd(par.getTip_(), rollHeading);
 			SGVec_3d tempTip = new SGVec_3d(); 
 			SGVec_3d tempRoll = rollHeading.copy();
 			SGVec_3d tempX = new SGVec_3d(); 
@@ -294,9 +301,9 @@ public abstract class AbstractBone {
 				this.tag = Integer.toString(System.identityHashCode(this));			
 			} else this.tag = inputTag;
 
-			sgRay tipHeadingRay = new sgRay(parArma.localAxes.origin_(), tipHeading);
+			sgRayd tipHeadingRay = new sgRayd(parArma.localAxes.origin_(), tipHeading);
 			tipHeadingRay.getRayScaledTo(inputBoneHeight);
-			sgRay rollHeadingRay = new sgRay(parArma.localAxes.origin_(), rollHeading);
+			sgRayd rollHeadingRay = new sgRayd(parArma.localAxes.origin_(), rollHeading);
 			SGVec_3d tempTip = new SGVec_3d(); 
 			SGVec_3d tempRoll = new SGVec_3d(); 
 			SGVec_3d tempX = new SGVec_3d(); 
@@ -356,8 +363,8 @@ public abstract class AbstractBone {
 				this.tag = Integer.toString(System.identityHashCode(this));			
 			} else this.tag = inputTag;
 
-			sgRay tipHeadingRay = new sgRay(parArma.localAxes.origin_(), tipHeading);
-			sgRay rollHeadingRay = new sgRay(parArma.localAxes.origin_(), rollHeading);
+			sgRayd tipHeadingRay = new sgRayd(parArma.localAxes.origin_(), tipHeading);
+			sgRayd rollHeadingRay = new sgRayd(parArma.localAxes.origin_(), rollHeading);
 			SGVec_3d tempTip = new SGVec_3d(); 
 			SGVec_3d tempRoll = new SGVec_3d(); 
 			SGVec_3d tempX = new SGVec_3d(); 
@@ -962,6 +969,10 @@ public abstract class AbstractBone {
 		
 	}
 	
+	public AbstractIKPin getIKPin() {
+		return this.pin;
+	}
+	
 	
 	/**
 	 * if set to true, the IK system will not rotate this bone
@@ -1032,6 +1043,44 @@ public abstract class AbstractBone {
 		stiffnessScalar = 1d-stiffness;
 	}
 
+	@Override
+	public void loadFromJSONObject(JSONObject j) {
+		this.localAxes = (AbstractAxes) EWBIKLoader.getObjectFromClassMaps(AbstractAxes.class, j.getString("localAxes"));
+		this.majorRotationAxes = (AbstractAxes) EWBIKLoader.getObjectFromClassMaps(AbstractAxes.class, j.getString("majorRotationAxes"));
+		EWBIKLoader.arrayListFromJSONArray(j.getJSONArray("children"), this.children, this.getClass()); 
+		this.setBoneHeight(j.getDouble("boneHeight"));
+		this.setStiffness(j.getDouble("stiffness"));
+		
+		if(j.hasKey("constraints")) 
+			this.constraints = (AbstractKusudama) EWBIKLoader.getObjectFromClassMaps(this.getConstraint().getClass(), j.getString("constraints"));
+		if(j.hasKey("IKPin")) 
+			this.pin = (AbstractIKPin) EWBIKLoader.getObjectFromClassMaps(this.getIKPin().getClass(), j.getString("constraints"));
+	}
 	
+	@Override
+	public JSONObject getSaveJSON() {
+		JSONObject thisBone = new JSONObject();
+		thisBone.setString("localAxes", this.localAxes.getIdentityHash());
+		thisBone.setString("majorRotationAxes", majorRotationAxes.getIdentityHash());
+		JSONArray children = EWBIKSaver.arrayListToJSONArray(getChildren());
+		thisBone.setJSONArray("children", children);
+		if(constraints != null) {
+			thisBone.setString("constraints", ((AbstractKusudama)constraints).getIdentityHash());
+		}
+		if(pin != null) 
+			thisBone.setString("IKPin", pin.getIdentityHash());
+		
+		thisBone.setDouble("boneHeight", this.getBoneHeight());
+		thisBone.setDouble("stiffness", this.getStiffness());
+		
+		return thisBone; 
+	}
+		
+	
+	
+	@Override
+	public void makeSaveable() {
+		EWBIKSaver.addToSaveState(this);
+	}
 
 }

@@ -18,10 +18,15 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 package IK;
+import data.EWBIKLoader;
+import data.EWBIKSaver;
+import data.JSONObject;
+import data.Saveable;
 import sceneGraph.*;
-import sceneGraph.math.SGVec_3d;
+import sceneGraph.math.doubleV.SGVec_3d;
+import sceneGraph.math.doubleV.sgRayd;
 
-public abstract class AbstractLimitCone {
+public abstract class AbstractLimitCone implements Saveable {
 
 	SGVec_3d controlPoint; 
 	SGVec_3d radialPoint; 
@@ -125,7 +130,7 @@ public abstract class AbstractLimitCone {
 		triangleHolder = onNaivelyInterpolatedPath(next, input);
 
 		if(triangleHolder != null) {
-			sgRay toPathRay = new sgRay(triangleHolder[0], input);
+			sgRayd toPathRay = new sgRayd(triangleHolder[0], input);
 			SGVec_3d pathIntersect = new SGVec_3d(); 
 			toPathRay.intersectsPlane(new SGVec_3d(0,0,0), this.controlPoint, next.controlPoint, pathIntersect);
 			pathIntersect.normalize();
@@ -314,7 +319,7 @@ public abstract class AbstractLimitCone {
 	
 	double distFromPathCenterTowardTanCone(SGVec_3d pos, SGVec_3d tanCone, SGVec_3d cone1, SGVec_3d cone2) {
 		SGVec_3d ro = new SGVec_3d(0.0, 0.0, 0.0);
-		sgRay tanToPos = new sgRay(tanCone, pos);
+		sgRayd tanToPos = new sgRayd(tanCone, pos);
 		SGVec_3d intersectsGreatArcAt = tanToPos.intersectsPlane(ro, cone2, cone1);
 		intersectsGreatArcAt = intersectsGreatArcAt.normalize(); 
 		return SGVec_3d.angleBetween(pos, intersectsGreatArcAt);
@@ -508,13 +513,13 @@ public abstract class AbstractLimitCone {
 			SGVec_3d minorAppoloniusP3B = SGVec_3d.mult(minorAppoloniusAxisB, G.cos(minorAppoloniusRadiusB));
 
 			// ray from scaled center of next cone to half way point between the circumference of this cone and the next cone. 
-			sgRay r1B = new sgRay(minorAppoloniusP1B, minorAppoloniusP3B); r1B.elongate();
-			sgRay r2B = new sgRay(minorAppoloniusP1B, minorAppoloniusP2B); r2B.elongate();
+			sgRayd r1B = new sgRayd(minorAppoloniusP1B, minorAppoloniusP3B); r1B.elongate();
+			sgRayd r2B = new sgRayd(minorAppoloniusP1B, minorAppoloniusP2B); r2B.elongate();
 
 			SGVec_3d intersection1 = G.intersectTest(r1B, minorAppoloniusP3A, minorAppoloniusP1A, minorAppoloniusP2A);
 			SGVec_3d intersection2 = G.intersectTest(r2B, minorAppoloniusP3A, minorAppoloniusP1A, minorAppoloniusP2A);
 
-			sgRay intersectionRay = new sgRay(intersection1, intersection2);
+			sgRayd intersectionRay = new sgRayd(intersection1, intersection2);
 			intersectionRay.elongate();
 
 			SGVec_3d sphereIntersect1 = new SGVec_3d(); 
@@ -632,5 +637,27 @@ public abstract class AbstractLimitCone {
 	
 	public AbstractKusudama getParentKusudama() {
 		return parentKusudama;
+	}
+	
+	@Override
+	public void makeSaveable() {
+	}
+	
+	@Override
+	public JSONObject getSaveJSON() {
+		JSONObject saveJSON = new JSONObject(); 
+		saveJSON.setString("identityHash", this.getIdentityHash());
+		saveJSON.setString("parentKusudama", this.getParentKusudama().getIdentityHash()); 
+		saveJSON.setJSONObject("controlPoint", this.controlPoint.toJSONObject());
+		saveJSON.setDouble("radius", this.radius);
+		return saveJSON;
+	}
+	
+	
+	public void loadFromJSONObject(JSONObject j) {
+		this.parentKusudama = (AbstractKusudama) EWBIKLoader.getObjectFromClassMaps(getParentKusudama().getClass(), j.getString("parentKusudama")); 
+		SGVec_3d controlPointJ = new SGVec_3d(j.getJSONObject("controlPoint"));
+		this.setControlPoint(controlPointJ);
+		this.radius = j.getDouble("radius");
 	}
 }
