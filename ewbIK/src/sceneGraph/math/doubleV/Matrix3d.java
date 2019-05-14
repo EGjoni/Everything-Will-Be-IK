@@ -511,6 +511,68 @@ public class Matrix3d implements Serializable {
 		mul(val, tmp);
 		return this;
 	}
+	
+	public SGVec_3d col(int column) {
+		double[] vecarr = new double[3]; 
+		getColumn(column, vecarr);
+		return new SGVec_3d(vecarr);
+	}
+	
+	/**
+     * Copies the matrix values in the specified column into the array
+     * @param column  the matrix column
+     * @param v    the vector into which the matrix column values will be copied
+     */
+	public void getColumn(int column, double[] arrVec)
+	{
+		switch (column) {
+		case 0:
+			arrVec[0] = val[M00];
+			arrVec[1] = val[M10];
+			arrVec[2] = val[M20];
+			    break;
+                
+		case 1:
+			arrVec[0] = val[M01];
+			arrVec[1] = val[M11];
+			arrVec[2] = val[M21];
+			    break;
+                
+		case 2:
+			arrVec[0] = val[M02];
+			arrVec[1] = val[M12];
+			arrVec[2] = val[M22];
+			    break;            
+		}
+	}
+	
+	public void setColumn(int column, double[] v) 
+	{   
+		setColumn(column, v[0], v[1], v[2], v[3]);
+	}
+	
+	public void setColumn(int column, double x, double y, double z, double w)
+	{
+		switch (column) {
+		case 0:
+			val[M00] = x;
+			val[M10] = y;
+			val[M20] = z;
+			break;
+
+		case 1:
+			val[M01] = x;
+			val[M11] = y;
+			val[M21] = z;
+			break;
+
+		case 2:
+			val[M02] = x;
+			val[M12] = y;
+			val[M22] = z;
+			break;
+		}
+	}
 
 	/** Get the values in this matrix.
 	 * @return The double values that make up this matrix in column-major order. */

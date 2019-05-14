@@ -16,11 +16,14 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. 
 
  */
-package IK;
+package IK.doubleIK;
 import sceneGraph.*;
 import sceneGraph.math.doubleV.Quaternion;
+import sceneGraph.math.doubleV.Rot;
 import sceneGraph.math.doubleV.SGVec_3d;
 import sceneGraph.math.doubleV.sgRayd;
+import sceneGraph.math.floatV.SGVec_3f;
+import sceneGraph.math.floatV.sgRayf;
 
 import java.util.ArrayList;
 
@@ -502,7 +505,8 @@ public class G {
 
 	public static Quaternion getSingleCoveredQuaternion(Quaternion inputQ, Quaternion targetQ) {
 		//targetQ is the Quaternion that exists on the target hemisphere
-		if(inputQ.dot(targetQ) < 0d) {
+		double dot = inputQ.dot(targetQ);
+		if(dot <0d) {
 			return new Quaternion(-inputQ.getQ0(), -inputQ.getQ1(), -inputQ.getQ2(), -inputQ.getQ3());  
 		} else {
 			return inputQ;  
@@ -528,6 +532,12 @@ public class G {
 	public static double smoothstep(double edge0, double edge1, double x) {
 		double t = Math.min(Math.max((x - edge0) / (edge1 - edge0), 0.0), 1.0);
 		return t * t * (3.0 - 2.0 * t);
+	}
+
+	public static SGVec_3f intersectTest(sgRayf r2b, SGVec_3f minorAppoloniusP3A, SGVec_3f minorAppoloniusP1A,
+			SGVec_3f minorAppoloniusP2A) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 }

@@ -16,14 +16,15 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. 
 
  */
-package IK;
+package IK.floatIK;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.WeakHashMap;
 
-import sceneGraph.AbstractAxes;
-import sceneGraph.Rot;
+import IK.floatIK.AbstractBone;
+import sceneGraph.math.floatV.AbstractAxes;
+import sceneGraph.math.floatV.Rot;
 
 /**
  * @author Eron Gjoni
@@ -37,13 +38,13 @@ public class SegmentedArmature {
 	
 	HashMap<SegmentedArmature, ArrayList<AbstractBone>> strandMap = new HashMap<SegmentedArmature, ArrayList<AbstractBone>>();
 	HashMap<AbstractBone, AbstractAxes> originalOrientations = new HashMap<AbstractBone, AbstractAxes>();
-	HashMap<AbstractBone, ArrayList<Rot>> boneRotationMap = new HashMap<AbstractBone, ArrayList<Rot>>();
+	public HashMap<AbstractBone, ArrayList<Rot>> boneRotationMap = new HashMap<AbstractBone, ArrayList<Rot>>();
 	WeakHashMap<Rot, SegmentedArmature> rotationStrandMap = new WeakHashMap<Rot, SegmentedArmature>();
 	ArrayList<AbstractBone> strandsBoneList = new ArrayList<AbstractBone>();
 
-	protected SegmentedArmature parentSegment = null;
-	boolean basePinned = false; 
-	boolean tipPinned = false;
+	private SegmentedArmature parentSegment = null;
+	private boolean basePinned = false; 
+	private boolean tipPinned = false;
 	public int distanceToRoot = 0;
 
 	public int chainLength = 0;
@@ -56,19 +57,19 @@ public class SegmentedArmature {
 
 	public SegmentedArmature(SegmentedArmature inputParentSegment, AbstractBone inputSegmentRoot) {
 		this.segmentRoot = inputSegmentRoot;
-		this.parentSegment = inputParentSegment;
-		this.distanceToRoot = this.parentSegment.distanceToRoot+1;
+		this.setParentSegment(inputParentSegment);
+		this.distanceToRoot = this.getParentSegment().distanceToRoot+1;
 		generateArmatureSegments();  
 	}
 
 	private void generateArmatureSegments() {
 		childSegments.clear();
 		//pinnedDescendants.clear();
-		tipPinned = false;
-		if(segmentRoot.parent != null && segmentRoot.parent.isPinned()) 
-			this.basePinned = true;
+		setTipPinned(false);
+		if(segmentRoot.getParent() != null && segmentRoot.getParent().isPinned()) 
+			this.setBasePinned(true);
 		else 
-			this.basePinned = false; 
+			this.setBasePinned(false); 
 
 		AbstractBone tempSegmentTip = this.segmentRoot;
 		this.chainLength = -1;
@@ -77,7 +78,7 @@ public class SegmentedArmature {
 			ArrayList<AbstractBone> childrenWithPinnedDescendants = tempSegmentTip.returnChildrenWithPinnedDescendants();
 			
 			if(childrenWithPinnedDescendants.size() > 1 || (tempSegmentTip.isPinned())) {
-				if(tempSegmentTip.isPinned()) tipPinned = true; 
+				if(tempSegmentTip.isPinned()) setTipPinned(true); 
 				//else tipPinned = false;
 				this.segmentTip = tempSegmentTip; 
 				
@@ -98,8 +99,8 @@ public class SegmentedArmature {
 	}
 	
 	public void updateSegmentedArmature() {
-		if(this.parentSegment != null) {
-			this.parentSegment.updateSegmentedArmature();
+		if(this.getParentSegment() != null) {
+			this.getParentSegment().updateSegmentedArmature();
 		} else { 
 			generateArmatureSegments();
 		}
@@ -132,14 +133,14 @@ public class SegmentedArmature {
 
 		if(pinnedBone.isPinned()) {
 			result.add(pinnedBone);
-			AbstractBone currBone = pinnedBone.parent;
+			AbstractBone currBone = pinnedBone.getParent();
 			//note to self -- try removing the currbone.parent != null condition
-			while(currBone != null && currBone.parent != null) {
+			while(currBone != null && currBone.getParent() != null) {
 				result.add(currBone);
-				if(currBone.parent.isPinned()) {
+				if(currBone.getParent().isPinned()) {
 					break;
 				}
-				currBone = currBone.parent;
+				currBone = currBone.getParent();
 			}			
 		}
 
@@ -153,7 +154,7 @@ public class SegmentedArmature {
 
 	public ArrayList<SegmentedArmature> returnSegmentPinnedNodes() {
 		ArrayList<SegmentedArmature> innerPinnedChains = new ArrayList<SegmentedArmature>();
-		if(this.tipPinned) {
+		if(this.isTipPinned()) {
 			innerPinnedChains.add(this); 
 		} else { 
 			for(SegmentedArmature childSegment : childSegments) {
@@ -173,10 +174,10 @@ public class SegmentedArmature {
 		AbstractBone candidate = this.segmentTip; 
 		while(true) {
 			if(candidate == chainMember) return this;
-			if(/*candidate == segmentRoot ||*/ candidate.parent == null) {
+			if(/*candidate == segmentRoot ||*/ candidate.getParent() == null) {
 				break;
 			}		
-			candidate = candidate.parent;
+			candidate = candidate.getParent();
 		}
 		SegmentedArmature result = null;
 		for(SegmentedArmature children : childSegments) {
@@ -194,8 +195,8 @@ public class SegmentedArmature {
 
 		SegmentedArmature currentChain = this;
 		while(true && currentChain !=null) {
-			if(currentChain.basePinned) return currentChain;
-			else currentChain = currentChain.parentSegment;
+			if(currentChain.isBasePinned()) return currentChain;
+			else currentChain = currentChain.getParentSegment();
 		}
 
 		return currentChain;
@@ -204,10 +205,34 @@ public class SegmentedArmature {
 
 	public AbstractBone armatureRootBone(AbstractBone rootBone2) {
 		AbstractBone rootBone = rootBone2;
-		while(rootBone.parent != null) {
-			rootBone = rootBone.parent;
+		while(rootBone.getParent() != null) {
+			rootBone = rootBone.getParent();
 		} 
 		return rootBone;
+	}
+
+	public boolean isTipPinned() {
+		return tipPinned;
+	}
+
+	public void setTipPinned(boolean tipPinned) {
+		this.tipPinned = tipPinned;
+	}
+
+	public boolean isBasePinned() {
+		return basePinned;
+	}
+
+	public void setBasePinned(boolean basePinned) {
+		this.basePinned = basePinned;
+	}
+
+	public SegmentedArmature getParentSegment() {
+		return parentSegment;
+	}
+
+	public void setParentSegment(SegmentedArmature parentSegment) {
+		this.parentSegment = parentSegment;
 	}
 
 }

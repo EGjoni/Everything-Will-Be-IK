@@ -1,6 +1,7 @@
-package IK;
+package IK.doubleIK;
 
-import sceneGraph.AbstractAxes;
+import sceneGraph.math.Vec;
+import sceneGraph.math.doubleV.AbstractAxes;
 import sceneGraph.math.doubleV.SGVec_3d;
 
 public interface Constraint {

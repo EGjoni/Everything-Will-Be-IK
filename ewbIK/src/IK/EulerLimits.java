@@ -1,10 +1,14 @@
 package IK;
 
 
-import sceneGraph.AbstractAxes;
+import IK.doubleIK.AbstractBone;
+import IK.doubleIK.Constraint;
+import IK.doubleIK.G;
 import sceneGraph.IKVector;
-import sceneGraph.MRotation;
-import sceneGraph.math.RotationOrder;
+import sceneGraph.math.Vec;
+import sceneGraph.math.doubleV.AbstractAxes;
+import sceneGraph.math.doubleV.MRotation;
+import sceneGraph.math.doubleV.RotationOrder;
 import sceneGraph.math.doubleV.SGVec_3d;
 
 public class EulerLimits implements Constraint {
@@ -145,5 +149,6 @@ public class EulerLimits implements Constraint {
 		return false;
 	}
 
+	
 
 }

@@ -34,9 +34,9 @@ public final class MathUtils {
 	static public final float PI2 = PI * 2f;
 	static public final float HALF_PI = PI * 2f;
 
-	static public final double E = Math.E;
+	static public final float E = (float) Math.E;
 
-	static private final int SIN_BITS = 14; // 16KB. Adjust for accuracy.
+	static private final int SIN_BITS = 20; // 16KB. Adjust for accuracy.
 	static private final int SIN_MASK = ~(-1 << SIN_BITS);
 	static private final int SIN_COUNT = SIN_MASK + 1;
 
@@ -49,7 +49,7 @@ public final class MathUtils {
 	static public final float radiansToDegrees = 180f / PI;
 	static public final float radDeg = radiansToDegrees;
 	/** multiply by this to convert from degrees to radians */
-	static public final float degreesToRadians = PI / 180;
+	static public final float degreesToRadians = PI / 180f;
 	static public final float degRad = degreesToRadians;
 
 
@@ -298,5 +298,25 @@ public final class MathUtils {
 	/** @return the logarithm of value with base 2 */
 	static public double log2 (double value) {
 		return log(2, value);
+	}
+
+	public static float pow(float val, float power) {
+		return (float)Math.pow(val, power);
+	}
+
+	public static float abs(float f) {
+		return (float)Math.abs(f);
+	}
+
+	public static float sqrt(float f) {
+		return (float)Math.sqrt(f);
+	}
+
+	public static float asin(float sqrt) {
+		return (float)Math.asin(sqrt);
+	}
+	
+	public static float acos(float sqrt) {
+		return (float)Math.acos(sqrt);
 	}
 }

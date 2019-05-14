@@ -16,9 +16,10 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. 
 
  */
-package IK;
+package IK.doubleIK;
 import java.util.ArrayList;
 
+import IK.IKExceptions;
 import IK.IKExceptions.NullParentForBoneException;
 import data.CanLoad;
 import data.EWBIKLoader;
@@ -27,7 +28,10 @@ import data.JSONArray;
 import data.JSONObject;
 import data.Saveable;
 import sceneGraph.*;
-import sceneGraph.math.RotationOrder;
+import sceneGraph.math.doubleV.AbstractAxes;
+import sceneGraph.math.doubleV.MRotation;
+import sceneGraph.math.doubleV.Rot;
+import sceneGraph.math.doubleV.RotationOrder;
 import sceneGraph.math.doubleV.SGVec_3d;
 import sceneGraph.math.doubleV.Vec3d;
 import sceneGraph.math.doubleV.sgRayd;
@@ -37,7 +41,7 @@ import sceneGraph.math.doubleV.sgRayd;
  * @author Eron Gjoni
  *
  */
-public abstract class AbstractBone implements Saveable {
+public abstract class AbstractBone implements Saveable, Comparable<AbstractBone> {
 	
 	public static enum frameType {GLOBAL, RELATIVE};
 
@@ -61,6 +65,7 @@ public abstract class AbstractBone implements Saveable {
 	protected AbstractIKPin pin = null;
 	protected boolean orientationLock = false;
 	protected double stiffnessScalar = 1f;
+	public int ancestorCount = 0;
 	
 	/**
 	 * 
@@ -131,8 +136,8 @@ public abstract class AbstractBone implements Saveable {
 
 			this.parent.addFreeChild(this);
 			this.parent.addChild(this);
-
-			this.updateSegmentedArmature();	
+			this.updateAncestorCount();
+			//this.updateSegmentedArmature();	
 		} else {
 			throw IKExceptions.NullParentForBoneException();
 		}
@@ -183,12 +188,35 @@ public abstract class AbstractBone implements Saveable {
 
 			this.parent.addFreeChild(this);
 			this.parent.addChild(this);
-
-			this.updateSegmentedArmature();	
+			this.updateAncestorCount();
+			//this.updateSegmentedArmature();	
 		} else {
 			throw IKExceptions.NullParentForBoneException();
 		}
 
+	}
+	
+	
+	private void updateAncestorCount() {
+		int countedAncestors = 0;
+		AbstractBone currentBone = this.parent;
+		while(currentBone != null) {
+			countedAncestors++; 
+			currentBone = currentBone.parent;
+		}
+		setAncestorCount(countedAncestors);
+	}
+	
+	/**updates the ancestor count for this bone, and 
+	 * sets the ancestor count of all child bones 
+	 * to this bone's ancestor count +1;
+	 * @param count
+	 */
+	private void setAncestorCount(int count) {
+		this.ancestorCount = count; 
+		for(AbstractBone b : this.children) {
+			b.setAncestorCount(this.ancestorCount +1);
+		}
 	}
 	
 	/** 
@@ -277,7 +305,8 @@ public abstract class AbstractBone implements Saveable {
 
 			this.parent.addChild(this);
 			this.parent.addFreeChild(this);
-			this.updateSegmentedArmature();	
+			this.updateAncestorCount();
+			//this.updateSegmentedArmature();	
 		} else {
 			throw new NullParentForBoneException();
 		}
@@ -341,6 +370,7 @@ public abstract class AbstractBone implements Saveable {
 
 
 			this.boneHeight = inputBoneHeight;
+			this.updateAncestorCount();
 			//this.updateSegmentedArmature();	
 
 
@@ -400,7 +430,8 @@ public abstract class AbstractBone implements Saveable {
 			majorRotationAxes.setParent(parent.localAxes);
 			
 			parentArmature.addToBoneList(this);
-			//this.updateSegmentedArmature();	
+			this.updateAncestorCount();
+			this.updateSegmentedArmature();
 
 		} else {
 			throw new NullParentForBoneException();
@@ -431,6 +462,7 @@ public abstract class AbstractBone implements Saveable {
 	public void attachToParent(AbstractBone inputParent) {
 		inputParent.addChild(this);
 		this.parent = inputParent;
+		this.updateAncestorCount();
 	}
 
 	
@@ -742,7 +774,7 @@ public abstract class AbstractBone implements Saveable {
 	 */
 	public void enablePin() {
 		//System.out.println("pinning");
-		if(pin == null) pin = createAndReturnPinAtOrigin(this.getTip_());
+		if(pin == null) pin = createAndReturnPinAtOrigin(this.getBase_());
 		pin.enable();
 		//System.out.println("clearing children");
 		freeChildren.clear(); 
@@ -754,7 +786,7 @@ public abstract class AbstractBone implements Saveable {
 			}
 		}
 		//System.out.println("notifying ancestors");
-		notifyAncestorsOfPin();
+		notifyAncestorsOfPin(false);
 		//System.out.println("updating segment armature");
 		this.updateSegmentedArmature();	
 		//System.out.println("segment armature updated");
@@ -823,6 +855,7 @@ public abstract class AbstractBone implements Saveable {
 	}
 
 	public AbstractAxes getPinnedAxes() {
+		if(this.pin == null) return null;
 		return this.pin.getAxes();
 	}
 
@@ -1083,4 +1116,33 @@ public abstract class AbstractBone implements Saveable {
 		EWBIKSaver.addToSaveState(this);
 	}
 
+	
+	@Override
+	public void notifyOfSaveIntent() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void notifyOfSaveCompletion() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public boolean isLoading() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public void setLoading(boolean loading) {
+		// TODO Auto-generated method stub
+		
+	}
+	
+	@Override 
+	public int compareTo(AbstractBone i) {
+		return this.ancestorCount - i.ancestorCount;
+	}
 }

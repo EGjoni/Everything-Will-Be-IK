@@ -1,5 +1,6 @@
 package sceneGraph.numerical;
 
+
 public class Precision {
 
 	public static final double SAFE_MIN_DOUBLE;
@@ -18,5 +19,33 @@ public class Precision {
         EPSILON_FLOAT = Double.longBitsToDouble((EXPONENT_OFFSET_FLOAT - 24l) << 23);
         SAFE_MIN_FLOAT = Double.longBitsToDouble((EXPONENT_OFFSET_FLOAT - 126) << 23);
     }
+	
+	
+	public static class MathArithmeticException extends Exception {
+		
+	}
+	
+public static class MathIllegalArgumentException extends Exception {
+		
+	}
+
+public static class ZeroException extends Exception {
+	
+}
+
+public static class LocalizedFormats extends Exception {
+
+	public static final String ZERO_NORM_FOR_ROTATION_AXIS = "0";
+	
+}
+
+
+public static class CardanEulerSingularityException extends Exception {
+	
+}
+
+public static class NotARotationMatrixException extends Exception {
+	
+}
 	
 }

@@ -18,6 +18,9 @@ package sceneGraph.math.floatV;
 
 import java.io.Serializable;
 
+import sceneGraph.math.doubleV.Quaternion;
+
+
 //import com.badlogic.gdx.utils.NumberUtils;
 
 /** A simple quaternion class.
@@ -95,7 +98,7 @@ public class Quaternionf implements Serializable {
 	}
 
 	/** @return a copy of this quaternion */
-	public Quaternionf cpy () {
+	public Quaternionf copy () {
 		return new Quaternionf(this);
 	}
 
@@ -229,6 +232,14 @@ public class Quaternionf implements Serializable {
 		q3 = -q3;
 		return this;
 	}
+	
+	
+	/** get the Conjugate of the quaternion.
+	 * 
+	 * @return This quaternion for chaining */
+	public Quaternionf getConjugate () {
+		return this.copy().conjugate();
+	}
 
 	// TODO : this would better fit into the vector3 class
 	/** Transforms the given vector using this quaternion
@@ -259,6 +270,10 @@ public class Quaternionf implements Serializable {
 		this.q3 = newZ;
 		this.q0 = newW;
 		return this;
+	}
+
+	public Quaternionf getMultiplied(float scalar) {
+		return this.copy().mul(scalar);
 	}
 
 

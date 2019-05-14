@@ -16,17 +16,23 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. 
 
  */
-package IK;
+package IK.floatIK;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import IK.StrandedArmature.Strand;
+import IK.floatIK.Constraint;
+import IK.floatIK.G;
+import IK.floatIK.StrandedArmature.Strand;
 import data.EWBIKLoader;
 import data.EWBIKSaver;
 import data.JSONObject;
 import data.Saveable;
 import sceneGraph.*;
-import sceneGraph.math.doubleV.*;
+import sceneGraph.math.doubleV.SGVec_3d;
+import sceneGraph.math.doubleV.sgRayd;
+import sceneGraph.math.floatV.*;
+import sceneGraph.math.floatV.AbstractAxes;
+import sceneGraph.math.floatV.Rot;
 /**
  * @author Eron Gjoni
  *
@@ -93,10 +99,10 @@ public abstract class AbstractArmature implements Saveable {
 
 	protected int IKType = ORIENTATIONAWARE; 
 	protected int IKIterations = 15;
-	protected double dampening = Math.toRadians(10d);
+	protected float dampening = (float)Math.toRadians(10f);
 	private boolean abilityBiasing = false;
 
-	public double IKSolverStability = 0d; 
+	public float IKSolverStability = 0f; 
 	PerformanceStats performance = new PerformanceStats(); 
 	
 	
@@ -107,7 +113,7 @@ public abstract class AbstractArmature implements Saveable {
 		this.localAxes = inputOrigin; 
 		this.tempWorkingAxes = localAxes.getGlobalCopy();
 		this.tag = name;
-		createRootBone(localAxes.y_().heading(), localAxes.z_().heading(), tag+" : rootBone", 1d, AbstractBone.frameType.GLOBAL);
+		createRootBone(localAxes.y_().heading(), localAxes.z_().heading(), tag+" : rootBone", 1f, AbstractBone.frameType.GLOBAL);
 	}
 
 
@@ -119,7 +125,7 @@ public abstract class AbstractArmature implements Saveable {
 		return rootBone;
 	}
 
-	private AbstractBone createRootBone(SGVec_3d tipHeading, SGVec_3d rollHeading, String inputTag, double boneHeight, AbstractBone.frameType coordinateType) {
+	private AbstractBone createRootBone(SGVec_3f tipHeading, SGVec_3f rollHeading, String inputTag, float boneHeight, AbstractBone.frameType coordinateType) {
 		initializeRootBone(this, tipHeading, rollHeading, inputTag, boneHeight, coordinateType);
 		this.segmentedArmature = new SegmentedArmature(rootBone);
 		this.strandedArmature = new StrandedArmature(rootBone);
@@ -127,9 +133,9 @@ public abstract class AbstractArmature implements Saveable {
 	}
 
 	protected abstract void initializeRootBone(AbstractArmature armature, 
-			SGVec_3d tipHeading, SGVec_3d rollHeading, 
+			SGVec_3f tipHeading, SGVec_3f rollHeading, 
 			String inputTag, 
-			double boneHeight, 
+			float boneHeight, 
 			AbstractBone.frameType coordinateType);
 	
 	public void setDefaultIterations(int iter) {
@@ -150,8 +156,8 @@ public abstract class AbstractArmature implements Saveable {
 		if(IKType < 0 || IKType > 4) IKType = 4;
 	}
 
-	public void setDefaultDampening(double damp) {
-		this.dampening = Math.max(Math.abs(Double.MIN_VALUE), Math.abs(damp)); 
+	public void setDefaultDampening(float damp) {
+		this.dampening = Math.max(Math.abs(Float.MIN_VALUE), Math.abs(damp)); 
 	}
 
 	/**
@@ -236,7 +242,7 @@ public abstract class AbstractArmature implements Saveable {
 	
 	protected boolean satisfyTwist = true;
 	protected boolean satisfyOrientation = true;
-	protected boolean inverseWeighted = true;
+	protected boolean inverseWeighted = false;
 	
 	/**
 	 * This option is is only applicable to the orientation aware solver its default value is "true".  
@@ -359,7 +365,7 @@ public abstract class AbstractArmature implements Saveable {
 		IKSolver(bone, dampening, IKIterations);
 	}
 
-	public void IKSolver(AbstractBone bone, double dampening, int iterations) {
+	public void IKSolver(AbstractBone bone, float dampening, int iterations) {
 		
 		//performance.resetPerformanceStat();
 		performance.startPerformanceMonitor();
@@ -401,7 +407,7 @@ public abstract class AbstractArmature implements Saveable {
 	 * before it converges on a solution. if you don't know what you want, try starting with 0.1.
 	 * @param iterations the number of times to run the IK loop before returning an answer. 
 	 */
-	public void ambitiousIKSolver(AbstractBone bone, double dampening, int iterations) {
+	public void ambitiousIKSolver(AbstractBone bone, float dampening, int iterations) {
 		SegmentedArmature thisChain = segmentedArmature.getChainFor(bone); 
 		if(thisChain != null) {
 			SegmentedArmature startFrom = thisChain.getPinnedRootChainFromHere();
@@ -409,7 +415,7 @@ public abstract class AbstractArmature implements Saveable {
 			for(int i = 0; i < iterations; i++) {
 				if(startFrom != null /*&& (startFrom.basePinned || startFrom.tipPinned)*/) 
 					solveIK(startFrom, dampening, 1);//iterations);
-				else if (thisChain != null && thisChain.tipPinned || thisChain.pinnedDescendants.size() > 0)
+				else if (thisChain != null && thisChain.isTipPinned() || thisChain.pinnedDescendants.size() > 0)
 					solveIK(segmentedArmature, dampening, 1);//iterations);
 			}
 			//}
@@ -421,16 +427,16 @@ public abstract class AbstractArmature implements Saveable {
 	
 	
 	
-	protected void solveIK(SegmentedArmature chain, double dampening, int iterations) {
+	protected void solveIK(SegmentedArmature chain, float dampening, int iterations) {
 		ArrayList<SegmentedArmature> pinnedChains = chain.pinnedDescendants;
 
-		if(!chain.basePinned) {
-			SGVec_3d translateBy = new SGVec_3d(0,0,0);
+		if(!chain.isBasePinned()) {
+			SGVec_3f translateBy = new SGVec_3f(0,0,0);
 			for(SegmentedArmature pc : pinnedChains) {
-				sgRayd tipToTargetRay = new sgRayd(pc.segmentTip.getTip_(), pc.segmentTip.pinnedTo());
-				translateBy.add((SGVec_3d)tipToTargetRay.heading());
+				sgRayf tipToTargetRay = new sgRayf(pc.segmentTip.getTip_(), pc.segmentTip.pinnedTo());
+				translateBy.add((SGVec_3f)tipToTargetRay.heading());
 			}
-			translateBy.div((double)pinnedChains.size());
+			translateBy.div((float)pinnedChains.size());
 			segmentedArmature.segmentRoot.localAxes.translateByGlobal(translateBy);	
 		}
 
@@ -444,13 +450,13 @@ public abstract class AbstractArmature implements Saveable {
 
 	}
 
-	protected void solveIKChainList(ArrayList<SegmentedArmature> chains, double dampening, int iterations) {
+	protected void solveIKChainList(ArrayList<SegmentedArmature> chains, float dampening, int iterations) {
 		ArrayList<SegmentedArmature> parentChains = new ArrayList<SegmentedArmature>();
 
 		for(SegmentedArmature c : chains) {
 			solveIKChain(c, dampening, iterations);
-			if(c.parentSegment != null && !c.parentSegment.tipPinned && !c.basePinned) {
-				insertIntoSortedChainList(parentChains, c.parentSegment);
+			if(c.getParentSegment() != null && !c.getParentSegment().isTipPinned() && !c.isBasePinned()) {
+				insertIntoSortedChainList(parentChains, c.getParentSegment());
 			}
 		}
 
@@ -465,7 +471,7 @@ public abstract class AbstractArmature implements Saveable {
 	}
 
 
-	protected void solveIKChain(SegmentedArmature chain, double dampening, int iterations) {		 
+	protected void solveIKChain(SegmentedArmature chain, float dampening, int iterations) {		 
 		//System.out.println("\n CHAIN ITERATION \n");
 		for(int i = 0 ; i<iterations; i++) {
 			iterateCCD(dampening, chain); 
@@ -474,13 +480,13 @@ public abstract class AbstractArmature implements Saveable {
 
 
 
-	private void iterateCCD(double dampening, SegmentedArmature chain) {
+	private void iterateCCD(float dampening, SegmentedArmature chain) {
 		AbstractBone tipBone = chain.segmentTip; 
 		AbstractBone currentBone = tipBone;
 		ArrayList<Rot> rotations = new ArrayList<Rot>();
 
-		sgRayd currentRay = new sgRayd(); 
-		sgRayd goalRay = new sgRayd(); 
+		sgRayf currentRay = new sgRayf(); 
+		sgRayf goalRay = new sgRayf(); 
 
 		//tempWorkingAxes.alignGlobalsTo(tipBone.localAxes());
 		//tempWorkingAxes.translateTo(tipBone.getTip());
@@ -505,8 +511,8 @@ public abstract class AbstractArmature implements Saveable {
 
 				Rot rotateToTarget = G.averageRotation(rotations);
 
-				double angle = rotateToTarget.getAngle(); 
-				SGVec_3d axis = rotateToTarget.getAxis();
+				float angle = rotateToTarget.getAngle(); 
+				SGVec_3f axis = rotateToTarget.getAxis();
 
 				angle = Math.min(angle, dampening);
 				currentBone.rotateBy(new Rot(axis, angle));   
@@ -548,8 +554,8 @@ public abstract class AbstractArmature implements Saveable {
 	 * before it converges on a solution. if you don't know what you want, try starting with 0.1.
 	 * @param iterations the number of times to run the IK loop before returning an answer. 
 	 */
-	public void tranquilIKSolver(AbstractBone bone, double dampening, int iterations) {
-		IKSolverStability = 0d;
+	public void tranquilIKSolver(AbstractBone bone, float dampening, int iterations) {
+		IKSolverStability = 0f;
 		StrandedArmature thisStrandCollection = strandedArmature.getStrandCollectionFor(bone);
 		if(thisStrandCollection != null) {
 			recursivelyCallAlternateSolver(thisStrandCollection, dampening, iterations);
@@ -560,11 +566,11 @@ public abstract class AbstractArmature implements Saveable {
 
 	}
 
-	private void recursivelyCallAlternateSolver(StrandedArmature starm, double dampening, int iterations) {		
+	private void recursivelyCallAlternateSolver(StrandedArmature starm, float dampening, int iterations) {		
 		if(starm!= null) {
 			starm.resetStabilityMeasures();
 			alternateIKSolver(starm, dampening, iterations);
-			double collectionStability = starm.getStability(); 
+			float collectionStability = starm.getStability(); 
 			IKSolverStability = Math.max(IKSolverStability, collectionStability);
 		}
 		for(StrandedArmature sa: starm.childCollections) {
@@ -572,7 +578,7 @@ public abstract class AbstractArmature implements Saveable {
 		}
 	}
 
-	protected void alternateIKSolver(StrandedArmature collection, double dampening, int iterations) {
+	protected void alternateIKSolver(StrandedArmature collection, float dampening, int iterations) {
 		ArrayList<Strand> strands = collection.strands;
 		/**
 		 * Go through each strand, and do an iteration of CCD on it. 
@@ -583,15 +589,15 @@ public abstract class AbstractArmature implements Saveable {
 		 */		
 
 		for(int i =0; i<iterations; i++) {
-			if(!collection.basePinned) {
-				SGVec_3d translateBy = new SGVec_3d(0,0,0);
-				sgRayd tipToTargetRay = new sgRayd(translateBy.copy(), null);
+			if(!collection.isBasePinned()) {
+				SGVec_3f translateBy = new SGVec_3f(0,0,0);
+				sgRayf tipToTargetRay = new sgRayf(translateBy.copy(), null);
 				for(Strand s : strands) {
-					tipToTargetRay.setP1(s.strandTip.getTip_());
-					tipToTargetRay.setP2(s.strandTip.pinnedTo());
-					translateBy.add((SGVec_3d)tipToTargetRay.heading());
+					tipToTargetRay.setP1(s.getStrandTip().getTip_());
+					tipToTargetRay.setP2(s.getStrandTip().pinnedTo());
+					translateBy.add((SGVec_3f)tipToTargetRay.heading());
 				}
-				translateBy.div((double)strands.size());
+				translateBy.div((float)strands.size());
 				segmentedArmature.segmentRoot.localAxes.translateByGlobal(translateBy);	
 			}	
 
@@ -616,8 +622,8 @@ public abstract class AbstractArmature implements Saveable {
 
 
 
-	Rot ir = new Rot(new SGVec_3d(1,1,1), 0);//strandList.get(0).rotationsMap.get(b);
-	Quaternion initialQ = new Quaternion(ir.rotation.getQ0(), ir.rotation.getQ1(), ir.rotation.getQ2(), ir.rotation.getQ3());
+	Rot ir = new Rot(new SGVec_3f(1,1,1), 0);//strandList.get(0).rotationsMap.get(b);
+	Quaternionf initialQ = new Quaternionf(ir.rotation.getQ0(), ir.rotation.getQ1(), ir.rotation.getQ2(), ir.rotation.getQ3());
 
 	private void applyAverageWeightedRotations(StrandedArmature collection) {
 
@@ -625,22 +631,22 @@ public abstract class AbstractArmature implements Saveable {
 			ArrayList<Strand> strandList = collection.boneStrandMap.get(b);
 
 
-			double totalCount = 0;
-			double wT = 0;
-			double xT = 0; 
-			double yT = 0; 
-			double zT = 0;
+			float totalCount = 0;
+			float wT = 0;
+			float xT = 0; 
+			float yT = 0; 
+			float zT = 0;
 
 			//totalDist = collection.totalPinDist;
 
-			double totalFreedomForBone = 0d;
+			float totalFreedomForBone = 0f;
 			for(Strand s : strandList) {
 
-				//double distance = s.distToTarget; 					
+				//float distance = s.distToTarget; 					
 				Rot r = s.rotationsMap.get(b);
 				//r = new Rot(r.getAxis(), r.getAngle()*(distance/totalDist));
-				Quaternion current = G.getSingleCoveredQuaternion(
-						new Quaternion(r.rotation.getQ0(), 
+				Quaternionf current = G.getSingleCoveredQuaternionf(
+						new Quaternionf(r.rotation.getQ0(), 
 								r.rotation.getQ1(),
 								r.rotation.getQ2(), 
 								r.rotation.getQ3()), 
@@ -653,8 +659,8 @@ public abstract class AbstractArmature implements Saveable {
 
 				totalCount ++;*/
 
-				double freedomForBoneThisStrand = getAbilityBiasing() ? s.getRemainingFreedomAtBone(b) : 1d; 
-				double weight = 1d/freedomForBoneThisStrand;
+				float freedomForBoneThisStrand = getAbilityBiasing() ? s.getRemainingFreedomAtBone(b) : 1f; 
+				float weight = 1f/freedomForBoneThisStrand;
 				totalFreedomForBone += weight;
 				//totalFreedomForBone += freedomForBoneThisStrand;				
 				wT += (current.getQ0() * weight);
@@ -673,40 +679,40 @@ public abstract class AbstractArmature implements Saveable {
 		}
 	}	
 
-	private void iterateCCDStrand(Strand chain, double dampening) {
+	private void iterateCCDStrand(Strand chain, float dampening) {
 
-		//SGVec_3d strandTip = chain.strandTip.getTip();
-		SGVec_3d strandTipPin = chain.strandTip.pinnedTo();
-		sgRayd currentRay = new sgRayd(new SGVec_3d(0,0,0), null);
-		sgRayd goalRay = new sgRayd(new SGVec_3d(0,0,0), null);
+		//SGVec_3f strandTip = chain.strandTip.getTip();
+		SGVec_3f strandTipPin = chain.getStrandTip().pinnedTo();
+		sgRayf currentRay = new sgRayf(new SGVec_3f(0,0,0), null);
+		sgRayf goalRay = new sgRayf(new SGVec_3f(0,0,0), null);
 
-		SGVec_3d origXHead = new SGVec_3d(0,0,0);
-		SGVec_3d origYHead = new SGVec_3d(0,0,0);
-		SGVec_3d postXHead = new SGVec_3d(0,0,0);
-		SGVec_3d postYHead = new SGVec_3d(0,0,0);
+		SGVec_3f origXHead = new SGVec_3f(0,0,0);
+		SGVec_3f origYHead = new SGVec_3f(0,0,0);
+		SGVec_3f postXHead = new SGVec_3f(0,0,0);
+		SGVec_3f postYHead = new SGVec_3f(0,0,0);
 
 		for(AbstractBone currentBone : chain.bones) {
 
 			currentRay.setP1(currentBone.getBase_()); 
-			currentRay.setP2(chain.strandTip.getTip_()); 
+			currentRay.setP2(chain.getStrandTip().getTip_()); 
 
 			goalRay.setP1(currentRay.p1());
 			goalRay.setP2(strandTipPin); 
 
-			origXHead = (SGVec_3d) currentBone.localAxes().x_().heading();
-			origYHead = (SGVec_3d) currentBone.localAxes().y_().heading();
+			origXHead = (SGVec_3f) currentBone.localAxes().x_().heading();
+			origYHead = (SGVec_3f) currentBone.localAxes().y_().heading();
 
 			Rot rotateToTarget = new Rot(currentRay.heading(), goalRay.heading());//G.averageRotation(rotations);
 
-			double angle = rotateToTarget.getAngle();
+			float angle = rotateToTarget.getAngle();
 
 			angle = Math.min(angle, dampening);
 
 			currentBone.rotateBy(new Rot(rotateToTarget.getAxis(), angle));   
 			currentBone.snapToConstraints();   			
 
-			postXHead = (SGVec_3d) currentBone.localAxes().x_().heading(); 
-			postYHead = (SGVec_3d) currentBone.localAxes().y_().heading();
+			postXHead = (SGVec_3f) currentBone.localAxes().x_().heading(); 
+			postYHead = (SGVec_3f) currentBone.localAxes().y_().heading();
 
 			Rot totalRotation = new Rot(origXHead, origYHead, postXHead, postYHead);
 
@@ -727,12 +733,12 @@ public abstract class AbstractArmature implements Saveable {
 
 	public void orientationAwareSolver(
 			AbstractBone bone, 
-			double dampening, 
+			float dampening, 
 			int iterations,
 			boolean inverseWeighting,
 			boolean orientationAware, 
 			boolean twistAware) {
-		IKSolverStability = 0d;
+		IKSolverStability = 0f;
 		StrandedArmature thisStrandCollection = strandedArmature.getStrandCollectionFor(bone);
 		if(thisStrandCollection != null && thisStrandCollection.strands.size() > 0) {
 			thisStrandCollection.alignSimulationAxesToBones();
@@ -761,15 +767,15 @@ public abstract class AbstractArmature implements Saveable {
 
 	private void recursivelyCallFabriCCDSolver(
 			StrandedArmature starm, 
-			double dampening, 
+			float dampening, 
 			int iterations, 
 			boolean inverseWeighting,
 			boolean orientationAware, 
 			boolean twistAware) {		
 		if(starm!= null) {
 			starm.resetStabilityMeasures();
-			fabriCCDSolver(starm, dampening, iterations, inverseWeighting, true, true) ;
-			double collectionStability = starm.getStability(); 
+			fabriCCDSolver(starm, dampening, iterations, inverseWeighting, orientationAware, twistAware) ;
+			float collectionStability = starm.getStability(); 
 			IKSolverStability = Math.max(IKSolverStability, collectionStability);
 		}
 		for(StrandedArmature sa: starm.childCollections) {
@@ -795,7 +801,7 @@ public abstract class AbstractArmature implements Saveable {
 	 */
 	protected void fabriCCDSolver(
 			StrandedArmature collection, 
-			double dampening, 
+			float dampening, 
 			int iterations,
 			boolean inverseWeighting,
 			boolean orientationAware,
@@ -810,17 +816,28 @@ public abstract class AbstractArmature implements Saveable {
 		 * (as an optimization, only reset the orientation if the bone is mapped to multiple strands in boneStrandsMap);
 		 */		
 
-		SGVec_3d base = new SGVec_3d(); 
-		
+		SGVec_3f base = new SGVec_3f(); 
+
 		for(int i = 0; i< iterations; i++) {
 			for(Strand s: strands) {
 				s.alignSimulationAxesToBones();
-				SGVec_3d fauxTip = new SGVec_3d(0d, s.strandTip.getBoneHeight(), 0d);
-				if(orientationAware) 
-					saneCCD(dampening, s, fauxTip, s.strandTip, s.strandRoot, inverseWeighting, true); 	
-				saneCCD(dampening, s, base, s.strandTip.parent, s.strandRoot, inverseWeighting, true);							
+				SGVec_3f fauxTip = new SGVec_3f(0f, s.getStrandTip().getBoneHeight(), 0f);
+				if(orientationAware) {
+					AbstractAxes strandTargetAxes = s.getStrandTip().getPinnedAxes();
+					saneCCD(dampening, s, fauxTip, s.getStrandTip().getBoneHeight(), s.getStrandTip(), s.getStrandRoot(), inverseWeighting, true); 	
+					saneCCD(dampening, s, base, 0f, s.getStrandTip().parent, s.getStrandRoot(), inverseWeighting, true);
+					AbstractAxes simulatedTipAxes = s.simulatedLocalAxes.get(s.getStrandTip()); simulatedTipAxes.updateGlobal();
+					simulatedTipAxes.alignOrientationTo(strandTargetAxes);	
+					AbstractKusudama constraint =  ((AbstractKusudama)s.getStrandTip().getConstraint());
+					if(constraint != null) {
+						constraint.setAxesToOrientationSnap(simulatedTipAxes, s.simulatedConstraintAxes.get(s.getStrandTip()), constraint.getStrength());
+					}	
+				} else {
+					saneCCD(dampening, s, base, s.getStrandTip().getBoneHeight(), s.getStrandTip(), s.getStrandRoot(), inverseWeighting, true);
+				}			
+				
 				if(twistAware) 
-					fabriTwist(s, s.strandRoot); 				
+					fabriTwist(s, s.getStrandRoot()); 				
 			}
 		}
 		applyAverageWeightedRotationsToSimulationAxes(collection, false);
@@ -830,43 +847,48 @@ public abstract class AbstractArmature implements Saveable {
 
 
 	private void saneCCD(
-			double dampening, 
+			float dampening, 
 			Strand chain,
-			SGVec_3d pointOnTarget,
+			SGVec_3f pointOnTarget,
+			float lengthAlongTipBone, //which part of the tip bone should be attempting to reach the target 
 			AbstractBone startFrom, 
 			AbstractBone upTo,
 			boolean inverseWeighting,
 			boolean snapLast) {
-		AbstractAxes strandTargetAxes = chain.strandTip.getPinnedAxes();
-		AbstractAxes strandTipAxes = chain.simulatedLocalAxes.get(chain.strandTip);
-		strandTipAxes.alignOrientationTo(strandTargetAxes);
-		SGVec_3d pinLocation = strandTargetAxes.getGlobalOf(pointOnTarget);
+		AbstractAxes strandTargetAxes = chain.getStrandTip().getPinnedAxes();
+		AbstractAxes strandTipAxes = chain.simulatedLocalAxes.get(chain.getStrandTip());
+		//strandTipAxes.alignOrientationTo(strandTargetAxes);
+		SGVec_3f pinLocation = strandTargetAxes.getGlobalOf(pointOnTarget);
+		SGVec_3f alongBoneLocation = new SGVec_3f(0f, lengthAlongTipBone, 0f);
 		AbstractBone currentBone = startFrom;
 		if(currentBone != null) {
-			sgRayd currentBoneDirRay = new sgRayd(new SGVec_3d(), new SGVec_3d());
-			sgRayd goalRay = new sgRayd(new SGVec_3d(), new SGVec_3d());
+			sgRayf currentBoneDirRay = new sgRayf(new SGVec_3f(), new SGVec_3f());
+			sgRayf goalRay = new sgRayf(new SGVec_3f(), new SGVec_3f());
 
-			double boneCount = 1d;
-			double bonesInChain = chain.bones.size();
+			float boneCount = 1f;
+			float bonesInChain = chain.bones.size();
 
-			double angle; 
-			double scalar;
+			float angle; 
+			float scalar;
 			while(currentBone != upTo.parent) {
-				
-					AbstractAxes currentSimulatedAxes = chain.simulatedLocalAxes.get(currentBone);
-					currentBoneDirRay.setP1(currentSimulatedAxes.origin_()); 
-					currentBoneDirRay.setP2(strandTipAxes.getGlobalOf(pointOnTarget));
+
+				AbstractAxes currentSimulatedAxes = chain.simulatedLocalAxes.get(currentBone);
+				currentBoneDirRay.setP1(currentSimulatedAxes.origin_()); 
+				currentBoneDirRay.setP2(strandTipAxes.getGlobalOf(alongBoneLocation));
 
 					goalRay.setP1(currentBoneDirRay.p1());
 					goalRay.setP2(pinLocation); 
 
-					Rot rotateToTarget = new Rot(currentBoneDirRay.heading(), goalRay.heading());
+					Rot rotateToTarget = new Rot(
+							currentBoneDirRay.heading(), 
+							goalRay.heading()
+							);
 					
 					angle = rotateToTarget.getAngle();
 					scalar = angle < 0 ? -1 : 1;
 					angle = Math.abs(dampening) > Math.abs(angle) ? angle : dampening * scalar;
 					angle *= (1f-currentBone.getStiffness());
-					if(inverseWeighted)
+					if(inverseWeighting)
 						angle *= (boneCount/bonesInChain);
 					
 					if(!currentBone.getIKOrientationLock()) {
@@ -883,14 +905,7 @@ public abstract class AbstractArmature implements Saveable {
 				currentBone = currentBone.parent;
 				boneCount++;			
 			}
-
-			AbstractAxes simulatedTipAxes = chain.simulatedLocalAxes.get(chain.strandTip); simulatedTipAxes.updateGlobal();
-
-			simulatedTipAxes.alignOrientationTo(strandTargetAxes);	
-			AbstractKusudama constraint =  ((AbstractKusudama)chain.strandTip.getConstraint());
-			if(constraint != null) {
-				constraint.setAxesToOrientationSnap(simulatedTipAxes, chain.simulatedConstraintAxes.get(chain.strandTip), constraint.getStrength());
-			}			
+			
 		}
 	}
 
@@ -900,11 +915,11 @@ public abstract class AbstractArmature implements Saveable {
 	 * then another sequence of forward snap to twists from @param upTo to the chain tip. 
 	 */
 	private void fabriTwist(Strand chain, AbstractBone upTo) {		
-		AbstractBone childBone = chain.strandTip;
+		AbstractBone childBone = chain.getStrandTip();
 		AbstractAxes childAxes = chain.simulatedLocalAxes.get(childBone);
 		AbstractAxes childAxesCopy = childAxes.getGlobalCopy();
 		AbstractBone currentBone = childBone.getParent();
-		AbstractAxes childInverseConstraints = chain.simulatedConstraintAxes.get(chain.strandTip); 
+		AbstractAxes childInverseConstraints = chain.simulatedConstraintAxes.get(chain.getStrandTip()); 
 		if(childInverseConstraints != null) childInverseConstraints = childInverseConstraints.getGlobalCopy();
 		AbstractAxes currentAxesCopy = childAxes.getGlobalCopy();
 		AbstractKusudama childConstraint = ((AbstractKusudama)childBone.getConstraint());
@@ -936,7 +951,7 @@ public abstract class AbstractArmature implements Saveable {
 		}
 
 
-		AbstractAxes tempChildAxes = chain.strandTipTracerAxes.getGlobalCopy();
+		AbstractAxes tempChildAxes = chain.getStrandTipTracerAxes().getGlobalCopy();
 		AbstractAxes simulatedChildAxes = null;
 		int i= chain.bones.size()-1; 
 		while(i >= 0) {
@@ -952,8 +967,9 @@ public abstract class AbstractArmature implements Saveable {
 				} 	
 
 				AbstractKusudama constraint = ((AbstractKusudama)currentBone.getConstraint());
-				constraint.snapToTwistLimits(simulatedCurrentAxes, chain.simulatedConstraintAxes.get(currentBone));
-
+				if(constraint != null) {
+					constraint.snapToTwistLimits(simulatedCurrentAxes, chain.simulatedConstraintAxes.get(currentBone));
+				}
 				if(childBone != null) { 
 					simulatedChildAxes.alignGlobalsTo(tempChildAxes);
 					simulatedChildAxes.updateGlobal();
@@ -977,7 +993,7 @@ public abstract class AbstractArmature implements Saveable {
 
 		for(AbstractBone b : collection.allBonesInStrandCollection) {
 
-			//double totalDist = 0d;
+			//float totalDist = 0f;
 			ArrayList<Strand> strandList = collection.boneStrandMap.get(b);
 
 			/*for(Strand s : strandList) { 
@@ -985,29 +1001,29 @@ public abstract class AbstractArmature implements Saveable {
 				totalDist += s.distToTarget;
 			}*/
 
-			double totalCount = 0;
-			double wT = 0;
-			double xT = 0; 
-			double yT = 0; 
-			double zT = 0;
+			float totalCount = 0;
+			float wT = 0;
+			float xT = 0; 
+			float yT = 0; 
+			float zT = 0;
 
 			//totalDist = collection.totalPinDist;
-			double totalFreedomForBone = 0d; 			
+			float totalFreedomForBone = 0f; 			
 			for(Strand s : strandList) {
-				//double distance = s.distToTarget; 					
+				//float distance = s.distToTarget; 					
 				AbstractAxes simulatedLocal = s.simulatedLocalAxes.get(b);
 				//simulatedLocal.updateGlobal();
 				Rot r = simulatedLocal.localMBasis.rotation;
 				//r = new Rot(r.getAxis(), r.getAngle()*(distance/totalDist));
-				Quaternion current = G.getSingleCoveredQuaternion(
-						new Quaternion(r.rotation.getQ0(), 
+				Quaternionf current = G.getSingleCoveredQuaternionf(
+						new Quaternionf(r.rotation.getQ0(), 
 								r.rotation.getQ1(),
 								r.rotation.getQ2(), 
 								r.rotation.getQ3()), 
 						initialQ);
 
-				double freedomForBoneThisStrand = getAbilityBiasing() ? s.getRemainingFreedomAtBone(b) : 1d; 
-				double weight = 1d/freedomForBoneThisStrand;
+				float freedomForBoneThisStrand = getAbilityBiasing() ? s.getRemainingFreedomAtBone(b) : 1f; 
+				float weight = 1f/freedomForBoneThisStrand;
 				totalFreedomForBone += weight;
 				//totalFreedomForBone += freedomForBoneThisStrand;				
 				wT += (current.getQ0() * weight);
@@ -1018,7 +1034,11 @@ public abstract class AbstractArmature implements Saveable {
 				//totalDist += distance;
 			}
 			//if(strandList.size() > 1) System.out.println();
-			Rot avg = new Rot(wT/totalFreedomForBone, xT/totalFreedomForBone, yT/totalFreedomForBone, zT/totalFreedomForBone, true);
+			Rot avg = new Rot(
+					wT/totalFreedomForBone, 
+					xT/totalFreedomForBone, 
+					yT/totalFreedomForBone, 
+					zT/totalFreedomForBone, true);
 			//Rot avg = new Rot(wT/totalCount, xT/totalCount, yT/totalCount, zT/totalCount, true);
 
 
@@ -1055,14 +1075,14 @@ public abstract class AbstractArmature implements Saveable {
 	}	
 	//debug code -- use to set a minimum distance an effector must move
 	// in order to trigger a chain iteration 
-	double debugMag = 5f; 
-	SGVec_3d lastTargetPos = new SGVec_3d(); 
+	float debugMag = 5f; 
+	SGVec_3f lastTargetPos = new SGVec_3f(); 
 
 
-	public Rot getDampenedRotationBetween(Rot from, Rot to, double clamp) {
+	public Rot getDampenedRotationBetween(Rot from, Rot to, float clamp) {
 		Rot result = to.applyTo(from.revert());
-		SGVec_3d axis = result.getAxis(); 
-		double aangle =result.getAngle(); 
+		SGVec_3f axis = result.getAxis(); 
+		float aangle =result.getAngle(); 
 		aangle = Math.min(aangle, dampening);
 		Rot rotTo = new Rot(axis, aangle);
 		return rotTo;
@@ -1099,7 +1119,7 @@ public abstract class AbstractArmature implements Saveable {
 		return IKType;
 	}
 
-	public double getDampening() {
+	public float getDampening() {
 		return dampening;
 	}
 
@@ -1155,7 +1175,7 @@ public abstract class AbstractArmature implements Saveable {
 		saveJSON.setString("localAxes", localAxes().getIdentityHash()); 
 		saveJSON.setString("rootBone", getRootBone().getIdentityHash());
 		saveJSON.setInt("defaultIterations", getDefaultIterations()); 
-		saveJSON.setDouble("dampening", this.getDampening());
+		saveJSON.setFloat("dampening", this.getDampening());
 		saveJSON.setInt("defaultSolver", this.getDefaultSolverType());
 		saveJSON.setBoolean("inverseWeighted", this.isInverseWeighted());
 		saveJSON.setBoolean("satisfyOrientation", this.isSatisfyOrientation());
@@ -1169,7 +1189,7 @@ public abstract class AbstractArmature implements Saveable {
 		this.localAxes = EWBIKLoader.getObjectFor(localAxes().getClass(), j, j.getString("localAxes"));
 		this.rootBone = EWBIKLoader.getObjectFor(getRootBone().getClass(), j, j.getString("rootBone"));
 		this.setDefaultIterations(j.getInt("defaultIterations"));
-		this.setDefaultDampening(j.getDouble("defaultDampening"));
+		this.setDefaultDampening(j.getFloat("defaultDampening"));
 		this.setDefaultIKType(j.getInt("defaultSolver"));	
 		this.setSatisfyOrientation(j.getBoolean("satisfyOrientation"));
 		this.setSatifyTwist(j.getBoolean("satisfyTwist"));
@@ -1177,5 +1197,29 @@ public abstract class AbstractArmature implements Saveable {
 		this.tag = j.getString("tag");
 	}
 
+	
+	@Override
+	public void notifyOfSaveIntent() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void notifyOfSaveCompletion() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public boolean isLoading() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public void setLoading(boolean loading) {
+		// TODO Auto-generated method stub
+		
+	}
 
 }

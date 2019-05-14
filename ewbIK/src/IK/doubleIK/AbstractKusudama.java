@@ -1,7 +1,7 @@
 /**
  * 
  */
-package IK;
+package IK.doubleIK;
 import java.util.ArrayList;
 
 import data.EWBIKLoader;
@@ -9,6 +9,9 @@ import data.EWBIKSaver;
 import data.JSONObject;
 import data.Saveable;
 import sceneGraph.*;
+import sceneGraph.math.doubleV.AbstractAxes;
+import sceneGraph.math.doubleV.MRotation;
+import sceneGraph.math.doubleV.Rot;
 import sceneGraph.math.doubleV.SGVec_3d;
 import sceneGraph.math.doubleV.Vec3d;
 import sceneGraph.math.doubleV.sgRayd;
@@ -1001,6 +1004,30 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 		this.range = j.getDouble("axialRange");
 		this.axiallyConstrained = j.getBoolean("axiallyConstrained"); 
 		this.orientationallyConstrained = j.getBoolean("orientationallyConstrained");
+	}
+	
+	@Override
+	public void notifyOfSaveIntent() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void notifyOfSaveCompletion() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public boolean isLoading() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public void setLoading(boolean loading) {
+		// TODO Auto-generated method stub
+		
 	}
 }
 

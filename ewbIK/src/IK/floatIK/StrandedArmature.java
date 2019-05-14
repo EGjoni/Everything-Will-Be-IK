@@ -1,8 +1,12 @@
-package IK;
+package IK.floatIK;
 
 import java.util.*;
+
+import IK.floatIK.AbstractBone;
 import sceneGraph.*;
-import sceneGraph.math.doubleV.SGVec_3d;
+import sceneGraph.math.floatV.AbstractAxes;
+import sceneGraph.math.floatV.Rot;
+import sceneGraph.math.floatV.SGVec_3f;
 
 public class StrandedArmature
 {
@@ -17,20 +21,20 @@ public class StrandedArmature
     public ArrayList<StrandedArmature> childCollections;
     public ArrayList<AbstractBone> allBonesInStrandCollection;
     public HashMap<AbstractBone, ArrayList<Strand>> boneStrandMap;
-    public HashMap<AbstractBone, Double> angleDeltaMap;
+    public HashMap<AbstractBone, Float> angleDeltaMap;
     public HashMap<AbstractBone, AbstractAxes> averageSimulatedAxes;
-    Double lastLargestAngleDelta;
-    Double amountIncreasing;
-    Double amountDecreasing;
+    Float lastLargestAngleDelta;
+    Float amountIncreasing;
+    Float amountDecreasing;
     int increasingSampleCount;
     int decreasingSampleCount;
     protected StrandedArmature parentStrandedAmature;
     public Strand parentStrand;
-    public double totalPinDist;
+    public float totalPinDist;
     public int distanceToRoot;
     public int chainLength;
     boolean includeInIK;
-    boolean basePinned;
+    private boolean basePinned;
     AbstractBone strandRoot;
     AbstractAxes simulatedStrandRootParentAxes;
     
@@ -41,24 +45,25 @@ public class StrandedArmature
         this.childCollections = new ArrayList<StrandedArmature>();
         this.allBonesInStrandCollection = new ArrayList<AbstractBone>();
         this.boneStrandMap = new HashMap<AbstractBone, ArrayList<Strand>>();
-        this.angleDeltaMap = new HashMap<AbstractBone, Double>();
+        this.angleDeltaMap = new HashMap<AbstractBone, Float>();
         this.averageSimulatedAxes = new HashMap<AbstractBone, AbstractAxes>();
         this.lastLargestAngleDelta = null;
-        this.amountIncreasing = 0.0;
-        this.amountDecreasing = 0.0;
+        this.amountIncreasing = 0.0f;
+        this.amountDecreasing = 0.0f;
         this.increasingSampleCount = 0;
         this.decreasingSampleCount = 0;
         this.parentStrandedAmature = null;
         this.parentStrand = null;
-        this.totalPinDist = 0.0;
+        this.totalPinDist = 0.0f;
         this.distanceToRoot = 0;
         this.chainLength = 0;
         this.includeInIK = true;
-        this.basePinned = false;
+        this.setBasePinned(false);
         this.simulatedStrandRootParentAxes = null;
         this.strandRoot = this.armatureRootBone(rootBone);
         this.allBonesInStrandCollection.add(this.strandRoot);
         this.generateStrandHierarchy();
+        sortBoneList();
     }
     
     public StrandedArmature( Strand inputParentStrand,  AbstractBone inputStrandRoot) {
@@ -66,29 +71,38 @@ public class StrandedArmature
         this.childCollections = new ArrayList<StrandedArmature>();
         this.allBonesInStrandCollection = new ArrayList<AbstractBone>();
         this.boneStrandMap = new HashMap<AbstractBone, ArrayList<Strand>>();
-        this.angleDeltaMap = new HashMap<AbstractBone, Double>();
+        this.angleDeltaMap = new HashMap<AbstractBone, Float>();
         this.averageSimulatedAxes = new HashMap<AbstractBone, AbstractAxes>();
         this.lastLargestAngleDelta = null;
-        this.amountIncreasing = 0.0;
-        this.amountDecreasing = 0.0;
+        this.amountIncreasing = 0.0f;
+        this.amountDecreasing = 0.0f;
         this.increasingSampleCount = 0;
         this.decreasingSampleCount = 0;
         this.parentStrandedAmature = null;
         this.parentStrand = null;
-        this.totalPinDist = 0.0;
+        this.totalPinDist = 0.0f;
         this.distanceToRoot = 0;
         this.chainLength = 0;
         this.includeInIK = true;
-        this.basePinned = false;
+        this.setBasePinned(false);
         this.simulatedStrandRootParentAxes = null;
         this.strandRoot = inputStrandRoot;
         this.parentStrandedAmature = inputParentStrand.parentStrandCollection;
         this.parentStrand = inputParentStrand;
         this.distanceToRoot = this.parentStrandedAmature.distanceToRoot + 1;
-        this.basePinned = (inputParentStrand != null && inputParentStrand.strandTip.isPinned());
+        this.setBasePinned((inputParentStrand != null && inputParentStrand.getStrandTip().isPinned()));
         this.allBonesInStrandCollection.add(this.strandRoot);
         this.updateSimulatedStrandRootParentAxes();
         this.generateStrandHierarchy();
+        sortBoneList();
+    }
+    
+
+    public void sortBoneList() {
+    	ArrayList<AbstractBone> tempList = (ArrayList<AbstractBone>) allBonesInStrandCollection.clone();
+    	tempList.sort((AbstractBone a, AbstractBone b) -> {
+    		return a.ancestorCount - b.ancestorCount;
+    	});
     }
     
     public void generateStrandHierarchy() {
@@ -174,7 +188,7 @@ public class StrandedArmature
         if (this.strandRoot.localAxes().getParentAxes() != null) {
             if (this.simulatedStrandRootParentAxes == null) {
             	if(this.parentStrandedAmature != null) {
-            		this.simulatedStrandRootParentAxes =  this.parentStrandedAmature.averageSimulatedAxes.get(this.strandRoot.parent);
+            		this.simulatedStrandRootParentAxes =  this.parentStrandedAmature.averageSimulatedAxes.get(this.strandRoot.getParent());
             	} else {
             		this.simulatedStrandRootParentAxes = this.strandRoot.localAxes().getParentAxes().getGlobalCopy();
             	}
@@ -186,11 +200,11 @@ public class StrandedArmature
                     ad.emancipate();
                 }*/
                 if (this.parentStrandedAmature == null) {
-                    this.simulatedStrandRootParentAxes.alignGlobalsTo(this.strandRoot.localAxes.getParentAxes());
+                    this.simulatedStrandRootParentAxes.alignGlobalsTo(this.strandRoot.localAxes().getParentAxes());
                     this.simulatedStrandRootParentAxes.updateGlobal();
                 }
                 else {
-                	AbstractAxes parentAverage  = (AbstractAxes)this.parentStrand.parentStrandCollection.averageSimulatedAxes.get(this.parentStrand.strandTip); 
+                	AbstractAxes parentAverage  = (AbstractAxes)this.parentStrand.parentStrandCollection.averageSimulatedAxes.get(this.parentStrand.getStrandTip()); 
                 	if(this.simulatedStrandRootParentAxes != parentAverage)
                 		this.simulatedStrandRootParentAxes.alignGlobalsTo(parentAverage);
                     this.simulatedStrandRootParentAxes.updateGlobal();
@@ -218,18 +232,18 @@ public class StrandedArmature
     
     public void resetStabilityMeasures() {
         this.lastLargestAngleDelta = null;
-        this.amountIncreasing = 0.0;
-        this.amountDecreasing = 0.0;
+        this.amountIncreasing = 0.0f;
+        this.amountDecreasing = 0.0f;
         this.increasingSampleCount = 0;
         this.decreasingSampleCount = 0;
     }
     
     public void updateStabilityEstimates() {
-         double thisLargestDelta = this.getLargestAngleChange();
+         float thisLargestDelta = this.getLargestAngleChange();
         if (this.lastLargestAngleDelta != null) {
-             double change = thisLargestDelta - this.lastLargestAngleDelta;
+             float change = thisLargestDelta - this.lastLargestAngleDelta;
             if (change < 0.0) {
-                this.amountDecreasing += -1.0 * change;
+                this.amountDecreasing += -1.0f * change;
                 ++this.increasingSampleCount;
             }
             else {
@@ -240,10 +254,10 @@ public class StrandedArmature
         this.lastLargestAngleDelta = thisLargestDelta;
     }
     
-    private double getLargestAngleChange() {
-        double largestDelta = 0.0;
+    private float getLargestAngleChange() {
+        float largestDelta = 0.0f;
         for ( AbstractBone b : this.allBonesInStrandCollection) {
-             Double delta = Math.abs(this.angleDeltaMap.get(b));
+             Float delta = Math.abs(this.angleDeltaMap.get(b));
             if (delta != null && delta > largestDelta) {
                 largestDelta = delta;
             }
@@ -251,16 +265,16 @@ public class StrandedArmature
         return largestDelta;
     }
     
-    public void setDeltaMeasureForBone( AbstractBone b,  double angle) {
+    public void setDeltaMeasureForBone( AbstractBone b,  float angle) {
         this.angleDeltaMap.put(b, angle);
     }
     
-    public double getStability() {
+    public float getStability() {
         if (this.increasingSampleCount == 0) {
-            return 0.0;
+            return 0.0f;
         }
         if (this.decreasingSampleCount == 0) {
-            return 1.0;
+            return 1.0f;
         }
         return this.increasingSampleCount / (this.increasingSampleCount + this.decreasingSampleCount);
     }
@@ -269,9 +283,9 @@ public class StrandedArmature
     }
     
     public void updateTotalPinDist() {
-        this.totalPinDist = 0.0;
+        this.totalPinDist = 0.0f;
         for ( Strand s : this.strands) {
-            this.totalPinDist += s.strandTip.getTip_().dist(s.strandTip.getPinPosition());
+            this.totalPinDist += s.getStrandTip().getTip_().dist(s.getStrandTip().getPinPosition());
         }
     }
     
@@ -287,34 +301,34 @@ public class StrandedArmature
         if (this.parentStrandedAmature != null) {
             this.parentStrandedAmature.getInnerMostStrands(addTo);
         }
-        else if (!this.basePinned) {
+        else if (!this.isBasePinned()) {
             addTo.addAll(this.strands);
         }
     }
     
     public AbstractBone armatureRootBone( AbstractBone rootBone2) {
         AbstractBone rootBone3;
-        for (rootBone3 = rootBone2; rootBone3.parent != null; rootBone3 = rootBone3.parent) {}
+        for (rootBone3 = rootBone2; rootBone3.getParent() != null; rootBone3 = rootBone3.getParent()) {}
         return rootBone3;
     }
     
     public void translateToAverageTipError( boolean onlyIfUnpinned) {
-        if (!onlyIfUnpinned || !this.basePinned) {
-             SGVec_3d totalDiff = new SGVec_3d(0.0, 0.0, 0.0);
+        if (!onlyIfUnpinned || !this.isBasePinned()) {
+             SGVec_3f totalDiff = new SGVec_3f(0.0f, 0.0f, 0.0f);
              AbstractAxes translationAxes = this.averageSimulatedAxes.get(this.strandRoot);
             AbstractAxes tipBoneAxes = null;
             AbstractBone tipBone = null;
-            SGVec_3d target = null;
-            SGVec_3d tracer = null;
+            SGVec_3f target = null;
+            SGVec_3f tracer = null;
             for ( Strand s : this.strands) {
-                tipBone = s.strandTip;
+                tipBone = s.getStrandTip();
                 tipBoneAxes = this.averageSimulatedAxes.get(tipBone);
                 target = tipBone.getPinnedAxes().origin_().copy();
                 tracer = tipBoneAxes.origin_().copy();
-                totalDiff.add(SGVec_3d.sub(target, tracer));
+                totalDiff.add(SGVec_3f.sub(target, tracer));
             }
-             double count = this.strands.size();
-             SGVec_3d averageDiff = SGVec_3d.div(totalDiff, count);
+             float count = this.strands.size();
+             SGVec_3f averageDiff = SGVec_3f.div(totalDiff, count);
             // IKVector baseExpected = IKVector.add(averageDiff, translationAxes.origin());
           //   IKVector tracerExpected = IKVector.add(tipBoneAxes.getGlobalOf(new IKVector(0.0, tipBone.getBoneHeight() / 2.0, 0.0)), averageDiff);
             translationAxes.translateByGlobal(averageDiff);
@@ -328,7 +342,15 @@ public class StrandedArmature
         }
     }
     
-    public class DisconnectedBoneException extends Exception
+    public boolean isBasePinned() {
+		return basePinned;
+	}
+
+	public void setBasePinned(boolean basePinned) {
+		this.basePinned = basePinned;
+	}
+
+	public class DisconnectedBoneException extends Exception
     {
         public DisconnectedBoneException( String message) {
             super("Error: BoneExample is not connected to armature. Ignoring strand");
@@ -338,17 +360,17 @@ public class StrandedArmature
     public class Strand
     {
         AbstractAxes strandTipTracerAxes;
-        AbstractBone strandTip;
-        AbstractBone strandRoot;
+        private AbstractBone strandTip;
+        private AbstractBone strandRoot;
         public boolean rootParentPinned;
         StrandedArmature parentStrandCollection;
-        ArrayList<AbstractBone> bones;
-        HashMap<AbstractBone, Rot> rotationsMap;
-        HashMap<AbstractBone, Rot> tempRotationsMap;
-        HashMap<AbstractBone, AbstractAxes> simulatedLocalAxes;
-        HashMap<AbstractBone, AbstractAxes> simulatedConstraintAxes;
-        HashMap<AbstractBone, Double> remainingFreedomAtBoneMap ; 
-        double distToTarget;
+        public ArrayList<AbstractBone> bones;
+        public HashMap<AbstractBone, Rot> rotationsMap;
+        public  HashMap<AbstractBone, Rot> tempRotationsMap;
+        public HashMap<AbstractBone, AbstractAxes> simulatedLocalAxes;
+        public HashMap<AbstractBone, AbstractAxes> simulatedConstraintAxes;
+        public HashMap<AbstractBone, Float> remainingFreedomAtBoneMap ; 
+        float distToTarget;
         AbstractAxes strandTempAxes;
         
         public Strand( StrandedArmature par,  AbstractBone tip,  AbstractBone root) throws DisconnectedBoneException {
@@ -359,19 +381,19 @@ public class StrandedArmature
             this.simulatedLocalAxes = new HashMap<AbstractBone, AbstractAxes>();
             this.simulatedConstraintAxes = new HashMap<AbstractBone, AbstractAxes>();
             this.remainingFreedomAtBoneMap = new HashMap<>();
-            this.distToTarget = 0.0;
+            this.distToTarget = 0.0f;
             this.parentStrandCollection = par;
-            this.strandTip = tip;
-            this.strandRoot = root;
-            this.strandTipTracerAxes = this.strandTip.localAxes().getGlobalCopy();
-            if (this.strandRoot.parent != null && this.strandRoot.parent.isPinned()) {
+            this.setStrandTip(tip);
+            this.setStrandRoot(root);
+            this.strandTipTracerAxes = this.getStrandTip().localAxes().getGlobalCopy();
+            if (this.getStrandRoot().getParent() != null && this.getStrandRoot().getParent().isPinned()) {
                 this.rootParentPinned = true;
             }
             else {
                 this.rootParentPinned = false;
             }
             this.populateStrandBonesData();
-            (this.strandTempAxes = this.simulatedLocalAxes.get(this.strandTip).getGlobalCopy()).setParent(this.strandTipTracerAxes);
+            (this.strandTempAxes = this.simulatedLocalAxes.get(this.getStrandTip()).getGlobalCopy()).setParent(this.strandTipTracerAxes);
         }
         
         public ArrayList<StrandedArmature> generateChildStrandCollection() {
@@ -380,7 +402,7 @@ public class StrandedArmature
 			 * should also be its own strandedArmature.
 			 */
              ArrayList<StrandedArmature> result = new ArrayList<StrandedArmature>();
-             ArrayList<AbstractBone> childrenWithPinnedDescendents = this.strandTip.returnChildrenWithPinnedDescendants();
+             ArrayList<AbstractBone> childrenWithPinnedDescendents = this.getStrandTip().returnChildrenWithPinnedDescendants();
             for ( AbstractBone b : childrenWithPinnedDescendents) {
                 result.add(new StrandedArmature(this, b));
             }
@@ -393,14 +415,14 @@ public class StrandedArmature
 		 */
         public AbstractAxes getStrandTipTracerAxes() {
             this.strandTipTracerAxes.alignGlobalsTo(
-            		this.simulatedLocalAxes.get(this.strandTip));
+            		this.simulatedLocalAxes.get(this.getStrandTip()));
              //IKVector boneCenter = IKVector.div(IKVector.add(this.simulatedLocalAxes.get(this.strandTip).origin(), this.simulatedLocalAxes.get(this.strandTip).y().getScaledTo(this.strandTip.getBoneHeight())), 2.0);
             //this.strandTipTracerAxes.translateTo(boneCenter);
             return this.strandTipTracerAxes;
         }
         
-        public double getTotalErrorAcrossStrandsIfRotatedTo(Rot rotationTo, AbstractBone boneToRotate) {
-        	double result = 0d;
+        public float getTotalErrorAcrossStrandsIfRotatedTo(Rot rotationTo, AbstractBone boneToRotate) {
+        	float result = 0f;
         	strandTempAxes.alignGlobalsTo(simulatedLocalAxes.get(boneToRotate));
         	
         	
@@ -408,7 +430,7 @@ public class StrandedArmature
         }
         
         public void updateDistToTarget() {
-            this.distToTarget = this.strandTip.getTip_().dist(this.strandTip.pinnedTo());
+            this.distToTarget = this.getStrandTip().getTip_().dist(this.getStrandTip().pinnedTo());
         }
         
         public void revertRotations() {
@@ -424,16 +446,18 @@ public class StrandedArmature
         }
         
         private void populateStrandBonesData() throws DisconnectedBoneException {
-            AbstractBone currentBone = this.strandTip;
+            AbstractBone currentBone = this.getStrandTip();
             AbstractBone previousChild = null;
-            while (previousChild != this.strandRoot) {
+            while (previousChild != this.getStrandRoot()) {
                 this.populateBoneData(currentBone, previousChild);
                 this.simulatedLocalAxes.put(currentBone, currentBone.localAxes().getGlobalCopy());
-                if(currentBone != this.strandRoot) 
-                	this.simulatedConstraintAxes.put(currentBone, currentBone.getConstraint().limitingAxes().getGlobalCopy());
+                if(currentBone != this.getStrandRoot()) {
+                	AbstractAxes constraintAxes = currentBone.getConstraint() == null? currentBone.getMajorRotationAxes() : currentBone.getConstraint().limitingAxes();
+                	this.simulatedConstraintAxes.put(currentBone,  constraintAxes.getGlobalCopy());
+                }
                 previousChild = currentBone;
-                currentBone = currentBone.parent;
-                if(previousChild == this.strandRoot) {
+                currentBone = currentBone.getParent();
+                if(previousChild == this.getStrandRoot()) {
                 	currentBone = previousChild;
                 	break;
                 } else if (currentBone == null) {
@@ -442,20 +466,21 @@ public class StrandedArmature
             }
             //this.populateBoneData(currentBone, previousChild);
             this.simulatedLocalAxes.put(currentBone, currentBone.localAxes().getGlobalCopy());
-            if (currentBone.parent != null) {
-                this.simulatedConstraintAxes.put(currentBone, currentBone.getConstraint().limitingAxes().getGlobalCopy());
+            if (currentBone.getParent() != null) {
+            	AbstractAxes constraintAxes = currentBone.getConstraint() == null? currentBone.getMajorRotationAxes() : currentBone.getConstraint().limitingAxes();
+            	this.simulatedConstraintAxes.put(currentBone,  constraintAxes.getGlobalCopy());
             }
-            for (currentBone = this.strandTip; currentBone != this.strandRoot; currentBone = currentBone.parent) {
-                this.simulatedLocalAxes.get(currentBone).setParent(this.simulatedLocalAxes.get(currentBone.parent));
-                this.simulatedConstraintAxes.get(currentBone).setParent(this.simulatedLocalAxes.get(currentBone.parent));
+            for (currentBone = this.getStrandTip(); currentBone != this.getStrandRoot(); currentBone = currentBone.getParent()) {
+            	this.simulatedLocalAxes.get(currentBone).setParent(this.simulatedLocalAxes.get(currentBone.getParent()));
+                this.simulatedConstraintAxes.get(currentBone).setParent(this.simulatedLocalAxes.get(currentBone.getParent()));
             }
-            if (currentBone.parent != null) {
+            if (currentBone.getParent() != null) {
                 this.simulatedLocalAxes.get(currentBone).setParent(this.parentStrandCollection.simulatedStrandRootParentAxes);
-                AbstractAxes offStrandSimulatedParentAxes = parentStrandedAmature.averageSimulatedAxes.get(this.strandRoot.parent);
+                AbstractAxes offStrandSimulatedParentAxes = parentStrandedAmature.averageSimulatedAxes.get(this.getStrandRoot().getParent());
                 this.simulatedConstraintAxes.get(currentBone).setParent(offStrandSimulatedParentAxes);//this.simulatedLocalAxes.get(currentBone).getParentAxes());
             }
             else {
-            	if(currentBone == this.strandRoot && currentBone == this.strandTip) 
+            	if(currentBone == this.getStrandRoot() && currentBone == this.getStrandTip()) 
             	    this.simulatedLocalAxes.put(currentBone, currentBone.localAxes().getGlobalCopy());
                 this.simulatedLocalAxes.get(currentBone).setParent(currentBone.parentArmature.localAxes());
                
@@ -477,14 +502,14 @@ public class StrandedArmature
             	if(bone.getConstraint() != null) {
             		this.remainingFreedomAtBoneMap.put(bone, bone.getConstraint().getRotationalFreedom() + remainingFreedomAtBoneMap.get(child));
             	} else {
-            		this.remainingFreedomAtBoneMap.put(bone, 1d + remainingFreedomAtBoneMap.get(child));
+            		this.remainingFreedomAtBoneMap.put(bone, 1f + remainingFreedomAtBoneMap.get(child));
             	}
             } else {
-            	this.remainingFreedomAtBoneMap.put(bone, 1d);
+            	this.remainingFreedomAtBoneMap.put(bone, 1f);
             }
         }
         
-        public double getRemainingFreedomAtBone(AbstractBone b) {
+        public float getRemainingFreedomAtBone(AbstractBone b) {
         	return remainingFreedomAtBoneMap.get(b);
         }
         
@@ -514,12 +539,30 @@ public class StrandedArmature
             for (int i = 0; i < this.bones.size(); ++i) {
                  AbstractBone currentBone = this.bones.get(i);
                 if (this.simulatedConstraintAxes.get(currentBone) != null) {
-                     AbstractAxes constraintAxes = this.simulatedConstraintAxes.get(currentBone);
-                    constraintAxes.localMBasis.adoptValues(currentBone.getConstraint().limitingAxes().localMBasis);
-                    constraintAxes.markDirty();
-                    constraintAxes.updateGlobal();
+                	 AbstractAxes simulatedConstraintAxes = this.simulatedConstraintAxes.get(currentBone);
+                     AbstractAxes actualConstraintAxes = currentBone.getConstraint() == null? currentBone.getMajorRotationAxes() : currentBone.getConstraint().limitingAxes();
+                     
+                    simulatedConstraintAxes.localMBasis.adoptValues(actualConstraintAxes.localMBasis);
+                    simulatedConstraintAxes.markDirty();
+                    simulatedConstraintAxes.updateGlobal();
                 }
             }
         }
+
+		public AbstractBone getStrandTip() {
+			return strandTip;
+		}
+
+		public void setStrandTip(AbstractBone strandTip) {
+			this.strandTip = strandTip;
+		}
+
+		public AbstractBone getStrandRoot() {
+			return strandRoot;
+		}
+
+		public void setStrandRoot(AbstractBone strandRoot) {
+			this.strandRoot = strandRoot;
+		}
     }
 }

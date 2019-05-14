@@ -1,4 +1,4 @@
-package IK;
+package IK.floatIK;
 
 import java.util.ArrayList;
 
@@ -6,8 +6,8 @@ import data.EWBIKLoader;
 import data.EWBIKSaver;
 import data.JSONObject;
 import data.Saveable;
-import sceneGraph.AbstractAxes;
-import sceneGraph.math.doubleV.SGVec_3d;
+import sceneGraph.math.floatV.AbstractAxes;
+import sceneGraph.math.floatV.SGVec_3f;
 
 public abstract class AbstractIKPin implements Saveable {
 	
@@ -16,7 +16,7 @@ public abstract class AbstractIKPin implements Saveable {
 	protected AbstractBone forBone;
 	protected AbstractIKPin parentPin; 		
 	protected ArrayList<AbstractIKPin> childPins = new ArrayList<>();
-	double pinWeight  = 1;
+	float pinWeight  = 1;
 	
 	public AbstractIKPin() {
 		
@@ -72,7 +72,7 @@ public abstract class AbstractIKPin implements Saveable {
 	 * translates the pin to the location specified in global coordinates
 	 * @param location
 	 */
-	public void translateTo_(SGVec_3d location) {
+	public void translateTo_(SGVec_3f location) {
 		this.axes.translateTo(location);
 	}
 	
@@ -81,14 +81,14 @@ public abstract class AbstractIKPin implements Saveable {
 	 * (relative to any other Axes objects the pin may be parented to)
 	 * @param location
 	 */
-	public void translateBy_(SGVec_3d location) {
+	public void translateBy_(SGVec_3f location) {
 		this.axes.translateTo(location);
 	}
 	
 	/**
 	 * @return the pin locationin global coordinates
 	 */
-	public SGVec_3d getLocation_() {
+	public SGVec_3f getLocation_() {
 		return axes.origin_();
 	}
 	
@@ -170,7 +170,7 @@ public abstract class AbstractIKPin implements Saveable {
 	}
 	
 	
-	public double getPinWeight() {
+	public float getPinWeight() {
 		return pinWeight;
 	}
 	
@@ -186,7 +186,7 @@ public abstract class AbstractIKPin implements Saveable {
 	 * 
 	 * 
 	 */
-	public void setPinWeight(double weight) {
+	public void setPinWeight(float weight) {
 		
 	}
 	
@@ -203,7 +203,7 @@ public abstract class AbstractIKPin implements Saveable {
 		saveJSON.setString("axes", getAxes().getIdentityHash()); 
 		saveJSON.setString("forBone", forBone.getIdentityHash());
 		saveJSON.setBoolean("isEnabled", this.isEnabled());
-		saveJSON.setDouble("pinWeight", this.pinWeight);
+		saveJSON.setFloat("pinWeight", this.pinWeight);
 		return saveJSON;
 	}
 	
@@ -211,9 +211,33 @@ public abstract class AbstractIKPin implements Saveable {
 	public void loadFromJSONObject(JSONObject j) {
 		this.axes = (AbstractAxes) EWBIKLoader.getObjectFromClassMaps(this.getAxes().getClass(), j.getString("axes"));
 		this.isEnabled = j.getBoolean("isEnabled"); 
-		this.pinWeight = j.getDouble("pinWeight");
+		this.pinWeight = j.getFloat("pinWeight");
 		this.forBone = (AbstractBone) EWBIKLoader.getObjectFromClassMaps(this.forBone().getClass(), j.getString("forBone")); 
 		
 	}
 
+	
+	@Override
+	public void notifyOfSaveIntent() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void notifyOfSaveCompletion() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public boolean isLoading() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public void setLoading(boolean loading) {
+		// TODO Auto-generated method stub
+		
+	}
 }

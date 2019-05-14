@@ -436,6 +436,35 @@ public class SGVec_3d implements Serializable, Vec3d<SGVec_3d>, CanLoad {
 			* l_mat[Matrix4d.M10] + y * l_mat[Matrix4d.M11] + z * l_mat[Matrix4d.M12] + l_mat[Matrix4d.M13])
 			* l_w, (x * l_mat[Matrix4d.M20] + y * l_mat[Matrix4d.M21] + z * l_mat[Matrix4d.M22] + l_mat[Matrix4d.M23]) * l_w);
 	}
+	
+	
+	/**
+	 * Takes two vectors representing a plane 
+	 * and returns the projection of this vector onto 
+	 * that plane.
+	 * 
+	 * @param p1 vector representing first edge of plane 
+	 * @param p2 vector representing second edge of plane
+	 * @return
+	 */
+	public SGVec_3d getPlaneProjectionOf(SGVec_3d p1, SGVec_3d p2) {
+		return this.getPlaneProjectionOf(p1.crossCopy(p2));
+	}
+	
+	
+	/**
+	 * Takes a vector representing the normal of a plane, and returns 
+	 * the value of this vector projected onto that plane
+	 * @param norm
+	 * @return
+	 */
+	public SGVec_3d getPlaneProjectionOf(SGVec_3d rawNorm) {
+		SGVec_3d norm = rawNorm.copy().normalize();
+		SGVec_3d normProj = norm.multCopy(this.dot(norm));
+		normProj.mult(-1);
+		
+		return normProj.addCopy(this);
+	}
 
 	/** Multiplies this vector by the first three columns of the matrix, essentially only applying rotation and scaling.
 	 *
@@ -626,7 +655,7 @@ public class SGVec_3d implements Serializable, Vec3d<SGVec_3d>, CanLoad {
 	 * @return a string representation of this object. */
 	@Override
 	public String toString () {
-		return "(" + x + "," + y + "," + z + ")";
+		return "(" +(float) x + "," + (float)y + "," + (float)z + ")";
 	}
 
 
