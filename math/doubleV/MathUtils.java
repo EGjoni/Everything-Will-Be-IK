@@ -31,9 +31,7 @@ public final class MathUtils {
 	static public final float FLOAT_ROUNDING_ERROR =   0.000001f; // 32 bits, 23 of which may hold the significand for a precision of 6 digits
 	static public final double DOUBLE_ROUNDING_ERROR = 0.000000000000001d; // 64, 52 of which represent the significand for a precision of 15 digits. 
 	static public final double PI = Math.PI;
-	static public final float PI_f = (float)Math.PI;
 	static public final double PI2 = PI * 2d;
-	static public final float PI2_f = (float)Math.PI;
 
 	static public final double E = Math.E;
 
@@ -64,16 +62,7 @@ public final class MathUtils {
 		}
 	}
 	
-	static private class Sinf {
-		static final float[] table = new float[SIN_COUNT];
-
-		static {
-			for (int i = 0; i < SIN_COUNT; i++)
-				table[i] = (float)Math.sin((i + 0.5f) / SIN_COUNT * radFull);
-			for (int i = 0; i < 360; i += 90)
-				table[(int)(i * degToIndex) & SIN_MASK] = (float)Math.sin(i * degreesToRadians);
-		}
-	}
+	
 
 	/** Returns the sine in radians from a lookup table. */
 	static public double sin (double radians) {
@@ -115,46 +104,6 @@ public final class MathUtils {
 		return y < 0f ? atan - PI : atan;
 	}
 	
-	/** Returns the sine in radians from a lookup table. */
-	static public float sin (float radians) {
-		return Sinf.table[(int)(radians * radToIndex) & SIN_MASK];
-	}
-
-	/** Returns the cosine in radians from a lookup table. */
-	static public float cos (float radians) {
-		return Sinf.table[(int)((radians + PI / 2) * radToIndex) & SIN_MASK];
-	}
-
-	/** Returns the sine in radians from a lookup table. */
-	static public float sinDeg (float degrees) {
-		return Sinf.table[(int)(degrees * degToIndex) & SIN_MASK];
-	}
-
-	/** Returns the cosine in radians from a lookup table. */
-	static public float cosDeg (float degrees) {
-		return Sinf.table[(int)((degrees + 90) * degToIndex) & SIN_MASK];
-	}
-
-	// ---
-
-	/** Returns atan2 in radians, faster but less accurate than Math.atan2. Average error of 0.00231 radians (0.1323 degrees),
-	 * largest error of 0.00488 radians (0.2796 degrees). */
-	static public float atan2 (float y, float x) {
-		if (x == 0f) {
-			if (y > 0f) return PI_f / 2;
-			if (y == 0f) return 0f;
-			return -PI_f / 2;
-		}
-		final float atan, z = y / x;
-		if (Math.abs(z) < 1f) {
-			atan = z / (1f + 0.28f * z * z);
-			if (x < 0f) return atan + (y < 0f ? -PI_f : PI_f);
-			return atan;
-		}
-		atan = PI_f / 2 - z / (z * z + 0.28f);
-		return y < 0f ? atan - PI_f : atan;
-	}
-
 	// ---
 
 	static public Random random = new RandomXS128();
@@ -348,5 +297,25 @@ public final class MathUtils {
 	/** @return the logarithm of value with base 2 */
 	static public double log2 (double value) {
 		return log(2, value);
+	}
+	
+	public static double pow(double val, double power) {
+		return Math.pow(val, power);
+	}
+
+	public static double abs(double f) {
+		return Math.abs(f);
+	}
+
+	public static double sqrt(double f) {
+		return Math.sqrt(f);
+	}
+
+	public static double asin(double sqrt) {
+		return Math.asin(sqrt);
+	}
+	
+	public static double acos(double sqrt) {
+		return Math.acos(sqrt);
 	}
 }

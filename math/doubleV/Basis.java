@@ -1,12 +1,7 @@
-package sceneGraph;
+package sceneGraph.math.doubleV;
 
 
 
-import sceneGraph.math.doubleV.Matrix3d;
-import sceneGraph.math.doubleV.Matrix4d;
-import sceneGraph.math.doubleV.Quaternion;
-import sceneGraph.math.doubleV.SGVec_3d;
-import sceneGraph.math.doubleV.sgRayd;
 import sceneGraph.math.floatV.Vec3f;
 
 public class Basis {
@@ -111,7 +106,7 @@ public class Basis {
 		SGVec_3d yDirNew =new SGVec_3d(y.heading()); 
 		SGVec_3d zDirNew = new SGVec_3d(z.heading());   		
 
-		this.rotation = createIdealRotation(xDirNew, yDirNew, zDirNew);
+		this.rotation = createPrioritzedRotation(xDirNew, yDirNew, zDirNew);
 
 		//if(shearScaleMatrix.determinant() < 0) {		
 		//this.rotation = createIdealRotation(xDirNew, yDirNew, zDirNew);
@@ -138,7 +133,7 @@ public class Basis {
 		this.refreshMatrices();
 	}
 
-	private Rot createIdealRotation(SGVec_3d xHeading, SGVec_3d yHeading, SGVec_3d zHeading) {
+	private Rot createPrioritzedRotation(SGVec_3d xHeading, SGVec_3d yHeading, SGVec_3d zHeading) {
 		Rot toYX = new Rot(yBase, xBase, yHeading, xHeading); 
 		toYX.applyTo(yBase, tempV_3);
 		Rot toY = new Rot(tempV_3, yHeading);
@@ -165,6 +160,57 @@ public class Basis {
 		return result;*/
 	}
 
+
+	/**
+	 * see: http://matthias-mueller-fischer.ch/publications/stablePolarDecomp.pdf
+	 * @param referenceOrientation can be null if not known, in which case, 
+	 * the Identity Rotation will be used, but providing something here 
+	 * is strongly encouraged as it speeds up convergence. If you call this function 
+	 * to recompute the rotation frequently, then usually you should feed its previous output 
+	 * rotation to it as the reerence orientation. 
+	 * @param maximumIterations maximum number of times to run the optimization loop.
+	 * according to the paper, in the overwhelming majority of cases you should get usable results 
+	 * in under 5 iterations. According to other papers, you might want to go as high as 12 iterations. 
+	 * @param saetyCheck according to the referenced paper, there are theoretical 
+	 * cases where this scheme does not converge. The paper maintains that these cases are 
+	 * exceedingly rare as per their empirical observations. However, their methodology 
+	 * depends on a random sampling of all possible transformations, while their math implies 
+	 * that the degenerate cases are most likely to arise in precisely the sorts of situations 
+	 * this Basis class is hoping to simplify away -- specifically, reflections across multiple planes.
+	 * For this reason, a safety check parameter is made available. If set to true, this 
+	 * will (as suggested by the paper) attempt to check if the solver is failing to converge, 
+	 * and add a small random perturbation to the input Matrix before running the solver again.
+	 *   
+	 */
+	public Rot extractIdealRotation(Matrix4d affineMatrix, Rot referenceOrientation, int maxIter, boolean safetyCheck) {
+		Matrix3d affine3d = new Matrix3d(affineMatrix.val);
+		return new Rot(extractIdealRotation(affine3d, referenceOrientation.rotation, maxIter, safetyCheck));
+	}
+	
+	public MRotation extractIdealRotation(Matrix3d affineMatrix, MRotation referenceOrientation, int maxIter, boolean safetyCheck) {
+		MRotation q = referenceOrientation.copy();
+		Matrix3d A = affineMatrix;
+		for (int iter = 0; iter < maxIter; iter++) {
+			Matrix3d R = q.getMatrix();
+			SGVec_3d col0 = R.col(0).crs(A.col(0));
+			SGVec_3d col1 = R.col(1).crs(A.col(1));
+			SGVec_3d col2 =R.col(2).crs(A.col(2)); 
+			SGVec_3d sum = col0.addCopy(col1).add(col2);
+			double mag = 	Math.abs(
+					R.col(0).dot(A.col(0)) 
+				+ R.col(1).dot(A.col(1)) 
+				+ R.col(2).dot(A.col(2)));
+			SGVec_3d omega = sum.multCopy(1d/(mag+1.0e-9));					
+			double w = omega.mag();
+			if (w < 1.0e-9)
+				break;
+			
+			q = new MRotation(omega.div(w), w).multiply(q);					
+			q= q.normalize();
+		}
+		return q;
+	}
+
 	public Basis(Basis input) {
 		this.adoptValues(input);
 	}
@@ -178,7 +224,7 @@ public class Basis {
 		this.rotation.set(in.rotation);
 		this.shearScaleMatrix.set(in.getShearScaleMatrix());
 		this.composedMatrix.set(in.getComposedMatrix());
-		
+
 		//this.shearScaleTransform.set(this.shearScaleMatrix);
 		//this.composedTransform.set(this.composedMatrix);
 		this.reflectionMatrix.set(in.reflectionMatrix);
@@ -1124,7 +1170,7 @@ public class Basis {
 		}
 		else flipArray[Z] = false;		
 	}
-	
+
 	SGVec_3d tempV_1 = new SGVec_3d();
 
 	/*public void setDVecFromTuple(SGVec_3d vec, SGVec_3d tuple) {
@@ -1261,11 +1307,11 @@ public class Basis {
 	M10 = 1, M11 = 5, M12 = 9, M13 = 13,
 	M20 = 2, M21 = 6, M22 = 10, M23 = 14, 
 	M30 = 3, M31 = 7, M32 = 11, M33 = 15;
-	
-	
+
+
 	public static final int 
 	mM00 = 0, mM01 = 3, mM02 = 6,
 	mM10 = 1, mM11 = 4, mM12 = 7, 
 	mM20 = 2, mM21 = 5, mM22 = 8; 
-	
+
 }

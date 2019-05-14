@@ -95,7 +95,7 @@ public class Quaternion implements Serializable {
 	}
 
 	/** @return a copy of this quaternion */
-	public Quaternion cpy () {
+	public Quaternion copy () {
 		return new Quaternion(this);
 	}
 
@@ -228,6 +228,14 @@ public class Quaternion implements Serializable {
 		q2 = -q2;
 		q3 = -q3;
 		return this;
+	}
+	
+	
+	/** get the Conjugate of the quaternion.
+	 * 
+	 * @return This quaternion for chaining */
+	public Quaternion getConjugate () {
+		return this.copy().conjugate();
 	}
 
 	// TODO : this would better fit into the vector3 class
@@ -684,6 +692,10 @@ public class Quaternion implements Serializable {
 		this.q3 *= scalar;
 		this.q0 *= scalar;
 		return this;
+	}
+	
+	public Quaternion getMultiplied(double scalar) {
+		return this.copy().mul(scalar);
 	}
 
 	/** Get the axis angle representation of the rotation in degrees. The supplied vector will receive the axis (x, y and z values)

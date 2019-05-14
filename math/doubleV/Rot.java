@@ -17,15 +17,12 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
  */
 
-package sceneGraph;
+package sceneGraph.math.doubleV;
 //import org.apache.commons.math3.geometry.euclidean.threed.*;
 
 import org.apache.commons.math3.complex.*;
 
 import data.JSONArray;
-import sceneGraph.math.RotationOrder;
-import sceneGraph.math.doubleV.SGVec_3d;
-import sceneGraph.math.doubleV.sgRayd;
 import sceneGraph.math.floatV.SGVec_3f;
 
 public class Rot {
@@ -92,7 +89,7 @@ public class Rot {
 	
 	public Rot( SGVec_3d begin, SGVec_3d end) {
 		try{ 
-			rotation = new MRotation(new SGVec_3d(begin), new SGVec_3d(end));
+			rotation = new MRotation(begin, end);
 		} catch(Exception e) { 
 			rotation = new MRotation(RotationOrder.X, 0d);
 		}
@@ -311,19 +308,13 @@ public class Rot {
 	 * @return an Array of Rot objects. With the first element representing the swing, and the second representing the twist
 	 * @see <a href="http://www.euclideanspace.com/maths/geometry/rotations/for/decomposition">calculation</a> */
 	public Rot[] getSwingTwist ( SGVec_3d axis) {
-		Quaternion thisQ = new Quaternion(rotation.getQ0(), rotation.getQ1(), rotation.getQ2(), rotation.getQ3());
-		 SGVec_3d temp =  axis.copy();
-		double d = temp.set(thisQ.getQ1(), thisQ.getQ2(), thisQ.getQ3()).dot(axis);
-		Quaternion twist = new Quaternion(rotation.getQ0(), axis.x * d, axis.y * d, axis.z * d).normalize();
-		if (d < 0) twist.multiply(-1f);
-		Quaternion swing = twist.getConjugate();
-		swing = Quaternion.multiply(thisQ, swing);
-
-		Rot[] result = new Rot[2]; 
-
-		result[0] = new Rot(new MRotation(swing.getQ0(), swing.getQ1(), swing.getQ2(), swing.getQ3(), true));
-		result[1] = new Rot(new MRotation(twist.getQ0(), twist.getQ1(), twist.getQ2(), twist.getQ3(), true));		
-
+		Quaternion swing = new Quaternion(); 
+		Quaternion twist = new Quaternion(); 
+		Quaternion thisRot = new Quaternion(rotation.getQ0(), rotation.getQ1(), rotation.getQ2(), rotation.getQ3());
+		thisRot.getSwingTwist(axis, swing, twist);
+		Rot[] result = new Rot[2];
+		result[0] = new Rot(swing);
+		result[1] = new Rot(twist);
 		return result;
 	}
 
@@ -339,7 +330,7 @@ public class Rot {
 		else if (amount > 1.0)
 			return value2;
 
-		double dot = value1.dotProduct(value2);
+		double dot = value1.dot(value2);
 		double x2, y2, z2, w2;
 		if (dot < 0.0)
 		{

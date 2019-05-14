@@ -33,6 +33,7 @@ public class sgRayd {
 	protected SGVec_3d p2; 
 
 	public sgRayd() {
+		workingVector = new SGVec_3d();
 		//this.p1 = new SGVec_3d();
 	}
 	
@@ -135,6 +136,7 @@ public class sgRayd {
 
 	public SGVec_3d heading(){
 		if(this.p2 == null) {
+			if(p1 == null) p1 = new SGVec_3d();
 			p2 =  p1.copy();
 			p2.set(0d,0d,0d);
 			return p2;
@@ -884,7 +886,10 @@ public class sgRayd {
 
 	@Override
 	public String toString() {
-		String result = "sgRay " + System.identityHashCode(this) + "\n"+this.p1+"\n             v \n" + this.p2+"\n ------------";
+		String result = "sgRay " + System.identityHashCode(this) + "\n"
+					+"("+(float)this.p1.x +" ->  " +(float)this.p2.x + ") \n " 
+					+"("+(float)this.p1.y +" ->  " +(float)this.p2.y + ") \n "
+					+"("+(float)this.p1.z +" ->  " +(float)this.p2.z+ ") \n ";
 		return result;		
 	}
 

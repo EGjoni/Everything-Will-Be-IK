@@ -1,4 +1,4 @@
-package sceneGraph.math;
+package sceneGraph.math.floatV;
 
 import sceneGraph.IKVector;
 import sceneGraph.math.doubleV.SGVec_3d;
@@ -6,9 +6,9 @@ import sceneGraph.math.doubleV.Vec3d;
 
 public final class RotationOrder {
 	
-	public static final SGVec_3d X = new SGVec_3d(1,0,0);
-	public static final SGVec_3d Y = new SGVec_3d(0,1,0);
-	public static final SGVec_3d Z = new SGVec_3d(0,0,1);
+	public static final SGVec_3f X = new SGVec_3f(1,0,0);
+	public static final SGVec_3f Y = new SGVec_3f(0,1,0);
+	public static final SGVec_3f Z = new SGVec_3f(0,0,1);
 
     /** Set of Cardan angles.
      * this ordered set of rotations is around X, then around Y, then
@@ -98,28 +98,28 @@ public final class RotationOrder {
     private final String name;
 
     /** Axis of the first rotation. */
-    private final Vec3d a1;
+    private final Vec3f a1;
 
     /** Axis of the second rotation. */
-    private final Vec3d a2;
+    private final Vec3f a2;
 
     /** Axis of the third rotation. */
-    private final Vec3d a3;
+    private final Vec3f a3;
 
     /** Private constructor.
      * This is a utility class that cannot be instantiated by the user,
      * so its only constructor is private.
      * @param name name of the rotation order
-     * @param a1 axis of the first rotation
-     * @param a2 axis of the second rotation
-     * @param a3 axis of the third rotation
+     * @param x2 axis of the first rotation
+     * @param z2 axis of the second rotation
+     * @param y2 axis of the third rotation
      */
     private RotationOrder(final String name,
-                          final Vec3d a1, final Vec3d a2, final Vec3d a3) {
+                          final SGVec_3f x2, final SGVec_3f z2, final SGVec_3f y2) {
         this.name = name;
-        this.a1   = a1;
-        this.a2   = a2;
-        this.a3   = a3;
+        this.a1   = x2;
+        this.a2   = z2;
+        this.a3   = y2;
     }
 
 
@@ -134,21 +134,21 @@ public final class RotationOrder {
     /** Get the axis of the first rotation.
      * @return axis of the first rotation
      */
-    public Vec3d getA1() {
+    public Vec3f getA1() {
         return a1;
     }
 
     /** Get the axis of the second rotation.
      * @return axis of the second rotation
      */
-    public Vec3d getA2() {
+    public Vec3f getA2() {
         return a2;
     }
 
     /** Get the axis of the second rotation.
      * @return axis of the second rotation
      */
-    public Vec3d getA3() {
+    public Vec3f getA3() {
         return a3;
     }
 
