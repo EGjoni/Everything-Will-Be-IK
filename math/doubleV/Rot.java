@@ -423,6 +423,97 @@ public class Rot {
 				(value1.getQ3() * t1) + (z2 * t2));
 	}
 
+	
+	public static Rot nlerp(Rot[] rotations, double[] weights) {
+	
+		if(weights == null) {		
+			return nlerp(rotations);
+		} else {
+			double q0 = 0d; 
+			double q1 = 0d;
+			double q2 = 0d;
+			double q3 = 0d; 
+			double total = 0d; 
+			
+			for(int i = 0; i<rotations.length; i++) {
+				MRotation r = rotations[i].rotation;
+				double weight = weights[i];
+				q0 += r.getQ0() * weight;
+				q1 += r.getQ1() * weight;
+				q2 += r.getQ2() * weight;
+				q3 += r.getQ3() * weight;
+				total += weight;
+			}			
+			
+			q0 /= total;
+			q1 /= total;
+			q2 /= total;
+			q3 /= total;
+			
+			return new Rot(q0, q1, q2, q3, true);
+		}
+	}
+	
+	public static Rot nlerp(Rot[] rotations) {
+		double q0 = 0d; 
+		double q1 = 0d;
+		double q2 = 0d;
+		double q3 = 0d; 
+		double total = rotations.length; 
+		
+		for(int i = 0; i<rotations.length; i++) {
+			MRotation r = rotations[i].rotation;			
+			q0 += r.getQ0();
+			q1 += r.getQ1();
+			q2 += r.getQ2();
+			q3 += r.getQ3();
+		}	
+		q0 /= total;
+		q1 /= total;
+		q2 /= total;
+		q3 /= total;
+		
+		return new Rot(q0, q1, q2, q3, true);
+	}
+	
+	/**
+	 * finds the instantaneous (optionally weighted) average of the given rotations 
+	 * in an order-agnostic manner. Conceptually, this is equivalent to breaking down 
+	 * each rotation into an infinitesimal sequence of rotations, and then applying the rotations 
+	 * in alternation.
+	 * @param rots
+	 * @param weights if this parameter receives null, equal weights are assumed for all rotations. Otherwise, 
+	 * every element in this array is treated as a weight on the corresponding element of the rots array.  
+	 * @return the weighted average Rotation. If the total weights are 0, then returns null. 
+	 */
+	public static Rot instantaneousAvg(Rot[] rots, double[] weights) {
+		SGVec_3d accumulatedAxisAngle = new SGVec_3d(); 
+		double totalWeight = rots.length; 
+		if(weights != null) {
+			totalWeight = 0d; 
+			for(int i=0; i<weights.length; i++) {
+				totalWeight += weights[i];
+			}
+		}
+		
+		if(totalWeight == 0) {
+			return null;
+		}
+		
+		for(int i=0; i<rots.length; i++) {
+			SGVec_3d axis = rots[i].getAxis(); 
+			double angle = rots[i].getAngle(); 
+			angle /= totalWeight;
+			if(weights != null) {				
+				angle *= weights[i]; 
+			}
+			axis.mult(angle);
+			accumulatedAxisAngle.add(axis);
+		}
+		double extractAngle = accumulatedAxisAngle.mag(); 
+		accumulatedAxisAngle.div(extractAngle); 
+		return new Rot(accumulatedAxisAngle, extractAngle);
+	}
 
 	public String toString() {
 		return "\n axis: "+ this.getAxis().toSGVec3f() +", \n angle: "+((float)Math.toDegrees(this.getAngle()));

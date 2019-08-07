@@ -104,6 +104,7 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 			if(this.areGlobal) {
 				globalMBasis.adoptValues(this.localMBasis);
 			} else {
+				//parent.markDirty();
 				parent.updateGlobal();
 				//if(this.debug) {
 					//System.out.println("====== " + this + " =========");
