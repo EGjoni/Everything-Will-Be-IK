@@ -869,20 +869,25 @@ public abstract class AbstractArmature implements Saveable {
 					break;
 				armature = armature.getParentSegment(); 
 			}
+			armature.alignSimulationAxesToBones();
 			for(int i = 0; i<iterations; i++) {
-				armature.alignSimulationAxesToBones();
+				
 				if(armature.getParentSegment() == null && armature.segmentTip.getPinnedAxes() != null) {
 					SGVec_3d baseTranslate = armature.segmentTip.getPinnedAxes().origin_().subCopy(
-																				armature.simulatedLocalAxes.get(armature.segmentTip).origin_());
+							armature.simulatedLocalAxes.get(armature.segmentTip).origin_());
 					armature.simulatedLocalAxes.get(armature.segmentRoot).translateByGlobal(baseTranslate);
 					armature.simulatedConstraintAxes.get(armature.segmentRoot).translateByGlobal(baseTranslate);
 				}
-				
-				recursivelyCallImprovedSolver(armature, dampening, iterations);
-				
+
+				alignSegmentTipOrientationsFor(armature, dampening);				
+				//recursivelyCallImprovedSolver(armature, dampening, iterations);
+				iterativelyCallImprovedSlver(armature, dampening, iterations);
+				armature.setProcessed(false);
+
 				//TODO: make this use temporary simulated boneAxes until all iterations have completed. 
-				armature.recursivelyAlignBonesToSimAxesFrom(armature.segmentRoot);
+				
 			}
+		armature.recursivelyAlignBonesToSimAxesFrom(armature.segmentRoot);
 		}
 	}
 
@@ -896,10 +901,80 @@ public abstract class AbstractArmature implements Saveable {
 			return; 
 		} else if(!armature.isTipPinned()) {
 			for(SegmentedArmature c: armature.childSegments) {
+				alignSegmentTipOrientationsFor(c, dampening);
 				recursivelyCallImprovedSolver(c, dampening, iterations);
+				c.setProcessed(true);
 			}
 		}
-		planarCCD(armature, dampening,  true, true, true, false);
+		planarCCD(armature, dampening,  true, true, false, false);
+	}
+
+	public void iterativelyCallImprovedSlver(
+			SegmentedArmature baseSegment, 
+			double dampening, 
+			int iterations) {
+		ArrayList<SegmentedArmature> processQueue =  new ArrayList<>(); 
+		baseSegment.getRootMostUnprocessedChains(processQueue);
+		while(processQueue.size() > 0) {
+			for(SegmentedArmature sa: processQueue) {
+				alignSegmentTipOrientationsFor(sa, dampening);
+				planarCCD(sa, dampening, true, true, true, false);
+				sa.setProcessed(true);
+			}
+			processQueue.clear(); 
+			baseSegment.getRootMostUnprocessedChains(processQueue);
+		}
+	}
+
+	private void alignSegmentTipOrientationsFor(SegmentedArmature chain, double dampening) {
+		ArrayList<SegmentedArmature> pinnedTips = chain.pinnedDescendants;
+
+		for(SegmentedArmature tipChain : pinnedTips) {
+			AbstractBone tipBone = tipChain.segmentTip; 
+			AbstractAxes currentBoneSimulatedAxes = tipChain.simulatedLocalAxes.get(tipBone); 
+			currentBoneSimulatedAxes.updateGlobal();
+			/*Rot dirRot = currentBoneSimulatedAxes.globalMBasis.rotation.applyInverseTo(currentBone.getPinnedAxes().globalMBasis.rotation);
+			currentBoneSimulatedAxes.rotateBy(currentBone.getPinnedAxes().globalMBasis.rotation);*/
+			//Rot globalAxesPreAlignRot = currentBoneSimulatedAxes.globalMBasis.rotation.copy();
+			//MRotation globalAxesPreAlignInverse = globalAxesPreAlignRot.rotation.getInverse();
+			AbstractAxes pinAxes = tipBone.getPinnedAxes();
+			pinAxes.updateGlobal();
+			currentBoneSimulatedAxes.alignOrientationTo(pinAxes);
+			currentBoneSimulatedAxes.markDirty(); currentBoneSimulatedAxes.updateGlobal();
+			/*Rot pinRotation = pinAxes.globalMBasis.rotation;
+			Rot boneLocalPinRotation = currentBoneSimulatedAxes.getParentAxes().globalMBasis.getLocalOfRotation(pinRotation);
+			currentBoneSimulatedAxes.localMBasis.rotation.set(boneLocalPinRotation);
+			currentBoneSimulatedAxes.markDirty(); currentBoneSimulatedAxes.updateGlobal();*/
+			//Rot preSnapRotationInverse = new Rot(currentBoneSimulatedAxes.globalMBasis.rotation.rotation.getInverse());
+			//Rot toPinRotation = new Rot(preSnapRotationInverse.rotation.multiply(pinRotation));
+			//currentBoneSimulatedAxes.rotateBy(toPinRotation);
+			tipBone.setAxesToSnapped(currentBoneSimulatedAxes,  tipChain.simulatedConstraintAxes.get(tipBone));
+			currentBoneSimulatedAxes.markDirty();
+			currentBoneSimulatedAxes.updateGlobal();
+			/*MRotation toConstrained = globalAxesPreAlignInverse.multiply(currentBoneSimulatedAxes.globalMBasis.rotation.rotation);
+			SGVec_3d toConstrainedAxis = toConstrained.getAxis();
+			double toConstrainedAngle = toConstrained.getAngle();
+			toConstrainedAngle = MathUtils.clamp(toConstrainedAngle, -dampening, dampening);
+			Rot constrainedClamped = new Rot(toConstrainedAxis, toConstrainedAngle); 
+			Rot globalAxesRotPostClamp =  constrainedClamped.applyTo(globalAxesPreAlignRot); //constrainedClamped
+			Rot localizedRot = currentBoneSimulatedAxes.getParentAxes().globalMBasis.getLocalOfRotation(globalAxesRotPostClamp);
+			currentBoneSimulatedAxes.localMBasis.rotation.set(localizedRot);
+			currentBoneSimulatedAxes.markDirty(); currentBoneSimulatedAxes.updateGlobal();
+			tipBone.setAxesToSnapped(currentBoneSimulatedAxes,  tipChain.simulatedConstraintAxes.get(tipBone));
+			currentBoneSimulatedAxes.markDirty();
+			currentBoneSimulatedAxes.updateGlobal();*/
+			//Rot 
+			/*Rot toSnapRot = new Rot(boneLocalPinRotation.rotation.getInverse().multiply(currentBoneSimulatedAxes.localMBasis.rotation.rotation));
+			Rot clampedToSnapRot = new Rot(toSnapRot.getAxis(), MathUtils.clamp(toSnapRot.getAngle(), -dampening, dampening));
+			currentBoneSimulatedAxes.rotateBy(clampedToSnapRot);
+			currentBoneSimulatedAxes.updateGlobal();*/
+			//currentBoneSimulatedAxes.alignOrientationTo(currentBone.getPinnedAxes());
+			
+		}
+		/*if(debug) {
+			lastDebugBone = null;//currentBone;
+			currentBone = null;
+		}*/
 	}
 
 	/*
@@ -977,45 +1052,28 @@ public abstract class AbstractArmature implements Saveable {
 		//lastDebugBone = null;
 		AbstractBone startFrom = debug && lastDebugBone != null ? lastDebugBone :  chain.segmentTip;		
 		AbstractBone stopAfter = chain.segmentRoot;
-		
+
 
 
 		AbstractBone currentBone = startFrom;
-		//sgRayd[] averageTargetRays = chain.getAverageTargetOrientationAcrossAllPinnedBones(true);
-		//System.out.println(averageTargetRays[0].p1());
-		if(currentBone == chain.segmentTip && chain.isTipPinned()) {
-			if(debug && chain.simulatedLocalAxes.size() < 2) {
-
-			} else { 
-				AbstractAxes currentBoneSimulatedAxes = chain.simulatedLocalAxes.get(currentBone); 
-				currentBoneSimulatedAxes.updateGlobal();
-				/*Rot dirRot = currentBoneSimulatedAxes.globalMBasis.rotation.applyInverseTo(currentBone.getPinnedAxes().globalMBasis.rotation);
-			currentBoneSimulatedAxes.rotateBy(currentBone.getPinnedAxes().globalMBasis.rotation);*/	
-				AbstractAxes pinAxes = currentBone.getPinnedAxes();
-				pinAxes.updateGlobal();
-				MRotation pinRotation = pinAxes.globalMBasis.rotation.rotation;
-				Rot toPinRotation = new Rot(currentBoneSimulatedAxes.globalMBasis.rotation.rotation.getInverse().multiply(pinRotation));
-				Rot clampedToPinRot = new Rot(toPinRotation.getAxis(), MathUtils.clamp(toPinRotation.getAngle(), -dampening, dampening));
-				currentBoneSimulatedAxes.rotateBy(clampedToPinRot);
-				currentBoneSimulatedAxes.updateGlobal();
-				//currentBoneSimulatedAxes.alignOrientationTo(currentBone.getPinnedAxes());
-				currentBone.setAxesToSnapped(currentBoneSimulatedAxes,  chain.simulatedConstraintAxes.get(currentBone));
-				currentBoneSimulatedAxes.updateGlobal();
-				currentBone = currentBone.getParent();
-				/*if(debug) {
-					lastDebugBone = null;//currentBone;
-					currentBone = null;
-				}*/
-			}
+		if(chain.isTipPinned()) { //if the tip is pinned, it should have already been oriented before this function was called.
+			if(currentBone == stopAfter)
+				currentBone = null; 
+			else 
+				currentBone = startFrom.getParent();
 		}
 
 		if(debug && chain.simulatedLocalAxes.size() < 2) {
 
 		} else {
-			System.out.print("---------");
+			//System.out.print("---------");
 			while(currentBone != null && passCount > 0) {			
-				chain.updateAverageRotationToPinnedDescendants(currentBone, modeCode, dampening);
-				
+				if(!currentBone.getIKOrientationLock()) {
+					chain.updateAverageRotationToPinnedDescendants(currentBone, modeCode, dampening);
+				} else {
+					int debug = 0;
+				}
+
 				/*AbstractAxes currentBoneSimulatedAxes = chain.simulatedLocalAxes.get(currentBone); 
 				AbstractAxes currentBoneConstraintAxes = chain.simulatedConstraintAxes.get(currentBone);
 				double accumulatedq0 = 0d; 
@@ -1148,6 +1206,14 @@ public abstract class AbstractArmature implements Saveable {
 			}
 		}
 		result = new Rot(precedenceStartEdge, precedenceTargetEdge);
+		SGVec_3d normPrecStart = precedenceStartEdge.copy().normalize();
+		SGVec_3d normPrecTarget = precedenceTargetEdge.copy().normalize();
+		
+		Rot testResult = new Rot(normPrecStart, normPrecTarget);
+		
+		SGVec_3d sanityCheck_toOrigin_notrolled = result.applyToCopy(normPrecStart);
+		SGVec_3d sanityCheck_toOrigin_notrolled_norm = testResult.applyToCopy(normPrecStart);
+		//SGVec_3d sanityCheck_toAxis_notrolled = result.applyToCopy(sanityCheck_toAxis);
 		if(skipMinor) 
 			return result; 
 		else {
@@ -1183,16 +1249,31 @@ public abstract class AbstractArmature implements Saveable {
 					double maxStartEdgeLengthSQ = minorStartEdge.subCopy(precedenceTargetEdge).magSq();
 					double maxTargetEdgeLengthSQ = minorTargetEdge.subCopy(precedenceTargetEdge).magSq();
 
-					double pythagoreanWeight = (minorStartProjected.magSq()/maxStartEdgeLengthSQ) + (minorTargetProjected.magSq() /maxTargetEdgeLengthSQ); // 1.414213562373095d; 
+					double normalizedMinorStart = (minorStartProjected.magSq()/maxStartEdgeLengthSQ);
+					double normalizedMinorTarget = (minorTargetProjected.magSq() /maxTargetEdgeLengthSQ);
+					
+					double pythagoreanWeight =  (normalizedMinorStart + normalizedMinorTarget);// 1.414213562373095d; 
 					pythagoreanWeight = Math.sqrt(pythagoreanWeight/2d);
 					//double pythagoreanSlow = (minorStartProjected.mag() / minorStartEdge.mag()) + (minorTargetProjected.mag() / minorTargetEdge.mag());
 					//pythagoreanSlow = Math.sqrt(pythagoreanSlow);
 					//System.out.println("weight: " + pythagoreanWeight);
+					SGVec_3d sanityCheck_toOrigin = normPrecStart.copy();
+					SGVec_3d sanityCheck_toAxis = minorStartEdge.copy();
+					
 					Rot minorRotation = new Rot(minorStartProjected, minorTargetProjected); 
-					Rot rolledRot = minorRotation.applyTo(result); 
-					result = new Rot(Rot.slerp(pythagoreanWeight, result.rotation, rolledRot.rotation));
+					minorRotation = new Rot(minorRotation.getAxis(), minorRotation.getAngle()*(pythagoreanWeight));
+					Rot rolledRot = minorRotation.applyTo(result); 				
+					
+					SGVec_3d sanityCheck_toOrigin_rolled = rolledRot.applyToCopy(normPrecStart);
+					SGVec_3d sanityCheck_toAxis_rolled = rolledRot.applyToCopy(sanityCheck_toAxis);
+					
+					double[] weights = {pythagoreanWeight, 1d-pythagoreanWeight};
+					Rot[] toAvg = {rolledRot, result};
+					Rot nresult = Rot.nlerp(toAvg, weights);
+					Rot sresult = new Rot(Rot.slerp(pythagoreanWeight, result.rotation, rolledRot.rotation));				
+					Rot iresult = Rot.instantaneousAvg(toAvg, weights);
 					//result = new Rot(precedenceStartEdge, minorStartEdge, precedenceTargetEdge, minorTargetEdge);
-					return result;
+					return rolledRot;
 				}
 			}					
 		}		

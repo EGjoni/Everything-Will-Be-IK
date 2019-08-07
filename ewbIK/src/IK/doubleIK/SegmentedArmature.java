@@ -55,6 +55,7 @@ public class SegmentedArmature {
 	private SegmentedArmature parentSegment = null;
 	private boolean basePinned = false; 
 	private boolean tipPinned = false;
+	private boolean processed  = false; 
 	public int distanceToRoot = 0;
 
 	public int chainLength = 0;
@@ -256,8 +257,16 @@ public class SegmentedArmature {
 		//in cases of no rotation. 
 		double[] accumulatedQ = {totalWeight,0d, 0d, 0d};
 		double[] resultQ = {0d, 0d, 0d, 0d};
-		
-		double[][] errorTracker = new double[pinnedDescendants.size()+1][pinnedDescendants.size()];
+
+		double[][] errorTracker = new double[pinnedDescendants.size()][pinnedDescendants.size()+1];
+		Rot[] localRots = new Rot[errorTracker.length];
+		double[] weights = new double[errorTracker.length];
+		double[] errorWeight = new double[errorTracker.length];
+		double bestErrorDrop = 0d;
+		double worstErrorIncrease = 0d;
+		double totalErrorDrop = 0d;
+		double totalError = 0d;
+
 		sgRayd[] targetHeadings =  {
 				new sgRayd(new SGVec_3d(), new SGVec_3d()), 
 				new sgRayd(new SGVec_3d(), new SGVec_3d()), 
@@ -269,35 +278,9 @@ public class SegmentedArmature {
 				new sgRayd(new SGVec_3d(), new SGVec_3d())
 		};
 
-		/**
-		 * populate the error tracker with the errors at this iteration so we can check 
-		 * whether each rotation contributes to a decrease or increase in the total error. 
-		 */
-		for(int i=0; i<pinnedDescendants.size(); i++) {
-			SegmentedArmature s = pinnedDescendants.get(i);
-			AbstractAxes targetAxes = s.segmentTip.getPinnedAxes();
-			AbstractAxes tipAxes = s.simulatedLocalAxes.get(s.segmentTip);			
-			targetHeadings[0].setP1(targetAxes.origin_()); targetHeadings[0].heading(targetAxes.orientation_X_());
-			targetHeadings[1].setP1(targetAxes.origin_()); targetHeadings[1].heading(targetAxes.orientation_Y_());
-			targetHeadings[2].setP1(targetAxes.origin_()); targetHeadings[2].heading(targetAxes.orientation_Z_());			
-			tipHeadings[0].setP1(tipAxes.origin_()); tipHeadings[0].heading(tipAxes.orientation_X_());
-			tipHeadings[1].setP1(tipAxes.origin_()); tipHeadings[1].heading(tipAxes.orientation_Y_());
-			tipHeadings[2].setP1(tipAxes.origin_()); tipHeadings[2].heading(tipAxes.orientation_Z_());
-			errorTracker[0][i] = measureMinkowskiError(forBone, null, s, targetHeadings, tipHeadings, 1, modeCode);
-		}
-
-
-
 		int debug =0;
-		if(pinnedDescendants.size() > 1) {
-			debug = 0;
-			//modeCode = 1;
-			System.out.println("Pre-Error: [");
-			for(int i=0; i<errorTracker.length; i++)
-				System.out.println(errorTracker[i]+",");
-			System.out.println("]");
-		}
-		for(int i=0; i<pinnedDescendants.size(); i++) {
+
+		for(int i=0; i< pinnedDescendants.size(); i++) {
 			SegmentedArmature s = pinnedDescendants.get(i);
 			AbstractAxes targetAxes = s.segmentTip.getPinnedAxes();
 			AbstractAxes tipAxes = s.simulatedLocalAxes.get(s.segmentTip);						
@@ -311,19 +294,6 @@ public class SegmentedArmature {
 
 			double pinWeight = s.segmentTip.getIKPin().getPinWeight(); 			
 
-			
-			for(int j=0; j<pinnedDescendants.size(); j++) {
-				SegmentedArmature ss = pinnedDescendants.get(j);
-				AbstractAxes targetAxes2 = s.segmentTip.getPinnedAxes();
-				AbstractAxes tipAxes2 = s.simulatedLocalAxes.get(s.segmentTip);			
-				targetHeadings[0].setP1(targetAxes2.origin_()); targetHeadings[0].heading(targetAxes2.orientation_X_());
-				targetHeadings[1].setP1(targetAxes2.origin_()); targetHeadings[1].heading(targetAxes2.orientation_Y_());
-				targetHeadings[2].setP1(targetAxes2.origin_()); targetHeadings[2].heading(targetAxes2.orientation_Z_());			
-				tipHeadings[0].setP1(tipAxes2.origin_()); tipHeadings[0].heading(tipAxes2.orientation_X_());
-				tipHeadings[1].setP1(tipAxes2.origin_()); tipHeadings[1].heading(tipAxes2.orientation_Y_());
-				tipHeadings[2].setP1(tipAxes2.origin_()); tipHeadings[2].heading(tipAxes2.orientation_Z_());
-				errorTracker[i+1][j] = measureMinkowskiError(forBone, null, s, targetHeadings, tipHeadings, 1, modeCode);// - errorTracker[i];
-			}
 			double preDampedAngle = addAveragedRotationToTarget(
 					targetHeadings, 
 					tipHeadings, 
@@ -332,91 +302,82 @@ public class SegmentedArmature {
 					dampening, 
 					accumulatedQ,
 					resultQ,
-					pinWeight);
-
-			totalWeight += (pinWeight*preDampedAngle);
+					pinWeight);			
+			localRots[i] = new Rot(new MRotation(resultQ[0], resultQ[1], resultQ[2], resultQ[3]));
+			totalWeight += preDampedAngle;
+			//System.out.println(totalWeight);
+			weights[i] = preDampedAngle;
 		}
 		AbstractAxes simBoneAxes = simulatedLocalAxes.get(forBone);
 		AbstractAxes simConstraintAxes = simulatedConstraintAxes.get(forBone);
-		Rot averagedLocalRot = new Rot(
-				accumulatedQ[0] /totalWeight,
-				accumulatedQ[1] /totalWeight,
-				accumulatedQ[2] /totalWeight,
-				accumulatedQ[3] /totalWeight,
-				true);
-		if(Double.isNaN(averagedLocalRot.getAngle())) {
+
+		//Rot averagedLocalRot = new Rot(Rot.slerp(0.5d, localRots[0].rotation, localRots[1].rotation));
+		//Rot averagedLocalRot = Rot.nlerp(localRots, weights);
+		Rot averagedLocalRot = Rot.instantaneousAvg(localRots, weights);
+		if(averagedLocalRot == null) averagedLocalRot = new Rot();
+		//Rot averagedLocalRot = localRots[0];
+		//System.out.println("error iterations for : " +forBone + " {");
+		Rot minErRot = averagedLocalRot;
+	/*	for(double e =0; e<=100; e++) {
+			double eStart = e/100d;
+			double[] testWeight = {eStart, 1-eStart};
+			double totalErrorAt = 0d;
+			double weightedErrorAt = 0d; 
+			double bestErrorDiff = -10d;
+			Rot testRot = null;
+			
+			for(int i=pinnedDescendants.size()-1; i>= 0; i--) {
+				SegmentedArmature s = pinnedDescendants.get(i);
+				AbstractAxes targetAxes = s.segmentTip.getPinnedAxes();
+				AbstractAxes tipAxes = s.simulatedLocalAxes.get(s.segmentTip);			
+				targetHeadings[0].setP1(targetAxes.origin_()); targetHeadings[0].heading(targetAxes.orientation_X_());
+				targetHeadings[1].setP1(targetAxes.origin_()); targetHeadings[1].heading(targetAxes.orientation_Y_());
+				targetHeadings[2].setP1(targetAxes.origin_()); targetHeadings[2].heading(targetAxes.orientation_Z_());			
+				tipHeadings[0].setP1(tipAxes.origin_()); tipHeadings[0].heading(tipAxes.orientation_X_());
+				tipHeadings[1].setP1(tipAxes.origin_()); tipHeadings[1].heading(tipAxes.orientation_Y_());
+				tipHeadings[2].setP1(tipAxes.origin_()); tipHeadings[2].heading(tipAxes.orientation_Z_());
+				testRot = Rot.instantaneousAvg(localRots, testWeight);
+				totalErrorAt += measureMinkowskiError(forBone, testRot, s, targetHeadings, tipHeadings, 1, modeCode);
+				weightedErrorAt += measureMinkowskiError(forBone, averagedLocalRot, s, targetHeadings, tipHeadings, 1, modeCode);
+				//errorTracker[i][0] = measureMinkowskiError(forBone, null, s, targetHeadings, tipHeadings, 1, modeCode);
+			}
+			double errorDiff = weightedErrorAt - totalErrorAt;
+			if( errorDiff > 0d) {
+				System.out.println("improvementAt "+(int)e+": " + errorDiff + "of "+ weightedErrorAt);
+				if(errorDiff > bestErrorDiff) {
+					bestErrorDiff = errorDiff;
+					minErRot = testRot;
+				}
+			}
+			
+			
+		}*/
+		//System.out.println("}");
+
+		/*new Rot(
+					accumulatedQ[0] /totalWeight,
+					accumulatedQ[1] /totalWeight,
+					accumulatedQ[2] /totalWeight,
+					accumulatedQ[3] /totalWeight,
+					true);*/
+		if(Double.isNaN(minErRot.getAngle())) {
 			debug = 0;
 		}
 		/*Quaternion singleCovered = G.getSingleCoveredQuaternion(G.getQuaternion(averagedLocalRot), G.getQuaternion(forBone.parentArmature.localAxes().globalMBasis.rotation));
 		averagedLocalRot = new Rot(singleCovered.getQ0(), singleCovered.getQ1(), singleCovered.getQ2(), singleCovered.getQ3(), false);*/
-		Rot clampedRot = new Rot(averagedLocalRot.getAxis(), MathUtils.clamp(averagedLocalRot.getAngle(), -dampening, dampening));
 
-		simBoneAxes.alignGlobalsTo(forBone.localAxes());
+
+		Rot clampedRot = new Rot(minErRot.getAxis(), MathUtils.clamp(minErRot.getAngle(), -dampening, dampening));
+		//Rot clampedRot = minErRot;
+		//simBoneAxes.alignGlobalsTo(forBone.localAxes());
 		simBoneAxes.markDirty(); simBoneAxes.updateGlobal();
 		simBoneAxes.localMBasis.rotateBy(clampedRot);
 		simBoneAxes.markDirty(); simBoneAxes.updateGlobal();
 		forBone.setAxesToSnapped(simBoneAxes, simConstraintAxes);
-		simBoneAxes.updateGlobal();
+		simBoneAxes.markDirty(); simBoneAxes.updateGlobal();
 
-		//if(pinnedDescendants.size() > 1) {
-		
-		if(pinnedDescendants.size() > 1) {
-			System.out.println("Post-Error: [");
-			for(int i=0; i<errorTracker.length; i++)
-				System.out.println(errorTracker[i]+",");
-			System.out.println("]");
-		}
 		//}
 
-	}
-
-	/**
-	 * use minkowski distance to measure error between components from segment tip location and orientation  to target 
-	 * @param fromBone
-	 * @param forTip 
-	 * @param localRotation if null, no rotation will be applied to the simulationAxes before checking for rotation errors.
-	 * @return a positive or negative number representing how much applying this rotation to the given bone would cause 
-	 * the error to increase or decrease for the given segment tip and its associated target.  
-	 */
-	public double measureMinkowskiError(
-			AbstractBone fromBone, 
-			Rot localRotation, 
-			SegmentedArmature forTip,
-			sgRayd[] targetHeadings, 
-			sgRayd[] simTipHeadings,
-			double power, int modeCode) {
-
-		double totalDist = 0d;
-
-		AbstractAxes simBoneAxes = simulatedLocalAxes.get(fromBone); 
-
-		if(localRotation != null) {
-			simBoneAxes.localMBasis.rotateBy(localRotation); 
-			simBoneAxes.markDirty(); simBoneAxes.updateGlobal();
-		}
-
-		totalDist += targetHeadings[0].p1().dist(simTipHeadings[0].p1());
-		//SGVec_3d.angleBetween(simBoneAxes.origin_().subCopy(simTipHeadings[0].p1()), simBoneAxes.origin_().subCopy(targetHeadings[0].p1()));
-
-
-		for(int mode = 0 ; mode < 3; mode++) {
-			boolean skipRound = true;
-			switch(mode){
-			case	0:  if((modeCode &1) != 0) skipRound = false;   
-			case 1:   if((modeCode &2) != 0) skipRound = false;   
-			case 2:   if((modeCode &4) != 0) skipRound = false;   
-			}  
-			if(!skipRound) {
-				int rayIndex = (mode+1)%3;
-				totalDist += SGVec_3d.angleBetween(simTipHeadings[rayIndex].heading(), targetHeadings[rayIndex].heading());
-			}
-		}
-
-		if(localRotation != null) { 
-			simBoneAxes.localMBasis.adoptValues(fromBone.localAxes().localMBasis); 
-			simBoneAxes.markDirty(); simBoneAxes.updateGlobal();
-		}
-		return totalDist; 	
 	}
 
 	/**
@@ -445,7 +406,9 @@ public class SegmentedArmature {
 			double[] resultQ,
 			double tipWeight) {
 
+
 		AbstractAxes currentBoneSimulatedAxes = simulatedLocalAxes.get(forBone);
+		AbstractAxes preSolveCurrentAxes = currentBoneSimulatedAxes.getGlobalCopy();
 		AbstractAxes currentBoneConstraintAxes = simulatedConstraintAxes.get(forBone);
 
 		//accounts for clamping's tendency to hide information about the relative magnitudes of rotations
@@ -458,20 +421,23 @@ public class SegmentedArmature {
 		if((modeCode &2) != 0) passCount++;   
 		if((modeCode &4) != 0) passCount++; 
 
+		Rot[] rotations = new Rot[(int) passCount];
+
 		double accumulatedq0 = clampingTotalWeight;
 		double accumulatedq1 = 0d;
 		double accumulatedq2 = 0d;
 		double accumulatedq3 = 0d;
 
 		MRotation inverseStartRot = currentBoneSimulatedAxes.localMBasis.rotation.rotation.getInverse(); 
-
+		currentBoneSimulatedAxes.getParentAxes().updateGlobal();
+		int ridx = 0;
 		for(int mode = 0 ; mode < 3; mode++) {
 			boolean skipRound = true;
-			switch(mode){
-			case	0:  if((modeCode &1) != 0) skipRound = false;   
-			case 1:   if((modeCode &2) != 0) skipRound = false;   
-			case 2:   if((modeCode &4) != 0) skipRound = false;   
-			}  
+			
+			if((modeCode & 1<<mode) != 0) skipRound = false;   
+			if((modeCode &1<<mode) != 0) skipRound = false;   
+			if((modeCode &1<<mode) != 0) skipRound = false;   
+			  
 			if(!skipRound) {
 				int rayIndex = (mode+1)%3;
 				sgRayd relevantTipRay = tipHeadings[rayIndex];
@@ -481,18 +447,21 @@ public class SegmentedArmature {
 						relevantTipRay.p1(), relevantTipRay.p2(),
 						relevantTargetRay.p1(), relevantTargetRay.p2());
 
-				Rot localizedRotDir = currentBoneSimulatedAxes.getParentAxes().globalMBasis.getLocalOfRotation(dirRot);
+
+				Rot localizedRotDir = currentBoneSimulatedAxes.getParentAxes().globalMBasis.getLocalOfRotation(dirRot);				
+				
 				Quaternion q =G.getSingleCoveredQuaternion(
 						G.getQuaternion(localizedRotDir), 
 						G.getQuaternion(currentBoneConstraintAxes.localMBasis.rotation)
 						);			
 				localizedRotDir = new Rot(q.getQ0(), q.getQ1(), q.getQ2(), q.getQ3(), true);
+				rotations[ridx] = localizedRotDir;
 				//MRotation localizedDirRot = inverseStartRot.multiply(localizedRot.rotation);
-				double dirAngle = localizedRotDir.getAngle();
-				Rot localizedDampenedRot = new Rot(localizedRotDir.getAxis(), MathUtils.clamp(dirAngle, -dampening, dampening));
+				/*double dirAngle = localizedRotDir.getAngle();
+				localizedRotDir = new Rot(localizedRotDir.getAxis(), MathUtils.clamp(dirAngle, -dampening, dampening));
+				
 
-
-				currentBoneSimulatedAxes.localMBasis.rotateBy(localizedDampenedRot); 
+				currentBoneSimulatedAxes.localMBasis.rotateBy(localizedRotDir); 
 				currentBoneSimulatedAxes.markDirty(); currentBoneSimulatedAxes.updateGlobal();
 
 				forBone.setAxesToSnapped(currentBoneSimulatedAxes, currentBoneConstraintAxes);
@@ -512,16 +481,33 @@ public class SegmentedArmature {
 				accumulatedq2 += mr.getQ2()*dirAngle;
 				accumulatedq3 += mr.getQ3()*dirAngle;
 
-				clampingTotalWeight += dirAngle;
-				currentBoneSimulatedAxes.alignGlobalsTo(forBone.localAxes());
-				currentBoneSimulatedAxes.markDirty(); currentBoneSimulatedAxes.updateGlobal();
+				clampingTotalWeight += dirAngle;*/
+				//currentBoneSimulatedAxes.alignGlobalsTo(forBone.localAxes());
+				//currentBoneSimulatedAxes.markDirty(); currentBoneSimulatedAxes.updateGlobal();
+				ridx++;
 			}
 		}
 
-		MRotation avgRot = new MRotation((accumulatedq0/clampingTotalWeight),
+		Rot avgRot = Rot.instantaneousAvg(rotations, null);/*new MRotation((accumulatedq0/clampingTotalWeight),
 				(accumulatedq1/clampingTotalWeight),
 				(accumulatedq2/clampingTotalWeight),
-				(accumulatedq3/clampingTotalWeight), true);
+				(accumulatedq3/clampingTotalWeight), true);*/
+		
+		
+
+		double predamp = avgRot.getAngle();
+		avgRot = new Rot(avgRot.getAxis(),  MathUtils.clamp(predamp, -dampening, dampening));
+		currentBoneSimulatedAxes.localMBasis.rotateBy(avgRot); 
+		currentBoneSimulatedAxes.markDirty(); currentBoneSimulatedAxes.updateGlobal();
+		forBone.setAxesToSnapped(currentBoneSimulatedAxes, currentBoneConstraintAxes);
+		currentBoneSimulatedAxes.markDirty(); currentBoneSimulatedAxes.updateGlobal();
+
+		Rot iAvgRotBy = new Rot(inverseStartRot.multiply(currentBoneSimulatedAxes.localMBasis.rotation.rotation));
+
+		resultQ[0] = iAvgRotBy.rotation.getQ0();
+		resultQ[1] = iAvgRotBy.rotation.getQ1(); 
+		resultQ[2] = iAvgRotBy.rotation.getQ2(); 
+		resultQ[3] = iAvgRotBy.rotation.getQ3(); 
 
 		//Rot toAvgRot = new Rot(currentBoneSimulatedAxes.localMBasis.rotation.rotation.getInverse().multiply(avgRot));
 		/*double preDampedAngle = avgRot.getAngle();
@@ -533,13 +519,251 @@ public class SegmentedArmature {
 		accumulatedQ[3] += tipWeight*preDampedAngle*(clampedToPinRot.rotation.getQ3());///passCount); 
 		return preDampedAngle; */
 
-		accumulatedQ[0] += tipWeight*(accumulatedq0/clampingTotalWeight);///passCount); 
-		accumulatedQ[1] += tipWeight*(accumulatedq1/clampingTotalWeight);///passCount); 
-		accumulatedQ[2] += tipWeight*(accumulatedq2/clampingTotalWeight);///passCount); 
-		accumulatedQ[3] += tipWeight*(accumulatedq3/clampingTotalWeight);///passCount); 
 
-		return clampingTotalWeight; 
+		/*resultQ[0] += tipWeight*(accumulatedq0/clampingTotalWeight);///passCount); 
+		resultQ[1] += tipWeight*(accumulatedq1/clampingTotalWeight);///passCount); 
+		resultQ[2] += tipWeight*(accumulatedq2/clampingTotalWeight);///passCount); 
+		resultQ[3] += tipWeight*(accumulatedq3/clampingTotalWeight);///passCount);*/ 
+
+		accumulatedQ[0] += resultQ[0];
+		accumulatedQ[1] += resultQ[1];
+		accumulatedQ[2] += resultQ[2];
+		accumulatedQ[3] += resultQ[3];
+
+		currentBoneSimulatedAxes.alignGlobalsTo(preSolveCurrentAxes);
+		currentBoneSimulatedAxes.markDirty(); currentBoneSimulatedAxes.updateGlobal();
+
+		return predamp/iAvgRotBy.getAngle(); 
 	}
+
+	/**
+	 * old error based version 
+	 * 
+	 * public void updateAverageRotationToPinnedDescendants(
+			AbstractBone forBone, 
+			int modeCode,
+			double dampening) {
+
+		double totalWeight = 0.0000001d;
+		//we start with a weighted unit quaternion 
+		//of tiny influence in order to avoid division by 0 
+		//in cases of no rotation. 
+		double[] accumulatedQ = {totalWeight,0d, 0d, 0d};
+		double[] resultQ = {0d, 0d, 0d, 0d};
+
+		double[][] errorTracker = new double[pinnedDescendants.size()][pinnedDescendants.size()+1];
+		Rot[] localRots = new Rot[errorTracker.length];
+		double[] errorWeight = new double[errorTracker.length];
+		double bestErrorDrop = 0d;
+		double worstErrorIncrease = 0d;
+		double totalErrorDrop = 0d;
+		double totalError = 0d;
+
+		sgRayd[] targetHeadings =  {
+				new sgRayd(new SGVec_3d(), new SGVec_3d()), 
+				new sgRayd(new SGVec_3d(), new SGVec_3d()), 
+				new sgRayd(new SGVec_3d(), new SGVec_3d())
+		};
+		sgRayd[] tipHeadings =  {
+				new sgRayd(new SGVec_3d(), new SGVec_3d()), 
+				new sgRayd(new SGVec_3d(), new SGVec_3d()), 
+				new sgRayd(new SGVec_3d(), new SGVec_3d())
+		};
+
+		// populate the error tracker with the errors at this iteration so we can check 
+		// whether each rotation contributes to a decrease or increase in the total error. 
+
+		for(int i=pinnedDescendants.size()-1; i>=0; i--) {
+			SegmentedArmature s = pinnedDescendants.get(i);
+			AbstractAxes targetAxes = s.segmentTip.getPinnedAxes();
+			AbstractAxes tipAxes = s.simulatedLocalAxes.get(s.segmentTip);			
+			targetHeadings[0].setP1(targetAxes.origin_()); targetHeadings[0].heading(targetAxes.orientation_X_());
+			targetHeadings[1].setP1(targetAxes.origin_()); targetHeadings[1].heading(targetAxes.orientation_Y_());
+			targetHeadings[2].setP1(targetAxes.origin_()); targetHeadings[2].heading(targetAxes.orientation_Z_());			
+			tipHeadings[0].setP1(tipAxes.origin_()); tipHeadings[0].heading(tipAxes.orientation_X_());
+			tipHeadings[1].setP1(tipAxes.origin_()); tipHeadings[1].heading(tipAxes.orientation_Y_());
+			tipHeadings[2].setP1(tipAxes.origin_()); tipHeadings[2].heading(tipAxes.orientation_Z_());
+			//errorTracker[i][0] = measureMinkowskiError(forBone, null, s, targetHeadings, tipHeadings, 1, modeCode);
+		}
+
+
+
+		int debug =0;
+
+		for(int i=pinnedDescendants.size()-1; i>=0; i--) {
+			SegmentedArmature s = pinnedDescendants.get(i);
+			AbstractAxes targetAxes = s.segmentTip.getPinnedAxes();
+			AbstractAxes tipAxes = s.simulatedLocalAxes.get(s.segmentTip);						
+			targetHeadings[0].setP1(targetAxes.origin_()); targetHeadings[0].heading(targetAxes.orientation_X_());
+			targetHeadings[1].setP1(targetAxes.origin_()); targetHeadings[1].heading(targetAxes.orientation_Y_());
+			targetHeadings[2].setP1(targetAxes.origin_()); targetHeadings[2].heading(targetAxes.orientation_Z_());
+
+			tipHeadings[0].setP1(tipAxes.origin_()); tipHeadings[0].heading(tipAxes.orientation_X_());
+			tipHeadings[1].setP1(tipAxes.origin_()); tipHeadings[1].heading(tipAxes.orientation_Y_());
+			tipHeadings[2].setP1(tipAxes.origin_()); tipHeadings[2].heading(tipAxes.orientation_Z_());
+
+			double pinWeight = s.segmentTip.getIKPin().getPinWeight(); 			
+
+			double preDampedAngle = addAveragedRotationToTarget(
+					targetHeadings, 
+					tipHeadings, 
+					forBone, 
+					modeCode, 
+					dampening, 
+					accumulatedQ,
+					resultQ,
+					pinWeight);
+
+			Rot locRot = new Rot(new MRotation(resultQ[0], resultQ[1], resultQ[2], resultQ[3], true));
+			localRots[i] = locRot;
+			double errorToAll = 0d;
+			double errorDropToAll = 0d; 
+			for(int j=pinnedDescendants.size()-1; j>=0; j--) {
+				SegmentedArmature ss = pinnedDescendants.get(j);
+				AbstractAxes targetAxes2 = ss.segmentTip.getPinnedAxes();
+				AbstractAxes tipAxes2 = ss.simulatedLocalAxes.get(ss.segmentTip);			
+				targetHeadings[0].setP1(targetAxes2.origin_()); targetHeadings[0].heading(targetAxes2.orientation_X_());
+				targetHeadings[1].setP1(targetAxes2.origin_()); targetHeadings[1].heading(targetAxes2.orientation_Y_());
+				targetHeadings[2].setP1(targetAxes2.origin_()); targetHeadings[2].heading(targetAxes2.orientation_Z_());			
+				tipHeadings[0].setP1(tipAxes2.origin_()); tipHeadings[0].heading(tipAxes2.orientation_X_());
+				tipHeadings[1].setP1(tipAxes2.origin_()); tipHeadings[1].heading(tipAxes2.orientation_Y_());
+				tipHeadings[2].setP1(tipAxes2.origin_()); tipHeadings[2].heading(tipAxes2.orientation_Z_());
+				double error = measureMinkowskiError(forBone, locRot, ss, targetHeadings, tipHeadings, 1, modeCode);// - errorTracker[i];
+				double errorDrop = error - errorTracker[i][0];
+				errorTracker[i][j+1] =  error;
+				if(Double.isInfinite(1d/error)) {
+					int debug2 = 0;
+				}
+				errorToAll += 1d/error;
+				errorDropToAll += errorDrop;
+			}
+			//errorToAll = Math.min(0d,  errorToAll);
+			double inverseSquareErrorToAll = errorToAll; 
+			totalError+= inverseSquareErrorToAll;
+			totalErrorDrop += Math.abs(errorDropToAll);
+			bestErrorDrop = Math.min(errorDropToAll, bestErrorDrop);
+			worstErrorIncrease = Math.max(errorDropToAll, worstErrorIncrease);
+			errorWeight[i] = inverseSquareErrorToAll;
+			totalWeight += pinWeight*preDampedAngle;
+		}
+		AbstractAxes simBoneAxes = simulatedLocalAxes.get(forBone);
+		AbstractAxes simConstraintAxes = simulatedConstraintAxes.get(forBone);
+
+		if(totalError != 0d && ! Double.isInfinite(totalError)) {
+			double[] errorWeightedRot = new double[4];
+			for(int i=0; i<errorWeight.length; i++) {
+				double normalizedWeight = (errorWeight[i]) / totalError;
+				errorWeightedRot[0] += localRots[i].rotation.getQ0()*normalizedWeight;
+				errorWeightedRot[1] += localRots[i].rotation.getQ1()*normalizedWeight; 
+				errorWeightedRot[2] += localRots[i].rotation.getQ2()*normalizedWeight; 
+				errorWeightedRot[3] += localRots[i].rotation.getQ3()*normalizedWeight; 
+			}
+
+
+			Rot averagedLocalRot = new Rot(
+					errorWeightedRot[0], //accumulatedQ[0] /totalWeight,
+					errorWeightedRot[1], //accumulatedQ[1] /totalWeight,
+					errorWeightedRot[2], //accumulatedQ[2] /totalWeight,
+					errorWeightedRot[3], //accumulatedQ[3] /totalWeight,
+					true);
+			if(Double.isNaN(averagedLocalRot.getAngle())) {
+				debug = 0;
+			}
+			//Quaternion singleCovered = G.getSingleCoveredQuaternion(G.getQuaternion(averagedLocalRot), G.getQuaternion(forBone.parentArmature.localAxes().globalMBasis.rotation));
+		//averagedLocalRot = new Rot(singleCovered.getQ0(), singleCovered.getQ1(), singleCovered.getQ2(), singleCovered.getQ3(), false);
+			Rot clampedRot = new Rot(averagedLocalRot.getAxis(), MathUtils.clamp(averagedLocalRot.getAngle(), -dampening, dampening));
+
+			simBoneAxes.alignGlobalsTo(forBone.localAxes());
+			simBoneAxes.markDirty(); simBoneAxes.updateGlobal();
+			simBoneAxes.localMBasis.rotateBy(clampedRot);
+			simBoneAxes.markDirty(); simBoneAxes.updateGlobal();
+			forBone.setAxesToSnapped(simBoneAxes, simConstraintAxes);
+			simBoneAxes.updateGlobal();
+
+			//if(pinnedDescendants.size() > 1) {
+
+			if(pinnedDescendants.size() > 1) {
+				System.out.println("Post-Error of " + forBone + ": [");
+				for(int i=0; i<errorTracker.length; i++) {
+					System.out.print((float)errorTracker[i][0]+" -> [ ");
+					float total = 0f;
+					for(int j= 1; j<errorTracker[i].length; j++) {
+						float errorChange = (float)(errorTracker[i][j] - errorTracker[i][0]);
+						System.out.print(errorChange+",  ");
+						total = errorChange;
+					}
+					System.out.println("] = " + (float)(errorWeight[i]/totalError));
+				}
+				System.out.println("]");
+			}
+		}
+		//}
+
+	}
+	 * 	
+	 */
+
+
+	/**
+	 * use minkowski distance to measure error between components from segment tip location and orientation  to target 
+	 * @param fromBone
+	 * @param forTip 
+	 * @param localRotation if null, no rotation will be applied to the simulationAxes before checking for rotation errors.
+	 * @return a positive or negative number representing how much applying this rotation to the given bone would cause 
+	 * the error to increase or decrease for the given segment tip and its associated target.  
+	 */
+	public double measureMinkowskiError(
+			AbstractBone fromBone, 
+			Rot localRotation, 
+			SegmentedArmature forTip,
+			sgRayd[] targetHeadings, 
+			sgRayd[] simTipHeadings,
+			double power, int modeCode) {
+
+		double totalDist = 0d;
+		double totalRounds = 1d;
+		
+		AbstractAxes simBoneAxes = simulatedLocalAxes.get(fromBone); 
+		AbstractAxes preTestAxes = simBoneAxes.getGlobalCopy();
+		
+		
+		if(localRotation != null) {
+			simBoneAxes.localMBasis.rotateBy(localRotation); 
+			simBoneAxes.markDirty(); simBoneAxes.updateGlobal();
+			AbstractAxes tipAxes2 = forTip.simulatedLocalAxes.get(forTip.segmentTip);
+			tipAxes2.markDirty();
+			tipAxes2.updateGlobal();
+			simTipHeadings[0].setP1(tipAxes2.origin_()); simTipHeadings[0].heading(tipAxes2.orientation_X_());
+			simTipHeadings[1].setP1(tipAxes2.origin_()); simTipHeadings[1].heading(tipAxes2.orientation_Y_());
+			simTipHeadings[2].setP1(tipAxes2.origin_()); simTipHeadings[2].heading(tipAxes2.orientation_Z_());
+		}
+
+		totalDist =//0d; targetHeadings[0].p1().dist(simTipHeadings[0].p1());
+				SGVec_3d.angleBetween(simBoneAxes.origin_().subCopy(simTipHeadings[0].p1()), simBoneAxes.origin_().subCopy(targetHeadings[0].p1()));
+
+
+		for(int mode = 0 ; mode < 3; mode++) {
+			boolean skipRound = true;
+			switch(mode){
+			case	0:  if((modeCode &1) != 0) skipRound = false;   
+			case 1:   if((modeCode &2) != 0) skipRound = false;   
+			case 2:   if((modeCode &4) != 0) skipRound = false;   
+			}  
+			if(!skipRound) {
+				int rayIndex = (mode+1)%3;
+				totalDist += SGVec_3d.angleBetween(simTipHeadings[rayIndex].heading(), targetHeadings[rayIndex].heading());
+				totalRounds ++;
+			}
+		}
+
+		if(localRotation != null) { 
+			simBoneAxes.alignGlobalsTo(preTestAxes);
+			simBoneAxes.updateGlobal();
+		}
+		return 0.001d+totalDist;//Math.pow(totalDist, 1d/totalRounds); 	
+	}
+
+
 
 
 
@@ -933,6 +1157,10 @@ public class SegmentedArmature {
 			AbstractAxes bAxes = bChain.simulatedLocalAxes.get(b); 
 			AbstractAxes cAxes = bChain.simulatedConstraintAxes.get(b);
 			bChain.simAligned = true;
+			bAxes.alignGlobalsTo(b.localAxes());
+			bAxes.markDirty(); bAxes.updateGlobal();			
+			cAxes.alignGlobalsTo(b.getMajorRotationAxes());
+			cAxes.markDirty(); cAxes.updateGlobal();			
 			if(parent != null) {
 				SegmentedArmature bParentChain = getChainFor(parent);
 				if(bParentChain != bChain && bParentChain.simAligned) {
@@ -943,8 +1171,9 @@ public class SegmentedArmature {
 			if(bAxes == null) {
 				int debug = 0;
 			}
-			bAxes.alignGlobalsTo(b.localAxes());
-			cAxes.alignGlobalsTo(b.getMajorRotationAxes());
+			if(Double.isNaN(bAxes.globalMBasis.rotation.getAngle())) {
+				int debug = 0;
+			}
 		}	
 	}
 
@@ -965,11 +1194,41 @@ public class SegmentedArmature {
 				recursivelyAlignBonesToSimAxesFrom(bc);	
 			}			
 			chain.simAligned = false;
+			chain.processed = false;
 		} else {
 			int debug = 0;
 		}
 
 	}
+
+	/**
+	 * popultes the given arraylist with the rootmost unprocessed chains of this segmented armature 
+	 * and its descnedants up until their pinned tips. 
+	 * @param segments
+	 */
+	public void getRootMostUnprocessedChains(ArrayList<SegmentedArmature> segments) {
+		if(!this.processed) {
+			segments.add(this);
+		} else {
+			if(this.tipPinned) 
+				return; 
+			for(SegmentedArmature c: childSegments) {
+				c.getRootMostUnprocessedChains(segments);
+			}
+		}
+	}
+
+
+	public void setProcessed(boolean b) {
+		this.processed = b;
+		if(processed == false) {
+			for(SegmentedArmature c : childSegments) {
+				c.setProcessed(false);
+			}
+		}
+	}
+
+
 
 	private boolean simAligned = false;
 
