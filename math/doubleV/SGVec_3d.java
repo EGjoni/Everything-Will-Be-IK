@@ -838,7 +838,7 @@ public class SGVec_3d implements Serializable, Vec3d<SGVec_3d>, CanLoad {
 	}
 
 	/**
-	 * Subtract one vector from another and store in another vector
+	 * Subtract v3 from v1 and store in target
 	 * @param target SGVec_3d in which to store the result
 	 * @return 
 	 */
