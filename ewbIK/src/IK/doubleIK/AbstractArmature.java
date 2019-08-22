@@ -933,42 +933,15 @@ public abstract class AbstractArmature implements Saveable {
 			AbstractBone tipBone = tipChain.segmentTip; 
 			AbstractAxes currentBoneSimulatedAxes = tipChain.simulatedLocalAxes.get(tipBone); 
 			currentBoneSimulatedAxes.updateGlobal();
-			/*Rot dirRot = currentBoneSimulatedAxes.globalMBasis.rotation.applyInverseTo(currentBone.getPinnedAxes().globalMBasis.rotation);
-			currentBoneSimulatedAxes.rotateBy(currentBone.getPinnedAxes().globalMBasis.rotation);*/
-			//Rot globalAxesPreAlignRot = currentBoneSimulatedAxes.globalMBasis.rotation.copy();
-			//MRotation globalAxesPreAlignInverse = globalAxesPreAlignRot.rotation.getInverse();
+		
 			AbstractAxes pinAxes = tipBone.getPinnedAxes();
 			pinAxes.updateGlobal();
 			currentBoneSimulatedAxes.alignOrientationTo(pinAxes);
 			currentBoneSimulatedAxes.markDirty(); currentBoneSimulatedAxes.updateGlobal();
-			/*Rot pinRotation = pinAxes.globalMBasis.rotation;
-			Rot boneLocalPinRotation = currentBoneSimulatedAxes.getParentAxes().globalMBasis.getLocalOfRotation(pinRotation);
-			currentBoneSimulatedAxes.localMBasis.rotation.set(boneLocalPinRotation);
-			currentBoneSimulatedAxes.markDirty(); currentBoneSimulatedAxes.updateGlobal();*/
-			//Rot preSnapRotationInverse = new Rot(currentBoneSimulatedAxes.globalMBasis.rotation.rotation.getInverse());
-			//Rot toPinRotation = new Rot(preSnapRotationInverse.rotation.multiply(pinRotation));
-			//currentBoneSimulatedAxes.rotateBy(toPinRotation);
+			
 			tipBone.setAxesToSnapped(currentBoneSimulatedAxes,  tipChain.simulatedConstraintAxes.get(tipBone));
 			currentBoneSimulatedAxes.markDirty();
 			currentBoneSimulatedAxes.updateGlobal();
-			/*MRotation toConstrained = globalAxesPreAlignInverse.multiply(currentBoneSimulatedAxes.globalMBasis.rotation.rotation);
-			SGVec_3d toConstrainedAxis = toConstrained.getAxis();
-			double toConstrainedAngle = toConstrained.getAngle();
-			toConstrainedAngle = MathUtils.clamp(toConstrainedAngle, -dampening, dampening);
-			Rot constrainedClamped = new Rot(toConstrainedAxis, toConstrainedAngle); 
-			Rot globalAxesRotPostClamp =  constrainedClamped.applyTo(globalAxesPreAlignRot); //constrainedClamped
-			Rot localizedRot = currentBoneSimulatedAxes.getParentAxes().globalMBasis.getLocalOfRotation(globalAxesRotPostClamp);
-			currentBoneSimulatedAxes.localMBasis.rotation.set(localizedRot);
-			currentBoneSimulatedAxes.markDirty(); currentBoneSimulatedAxes.updateGlobal();
-			tipBone.setAxesToSnapped(currentBoneSimulatedAxes,  tipChain.simulatedConstraintAxes.get(tipBone));
-			currentBoneSimulatedAxes.markDirty();
-			currentBoneSimulatedAxes.updateGlobal();*/
-			//Rot 
-			/*Rot toSnapRot = new Rot(boneLocalPinRotation.rotation.getInverse().multiply(currentBoneSimulatedAxes.localMBasis.rotation.rotation));
-			Rot clampedToSnapRot = new Rot(toSnapRot.getAxis(), MathUtils.clamp(toSnapRot.getAngle(), -dampening, dampening));
-			currentBoneSimulatedAxes.rotateBy(clampedToSnapRot);
-			currentBoneSimulatedAxes.updateGlobal();*/
-			//currentBoneSimulatedAxes.alignOrientationTo(currentBone.getPinnedAxes());
 			
 		}
 		/*if(debug) {
@@ -984,7 +957,7 @@ public abstract class AbstractArmature implements Saveable {
 	 * 
 	 *  Since we want orientation awareness, we can treat twist, direction, and location as separate effector types we are trying to 
 	 *  satisfy. Ultimately though, we want to minimize the disagreement between these three solution types before averaging.
-	 *  So it won't do to solvethem all from the same base solution. It would (probably) be much more stable to start one solution 
+	 *  So it won't do to solve them all from the same base solution. It would (probably) be much more stable to start one solution 
 	 *  from the rest post of the previous solution, and THEN average them. So our input simulatedAxes and our output simulatedAxes 
 	 *  are not necessarily going to be the same. Their target Axes however, are. 
 	 *  
@@ -1023,7 +996,7 @@ public abstract class AbstractArmature implements Saveable {
 	AbstractBone lastDebugBone = null; 
 
 	/**
-	 * Performs ccd attempting if possible (depending on input) to rotate one triangle onto another instead of one ray onto another.
+	 * Performs ccd, attempting if possible (depending on input) to rotate one triangle onto another instead of one ray onto another.
 	 * see {@link IK.doubleIK.AbstractArmature.contextualPlanarRotation} for more information about the rotation procedure. 
 	 */
 	private void planarCCD(
@@ -1067,68 +1040,15 @@ public abstract class AbstractArmature implements Saveable {
 
 		} else {
 			//System.out.print("---------");
-			while(currentBone != null && passCount > 0) {			
+			while(currentBone != null) {			
 				if(!currentBone.getIKOrientationLock()) {
-					chain.updateAverageRotationToPinnedDescendants(currentBone, modeCode, dampening);
+					boolean printRMSD =  currentBone.getParent() == stopAfter; 
+					chain.updateOptimalRotaitonToPinnedDescendants(currentBone, modeCode, dampening);
+					
 				} else {
 					int debug = 0;
 				}
 
-				/*AbstractAxes currentBoneSimulatedAxes = chain.simulatedLocalAxes.get(currentBone); 
-				AbstractAxes currentBoneConstraintAxes = chain.simulatedConstraintAxes.get(currentBone);
-				double accumulatedq0 = 0d; 
-				double accumulatedq1 = 0d; 
-				double accumulatedq2 = 0d; 
-				double accumulatedq3 = 0d;
-				for(int mode = 0 ; mode < 3; mode++) {
-					boolean skipRound = (mode==0 && ! orientationAware) || (mode==1 && !twistAware) || (mode ==2 &&  !useRedundancy);    
-					if(!skipRound) {
-						//if(currentBone == chain.segmentTip.parent) 
-							//System.out.print((mode == 0 ? "Y" : mode == 1 ? "Z" : "X")+": ");
-						int rayIndex = (mode+1)%3;
-						sgRayd relevantTargetRay = averageTargetRays[rayIndex];
-						sgRayd[] averageTipRays = chain.getAverageTipOrientationAcrossAllPinnedBones(true);
-						double tipMag = averageTipRays[rayIndex].mag();
-						double targetMag = averageTargetRays[rayIndex].mag();
-						sgRayd relevantTipRay = averageTipRays[rayIndex];					
-
-						Rot dirRot = contextualPlanarRotation(
-								currentBoneSimulatedAxes.origin_(), 
-								relevantTipRay.p1(), relevantTipRay.p2(),
-								relevantTargetRay.p1(), relevantTargetRay.p2());
-
-
-						Rot dampenedRot = new Rot(dirRot.getAxis(), MathUtils.clamp(dirRot.getAngle(), -dampening, dampening));
-						currentBoneSimulatedAxes.rotateBy(dampenedRot);
-
-						currentBone.setAxesToSnapped(currentBoneSimulatedAxes, currentBoneConstraintAxes);
-						currentBoneSimulatedAxes.updateGlobal(); 
-
-						Quaternion singleCovered =//G.getSingleCoveredQuaternion(
-								G.getQuaternion(currentBoneSimulatedAxes.localMBasis.rotation);//, 
-						//G.getQuaternion(currentBoneSimulatedAxes.localMBasis.rotation)
-						//);
-
-						accumulatedq0 += singleCovered.getQ0();
-						accumulatedq1 += singleCovered.getQ1();
-						accumulatedq2 += singleCovered.getQ2();
-						accumulatedq3 += singleCovered.getQ3();
-
-						currentBoneSimulatedAxes.alignGlobalsTo(currentBone.localAxes());
-						currentBoneSimulatedAxes.markDirty(); currentBoneSimulatedAxes.updateGlobal();
-					}	
-				}
-				Rot averagedLocalRot = new Rot(
-						accumulatedq0 /passCount,
-						accumulatedq1 /passCount,
-						accumulatedq2 /passCount,
-						accumulatedq3 /passCount,
-						true);
-
-				currentBoneSimulatedAxes.alignGlobalsTo(currentBone.localAxes());
-				currentBoneSimulatedAxes.markDirty(); currentBoneSimulatedAxes.updateGlobal();
-				currentBoneSimulatedAxes.localMBasis.rotateTo(averagedLocalRot);
-				currentBoneSimulatedAxes.markDirty(); currentBoneSimulatedAxes.updateGlobal();*/
 
 				if(currentBone == stopAfter) currentBone = null;
 				else currentBone = currentBone.getParent();
