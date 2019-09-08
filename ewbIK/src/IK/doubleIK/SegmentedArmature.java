@@ -234,6 +234,7 @@ public class SegmentedArmature {
 		
 		SGVec_3d [] localizedTipHeadings = new SGVec_3d[pinnedDescendants.size()*passCount]; 
 		SGVec_3d[] localizedTargetHeadings = new SGVec_3d[pinnedDescendants.size()*passCount]; 
+		double[] weights = new double[pinnedDescendants.size()*passCount];
 		AbstractAxes thisBoneAxes = simulatedLocalAxes.get(forBone);
 		
 		for(int i=0; i< pinnedDescendants.size(); i++) {
@@ -245,33 +246,39 @@ public class SegmentedArmature {
 			
 			localizedTipHeadings[i*passCount] =  SGVec_3d.sub(tipAxes.origin_(), thisBoneAxes.origin_());
 			localizedTargetHeadings[i*passCount] = SGVec_3d.sub(targetAxes.origin_(), thisBoneAxes.origin_());
+			weights[i*passCount] = 1.0;
 			
 			if((modeCode & 1<<0) != 0) {
 				sgRayd xTip = tipAxes.x_norm_();
 				sgRayd xTarget = targetAxes.x_norm_();
 				localizedTipHeadings[(i*passCount)+1] = SGVec_3d.sub(xTip.p2(), thisBoneAxes.origin_());
 				localizedTargetHeadings[(i*passCount)+1] = SGVec_3d.sub(xTarget.p2(), thisBoneAxes.origin_());
+				weights[(i*passCount)+1] = 1.0;
 			}
 			if((modeCode & 1<<1) != 0) {
 				sgRayd yTip = tipAxes.y_norm_();
 				sgRayd yTarget = targetAxes.y_norm_();
 				localizedTipHeadings[(i*passCount)+2] = SGVec_3d.sub(yTip.p2(), thisBoneAxes.origin_());
 				localizedTargetHeadings[(i*passCount)+2] = SGVec_3d.sub(yTarget.p2(), thisBoneAxes.origin_());
+				weights[(i*passCount)+2] = 1.0;
 			}
 			if((modeCode & 1<<2) != 0) {
 				sgRayd zTip = tipAxes.z_norm_();
 				sgRayd zTarget = targetAxes.z_norm_();
 				localizedTipHeadings[(i*passCount)+3] = SGVec_3d.sub(zTip.p2(), thisBoneAxes.origin_());
 				localizedTargetHeadings[(i*passCount)+3] = SGVec_3d.sub(zTarget.p2(), thisBoneAxes.origin_());	
+				weights[(i*passCount)+3] = 1.0;
 			}
 		}
 		
-		KabschAlignment orientationAligner = new KabschAlignment(localizedTipHeadings, null, localizedTargetHeadings, null);
+		/*KabschAlignment orientationAligner = new KabschAlignment(localizedTipHeadings, null, localizedTargetHeadings, null);
 		orientationAligner.align();
-		Rot rotBy = orientationAligner.getRotation();
-	
+		Rot rotBy = orientationAligner.getRotation();*/	
+		QCP qcpOrientationAligner = new QCP(MathUtils.DOUBLE_ROUNDING_ERROR, MathUtils.DOUBLE_ROUNDING_ERROR);
+		Rot qcpRot = qcpOrientationAligner.superpose(localizedTargetHeadings, localizedTipHeadings);
 		
-		Rot dampened = new Rot(rotBy.getAxis(), Math.min(rotBy.getAngle(), MathUtils.clamp(rotBy.getAngle(), -dampening, dampening)));
+		
+		Rot dampened = new Rot(qcpRot.getAxis(), Math.min(qcpRot.getAngle(), MathUtils.clamp(qcpRot.getAngle(), -dampening, dampening)));
 		thisBoneAxes.rotateBy(dampened);
 		thisBoneAxes.markDirty(); thisBoneAxes.updateGlobal();
 		forBone.setAxesToSnapped(thisBoneAxes, simulatedConstraintAxes.get(forBone));

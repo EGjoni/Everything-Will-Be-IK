@@ -134,9 +134,10 @@ public class Basis {
 	}
 
 	private Rot createPrioritzedRotation(SGVec_3d xHeading, SGVec_3d yHeading, SGVec_3d zHeading) {
+		SGVec_3d tempV = new SGVec_3d();
 		Rot toYX = new Rot(yBase, xBase, yHeading, xHeading); 
-		toYX.applyTo(yBase, tempV_3);
-		Rot toY = new Rot(tempV_3, yHeading);
+		toYX.applyTo(yBase, tempV);
+		Rot toY = new Rot(tempV, yHeading);
 
 		return toY.applyTo(toYX);
 		/*Rot result = new Rot(xBase, yBase, xHeading, yHeading);
@@ -499,13 +500,14 @@ public class Basis {
 		return oddBasisOut;
 	}
 
-	public Rot getLocalOfRotation(Rot inRot) {                    
-		inRot.getAxis(tempV_3);
+	public Rot getLocalOfRotation(Rot inRot) {
+		SGVec_3d tempV = new SGVec_3d();
+		inRot.getAxis(tempV);
 		//this.getInverseComposedTransform().transform(tempVec);
-		this.getInverseComposedOrthoNormalMatrix().transform(tempV_3, tempV_2);		
+		this.getInverseComposedOrthoNormalMatrix().transform(tempV, tempV);		
 		//double angle = inRot.getAngle(); 
 		//angle = inRot.getAngle()*this.chirality;
-		return new Rot(tempV_2, inRot.getAngle()*this.chirality);
+		return new Rot(tempV, inRot.getAngle()*this.chirality);
 	}
 
 	public Matrix4d composedOrthoNormalMatrix = new Matrix4d();
@@ -514,26 +516,28 @@ public class Basis {
 	//private Transform3D inverseComposedOrthonormalTransform = new Transform3D(); 
 
 	private Rot getChrialityModifiedRotationOf(Rot localRot) {
-		localRot.getAxis(tempV_3);
+		SGVec_3d tempV = new SGVec_3d();
+		localRot.getAxis(tempV);
 		//this.shearScaleTransform.transform(workingPoint);
-		this.reflectionMatrix.transform(tempV_3, tempV_2);
+		this.reflectionMatrix.transform(tempV, tempV);
 		double angle = localRot.getAngle();
 		if(this.chirality == LEFT) angle *=-1;
-		return new Rot(tempV_3, angle);
+		return new Rot(tempV, angle);
 	}
 
 	private void setToChiralityModifiedRotationOf(Rot localRot, Rot outputRot) {
-		localRot.getAxis(tempV_3);
+		SGVec_3d tempV = new SGVec_3d();
+		localRot.getAxis(tempV);
 		//localRot.this.setTupleFromDVec(workingVector, workingPoint);
 		//this.shearScaleTransform.transform(workingPoint);
-		this.reflectionMatrix.transform(tempV_3, tempV_2);
+		this.reflectionMatrix.transform(tempV, tempV);
 		double angle = localRot.getAngle();
 		if(this.chirality == LEFT) angle *=-1;
-		outputRot.set(tempV_2, angle);
+		outputRot.set(tempV, angle);
 	}
 
 
-	SGVec_3d tempV_3 = new SGVec_3d(0,0,0);
+	//SGVec_3d tempV_3 = new SGVec_3d(0,0,0);
 
 	/**
 	 * @return the x-heading of the orthonormal rotation matrix of this basis.
@@ -618,27 +622,28 @@ public class Basis {
 	 */
 	public void setToOrthoNormalGlobalOf(SGVec_3d input, SGVec_3d output) {	
 		if(input != null) {
-			tempV_1.set(input);
-			reflectionMatrix.transform(tempV_1, tempV_2);
-			this.rotation.applyTo(tempV_2, tempV_3);
-			output.setX_(tempV_3.x+translate.x); 
-			output.setY_(tempV_3.y+translate.y); 
-			output.setZ_(tempV_3.z+translate.z);  		
+			SGVec_3d tempV = new SGVec_3d(input);
+			reflectionMatrix.transform(tempV, tempV);
+			this.rotation.applyTo(tempV, tempV);
+			output.setX_(tempV.x+translate.x); 
+			output.setY_(tempV.y+translate.y); 
+			output.setZ_(tempV.z+translate.z);  		
 
 		}
 	}
 
 	public void setToOrientationalGlobalOf(SGVec_3d input, SGVec_3d output) {	
-		this.rotation.applyTo(input, tempV_3);
-		output.setX_(tempV_3.x+translate.x); 
-		output.setY_(tempV_3.y+translate.y); 
-		output.setZ_(tempV_3.z+translate.z);  		
+		SGVec_3d tempV = new SGVec_3d();
+		this.rotation.applyTo(input, tempV);
+		output.setX_(tempV.x+translate.x); 
+		output.setY_(tempV.y+translate.y); 
+		output.setZ_(tempV.z+translate.z);  		
 	}
 
 	public void setToGlobalOf(SGVec_3d input, SGVec_3d output) {
-		tempV_2.set(input);
-		this.composedMatrix.transform(tempV_2, tempV_1);		
-		output.set(tempV_1);
+		SGVec_3d tempV = new SGVec_3d(input);
+		this.composedMatrix.transform(tempV, tempV);		
+		output.set(tempV);
 		output.add(this.translate); 	
 	}
 
@@ -654,13 +659,14 @@ public class Basis {
 	}
 
 	public void setToLocalOf(SGVec_3d input, SGVec_3d output) {
-		tempV_1.set(input);
-		tempV_1.x -= translate.x; tempV_1.y -= translate.y; tempV_1.z -= translate.z; 		
+		SGVec_3d tempV = new SGVec_3d(input);
+		tempV.set(input);
+		tempV.x -= translate.x; tempV.y -= translate.y; tempV.z -= translate.z; 		
 
-		this.getInverseComposedMatrix().transform(tempV_1, tempV_2);
-		output.setX_(tempV_2.x); 
-		output.setY_(tempV_2.y); 
-		output.setZ_(tempV_2.z);
+		this.getInverseComposedMatrix().transform(tempV, tempV);
+		output.setX_(tempV.x); 
+		output.setY_(tempV.y); 
+		output.setZ_(tempV.z);
 	}
 
 	public SGVec_3d getLocalOf(SGVec_3d global_input) {
@@ -684,9 +690,10 @@ public class Basis {
 	 * @param output
 	 */
 	public void setToOrientationalLocalOf(SGVec_3d input, SGVec_3d output) {
-		tempV_1.set(input).sub(this.translate);
-		this.rotation.applyInverseTo(tempV_1, tempV_3);
-		output.set(tempV_3);
+		SGVec_3d tempV = new SGVec_3d(input);
+		tempV.set(input).sub(this.translate);
+		this.rotation.applyInverseTo(tempV, tempV);
+		output.set(tempV);
 	}
 
 	/*public void setToOrthoNormalLocalOf(SGVec_3d input, SGVec_3d output) {		
@@ -698,10 +705,11 @@ public class Basis {
 	}*/
 
 	public void setToOrthoNormalLocalOf(SGVec_3d input, SGVec_3d output) {		
-		tempV_1.set(input); 
-		this.setToOrientationalLocalOf(tempV_1, tempV_2);		
-		this.getInverseReflectionMatrix().transform(tempV_2, tempV_1);
-		output.set(tempV_1);
+		SGVec_3d tempV = new SGVec_3d(input);
+		tempV.set(input); 
+		this.setToOrientationalLocalOf(tempV, tempV);		
+		this.getInverseReflectionMatrix().transform(tempV, tempV);
+		output.set(tempV);
 	}
 
 
@@ -725,14 +733,15 @@ public class Basis {
 	}
 
 	public String toString() {
-		setToComposedXBase(tempV_3);
-		Vec3f xh = tempV_3.toSGVec3f();
+		SGVec_3d tempV = new SGVec_3d();
+		setToComposedXBase(tempV);
+		Vec3f xh = tempV.toSGVec3f();
 
-		setToComposedYBase(tempV_3);
-		Vec3f yh = tempV_3.toSGVec3f();
+		setToComposedYBase(tempV);
+		Vec3f yh = tempV.toSGVec3f();
 
-		setToComposedZBase(tempV_3);
-		Vec3f zh = tempV_3.toSGVec3f();
+		setToComposedZBase(tempV);
+		Vec3f zh = tempV.toSGVec3f();
 
 		float xMag = xh.mag();	
 		float yMag = yh.mag();
@@ -941,7 +950,7 @@ public class Basis {
 	double[][] rotMat = new double[4][4];
 
 
-	SGVec_3d tempV_2 = new SGVec_3d();
+	
 
 
 
@@ -1137,17 +1146,18 @@ public class Basis {
 	}
 
 	public void setFlipArrayForMatrix(Matrix4d forMatrix, boolean[] flipArray, Rot rotation) {
+		SGVec_3d tempV = new SGVec_3d();
 		double[] vecArr = new double[4]; 
 		forMatrix.getColumn(Z, vecArr); 
-		tempV_3.x = vecArr[X]; tempV_3.y = vecArr[Y]; tempV_3.z =  vecArr[Z];
+		tempV.x = vecArr[X]; tempV.y = vecArr[Y]; tempV.z =  vecArr[Z];
 		forMatrix.getColumn(Y, vecArr); 
-		tempV_3.x = vecArr[X]; tempV_3.y = vecArr[Y]; tempV_3.z =  vecArr[Z];
+		tempV.x = vecArr[X]; tempV.y = vecArr[Y]; tempV.z =  vecArr[Z];
 		SGVec_3d tempVec = new SGVec_3d(); 
 		rotation.applyTo(xBase, tempVec);		
 		forMatrix.getColumn(X, vecArr); 
-		tempV_3.x = vecArr[X]; tempV_3.y = vecArr[Y]; tempV_3.z =  vecArr[Z];		
+		tempV.x = vecArr[X]; tempV.y = vecArr[Y]; tempV.z =  vecArr[Z];		
 
-		double dot = tempVec.dot(tempV_3);
+		double dot = tempVec.dot(tempV);
 		if( dot < 0) {		
 			flipArray[X] = true;
 		} else {
@@ -1155,23 +1165,23 @@ public class Basis {
 		}
 
 		forMatrix.getColumn(Y, vecArr); 
-		tempV_3.x = vecArr[X]; tempV_3.y = vecArr[Y]; tempV_3.z =  vecArr[Z];
+		tempV.x = vecArr[X]; tempV.y = vecArr[Y]; tempV.z =  vecArr[Z];
 		rotation.applyTo(yBase, tempVec);
-		if(tempVec.dot(tempV_3) < 0) {
+		if(tempVec.dot(tempV) < 0) {
 			flipArray[Y] = true;
 		}
 		else flipArray[Y] = false;
 
 		forMatrix.getColumn(Z, vecArr); 
-		tempV_3.x = vecArr[X]; tempV_3.y = vecArr[Y]; tempV_3.z =  vecArr[Z];
+		tempV.x = vecArr[X]; tempV.y = vecArr[Y]; tempV.z =  vecArr[Z];
 		rotation.applyTo(zBase, tempVec);
-		if(tempVec.dot(tempV_3) < 0) {
+		if(tempVec.dot(tempV) < 0) {
 			flipArray[Z] = true;
 		}
 		else flipArray[Z] = false;		
 	}
 
-	SGVec_3d tempV_1 = new SGVec_3d();
+	//SGVec_3d tempV_1 = new SGVec_3d();
 
 	/*public void setDVecFromTuple(SGVec_3d vec, SGVec_3d tuple) {
 		vec.x = tuple.x; 
@@ -1183,17 +1193,18 @@ public class Basis {
 		tuple.x = vec.x; tuple.y = vec.y; tuple.z = vec.z;
 	}*/
 
-	private void updateRays() {			
+	private void updateRays() {		
+		SGVec_3d tempV = new SGVec_3d();
 		xRay.setP1(this.translate); 		
 		yRay.setP1(this.translate);			
 		zRay.setP1(this.translate);
 
-		setToComposedXBase(tempV_3);
-		xRay.heading(tempV_3);
-		setToComposedYBase(tempV_3);
-		yRay.heading(tempV_3);
-		setToComposedZBase(tempV_3);
-		zRay.heading(tempV_3);		
+		setToComposedXBase(tempV);
+		xRay.heading(tempV);
+		setToComposedYBase(tempV);
+		yRay.heading(tempV);
+		setToComposedZBase(tempV);
+		zRay.heading(tempV);		
 	}
 
 

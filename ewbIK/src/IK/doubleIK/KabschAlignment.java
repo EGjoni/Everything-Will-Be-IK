@@ -204,22 +204,14 @@ public class KabschAlignment {
 
         // get eigenvalues of RRt (a's)
         RealMatrix apacheRtR = MatrixUtils.createRealMatrix(RtR);
-        double[] resultEigVals = new double[3];
-        double[][] resultEigVecs = new double[3][3];
-        computeEigensystemFromSymmetricMatrix3(apacheRtR, resultEigVals, resultEigVecs);
+        //double[] resultEigVals = new double[3];
+        //double[][] resultEigVecs = new double[3][3];
+        //computeEigensystemFromSymmetricMatrix3(apacheRtR, resultEigVals, resultEigVecs);
         EigenDecomposition ed = new EigenDecomposition(apacheRtR);
         double[] mu = ed.getRealEigenvalues();
         double[][] a = ed.getV().getData();
         
-        try {
-			EigenDecomp ed2 = new EigenDecomp(apacheRtR.getData());
-			double[] mu2 = ed2.getRealEigenValues(); 
-			double[][] a2 = ed2.getV();
-		} catch (MaxCountExceededException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-        
+ 
         
 
          // make sure that the a3 = a1 x a2
