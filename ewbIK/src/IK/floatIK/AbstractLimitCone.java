@@ -18,7 +18,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 package IK.floatIK;
-import IK.floatIK.G;
 import data.EWBIKLoader;
 import data.EWBIKSaver;
 import data.JSONObject;
@@ -76,8 +75,8 @@ public abstract class AbstractLimitCone implements Saveable {
 	public float getMomentScalarFromThisToNext(SGVec_3f localPoint) {
 		float angle = SGVec_3f.angleBetween(localPoint, controlPoint); 		
 		//1 - (x^2 / roots) ^ softness
-		float multiplier = 1f-(float)Math.pow(
-				Math.pow(angle, 2f)/(Math.pow(radius,2)), softness);		
+		float multiplier = 1-MathUtils.pow(
+				MathUtils.pow(angle, 2f)/(MathUtils.pow(radius,2)), softness);		
 		return multiplier;
 	}
 
@@ -99,7 +98,7 @@ public abstract class AbstractLimitCone implements Saveable {
 		float result = 0;
 		if(currentAngle < radius) {
 			float x = angularMoment-currentAngle; 
-			result = x - (x*(float)Math.pow(Math.pow(x, 2)/Math.pow(radius, 2), softness)/((2*softness) +1));
+			result = x - (x*MathUtils.pow(MathUtils.pow(x, 2)/MathUtils.pow(radius, 2), softness)/((2*softness) +1));
 			return result; 
 		}
 		else return result;
@@ -237,15 +236,15 @@ public abstract class AbstractLimitCone implements Saveable {
 		float arcDistTocone2 = SGVec_3f.angleBetween(point, next.controlPoint);
 		boolean incone2 = arcDistTocone2 < next.radius;	
 		boolean inCone1 = arcDistToCone1 < radius; 
-		float cone1Height =  Math.max(0.0f, 1.0f - (arcDistToCone1 / radius)); 
-		float cone2Height = Math.max(0.0f, 1.0f -(arcDistTocone2 / next.radius)); 
+		float cone1Height =  (float)Math.max(0, 1 - (arcDistToCone1 / radius)); 
+		float cone2Height = (float)Math.max(0, 1 -(arcDistTocone2 / next.radius)); 
 			
 		boolean inLeftTan = arcDistToLeft < leftTanRadius; 	
 		boolean inRightTan = arcDistToRight < rightTanRadius;	
 		
-		SGVec_3f cone1PenaltyAxis = new SGVec_3f(0.0f,0.0f,0.0f);
-		SGVec_3f pathPenaltyAxis = new SGVec_3f(0.0f,0.0f,0.0f);
-		SGVec_3f cone2PenaltyAxis = new SGVec_3f(0.0f,0.0f,0.0f);
+		SGVec_3f cone1PenaltyAxis = new SGVec_3f(0,0,0);
+		SGVec_3f pathPenaltyAxis = new SGVec_3f(0,0,0);
+		SGVec_3f cone2PenaltyAxis = new SGVec_3f(0,0,0);
 		
 				
 		float[] onTriangle1 = new float[3];
@@ -259,8 +258,8 @@ public abstract class AbstractLimitCone implements Saveable {
 		
 		onTri1 = onTri1 && !inLeftTan; 
 		onTri2 = onTri2 && !inRightTan;
-		float distToPath = 0.0f; 
-		float lrRatio = 6.0f; 
+		float distToPath = 0; 
+		float lrRatio = 6; 
 		
 		if( (onTri1 || onTri2)) { 
 			
@@ -275,7 +274,7 @@ public abstract class AbstractLimitCone implements Saveable {
 				pathPenaltyAxis = rightTan.crossCopy(point);  
 				type += 4;
 			}
-			distToPath = 1.0f-lrRatio;
+			distToPath = 1-lrRatio;
 		}		
 		
 		if(inCone1) {
@@ -321,7 +320,7 @@ public abstract class AbstractLimitCone implements Saveable {
 	}
 	
 	float distFromPathCenterTowardTanCone(SGVec_3f pos, SGVec_3f tanCone, SGVec_3f cone1, SGVec_3f cone2) {
-		SGVec_3f ro = new SGVec_3f(0.0f, 0.0f, 0.0f);
+		SGVec_3f ro = new SGVec_3f(0, 0, 0);
 		sgRayf tanToPos = new sgRayf(tanCone, pos);
 		SGVec_3f intersectsGreatArcAt = tanToPos.intersectsPlane(ro, cone2, cone1);
 		intersectsGreatArcAt = intersectsGreatArcAt.normalize(); 
@@ -391,7 +390,7 @@ public abstract class AbstractLimitCone implements Saveable {
 		float angleToFirst = SGVec_3f.angleBetween(input, closestToFirst); 
 		float angleToSecond = SGVec_3f.angleBetween(input, closestToSecond);
 
-		if(Math.abs(angleToFirst) < Math.abs(angleToSecond)) {
+		if(MathUtils.abs(angleToFirst) < MathUtils.abs(angleToSecond)) {
 			return closestToFirst;
 		} else {
 			return closestToSecond;
@@ -415,9 +414,9 @@ public abstract class AbstractLimitCone implements Saveable {
 
 
 	private boolean onTangentRadii(SGVec_3f input) {
-		if(Math.abs(SGVec_3f.angleBetween(input, tangentCircleCenterNext1)) < tangentCircleRadiusNext) {
+		if(MathUtils.abs(SGVec_3f.angleBetween(input, tangentCircleCenterNext1)) < tangentCircleRadiusNext) {
 			return true; 
-		} else if(Math.abs(SGVec_3f.angleBetween(input, tangentCircleCenterNext2)) < tangentCircleRadiusNext) {
+		} else if(MathUtils.abs(SGVec_3f.angleBetween(input, tangentCircleCenterNext2)) < tangentCircleRadiusNext) {
 			return true;
 		} else {
 			return false;
@@ -509,11 +508,11 @@ public abstract class AbstractLimitCone implements Saveable {
 			//the point on the radius of this cone + half the arcdistance to the circumference of the next cone, rotated 90 degrees along the axis of this cone
 			SGVec_3f minorAppoloniusP2A = new Rot(minorAppoloniusAxisA, MathUtils.PI/2f).applyToCopy(minorAppoloniusP1A);
 			//the axis of this cone, scaled to minimize its distance to the previous two points. 
-			SGVec_3f minorAppoloniusP3A =  SGVec_3f.mult(minorAppoloniusAxisA, MathUtils.cos(minorAppoloniusRadiusA));
+			SGVec_3f minorAppoloniusP3A =  SGVec_3f.mult(minorAppoloniusAxisA, G.cos(minorAppoloniusRadiusA));
 			
 			SGVec_3f minorAppoloniusP1B = new Rot(arcNormal, minorAppoloniusRadiusB).applyToCopy(minorAppoloniusAxisB);
 			SGVec_3f minorAppoloniusP2B = new Rot(minorAppoloniusAxisB, MathUtils.PI/2f).applyToCopy(minorAppoloniusP1B);      
-			SGVec_3f minorAppoloniusP3B = SGVec_3f.mult(minorAppoloniusAxisB, MathUtils.cos(minorAppoloniusRadiusB));
+			SGVec_3f minorAppoloniusP3B = SGVec_3f.mult(minorAppoloniusAxisB, G.cos(minorAppoloniusRadiusB));
 
 			// ray from scaled center of next cone to half way point between the circumference of this cone and the next cone. 
 			sgRayf r1B = new sgRayf(minorAppoloniusP1B, minorAppoloniusP3B); r1B.elongate();
@@ -663,6 +662,7 @@ public abstract class AbstractLimitCone implements Saveable {
 		this.setControlPoint(controlPointJ);
 		this.radius = j.getFloat("radius");
 	}
+	
 	
 	@Override
 	public void notifyOfSaveIntent() {

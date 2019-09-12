@@ -34,6 +34,7 @@ public class sgRayf {
 	protected SGVec_3f p2; 
 
 	public sgRayf() {
+		workingVector = new SGVec_3f();
 		//this.p1 = new SGVec_3f();
 	}
 	
@@ -88,7 +89,7 @@ public class sgRayf {
 	 * @return
 	 */
 	public float distTo(sgRayf r) {
-		SGVec_3f closestOnThis = this.closestPointToRay3f(r);
+		SGVec_3f closestOnThis = this.closestPointToRay3D(r);
 		return r.distTo(closestOnThis);
 	}
 
@@ -96,7 +97,7 @@ public class sgRayf {
 	 * returns the distance between this ray as a line segment, and the input ray treated as a line segment
 	 */	
 	public float distToStrict(sgRayf r) {
-		SGVec_3f closestOnThis = this.closestPointToSegment3f(r);
+		SGVec_3f closestOnThis = this.closestPointToSegment3D(r);
 		return closestOnThis.dist(r.closestPointToStrict(closestOnThis));
 	}
 
@@ -136,6 +137,7 @@ public class sgRayf {
 
 	public SGVec_3f heading(){
 		if(this.p2 == null) {
+			if(p1 == null) p1 = new SGVec_3f();
 			p2 =  p1.copy();
 			p2.set(0f,0f,0f);
 			return p2;
@@ -172,7 +174,7 @@ public class sgRayf {
 	public void heading(SGVec_3d newHead){
 		if(p2 == null) p2 =  p1.copy();
 		p2.set(p1);
-		p2.add(new SGVec_3d(newHead).toSGVec3f());
+		p2.add(new SGVec_3f(newHead));
 	}
 
 	
@@ -191,8 +193,8 @@ public class sgRayf {
 	/**
 	 * @return a copy of this ray with its z-component set to 0;
 	 */
-	public sgRayf get2fCopy() {
-		return this.get2fCopy(sgRayf.Z);
+	public sgRayf get2DCopy() {
+		return this.get2DCopy(sgRayf.Z);
 	}
 
 	/**
@@ -201,7 +203,7 @@ public class sgRayf {
 	 * @param collapseOnAxis the axis on which to collapse the ray.
 	 * @return
 	 */
-	public sgRayf get2fCopy(int collapseOnAxis) {
+	public sgRayf get2DCopy(int collapseOnAxis) {
 		sgRayf result = this.copy(); 
 		if(collapseOnAxis == sgRayf.X) {
 			result.p1.setX_(0); 
@@ -428,7 +430,7 @@ public class sgRayf {
 		this.mag(1);  
 	}
 
-	public SGVec_3f intercepts2f (sgRayf r) {
+	public SGVec_3f intercepts2D (sgRayf r) {
 		SGVec_3f result =  p1.copy();
 		
 		float p0_x = this.p1.x;
@@ -456,7 +458,7 @@ public class sgRayf {
 		//return null; // No collision
 	}
 
-	/*public SGVec_3f intercepts2f(sgRay r) {
+	/*public SGVec_3f intercepts2D(sgRay r) {
 		SGVec_3f result = new SGVec_3f();
 
 		float a1 = p2.y - p1.y;
@@ -486,12 +488,12 @@ public class sgRayf {
 	 * @param r
 	 * @return
 	 */
-	public SGVec_3f closestPointToSegment3f(sgRayf r) {
-		SGVec_3f closestToThis =  r.closestPointToRay3fStrict(this); 
+	public SGVec_3f closestPointToSegment3D(sgRayf r) {
+		SGVec_3f closestToThis =  r.closestPointToRay3DStrict(this); 
 		return this.closestPointTo(closestToThis);
 	}
 
-	/*public SGVec_3f closestPointToSegment3fStrict(sgRay r) {
+	/*public SGVec_3f closestPointToSegment3DStrict(sgRay r) {
 
 	}*/
 
@@ -501,7 +503,7 @@ public class sgRayf {
 	 * @return
 	 */
 
-	public SGVec_3f closestPointToRay3f(sgRayf r) {
+	public SGVec_3f closestPointToRay3D(sgRayf r) {
 		SGVec_3f result = null;
 		
 		workingVector.set(p2);
@@ -520,7 +522,7 @@ public class sgRayf {
 
 		// compute the line parameters of the two closest points
 		if (D < Float.MIN_VALUE) {          // the lines are almost parallel
-			sc = 0.0f;
+			sc = 0;
 			//tc = (b>c ? d/b : e/c);    // use the largest denominator
 		}
 		else {
@@ -532,7 +534,7 @@ public class sgRayf {
 		return result;
 	}
 
-	public SGVec_3f closestPointToRay3fStrict(sgRayf r) {
+	public SGVec_3f closestPointToRay3DStrict(sgRayf r) {
 		SGVec_3f result = null;
 
 		workingVector.set(p2);
@@ -551,7 +553,7 @@ public class sgRayf {
 
 		// compute the line parameters of the two closest points
 		if (D < Float.MIN_VALUE) {          // the lines are almost parallel
-			sc = 0.0f;
+			sc = 0;
 			//tc = (b>c ? d/b : e/c);    // use the largest denominator
 		}
 		else {
@@ -573,7 +575,7 @@ public class sgRayf {
 	 * @param r
 	 * @return
 	 */
-	public SGVec_3f closestPointToRay3fBounded(sgRayf r) {
+	public SGVec_3f closestPointToRay3DBounded(sgRayf r) {
 		SGVec_3f result = null;
 
 		workingVector.set(p2);
@@ -592,7 +594,7 @@ public class sgRayf {
 
 		// compute the line parameters of the two closest points
 		if (D < Float.MIN_VALUE) {          // the lines are almost parallel
-			sc = 0.0f;
+			sc = 0;
 			//tc = (b>c ? d/b : e/c);    // use the largest denominator
 		}
 		else {
@@ -608,14 +610,14 @@ public class sgRayf {
 	}
 
 	//returns a ray perpendicular to this ray on the XY plane;
-	public sgRayf getPerpendicular2f() {
+	public sgRayf getPerpendicular2D() {
 		SGVec_3f heading = this.heading(); 
 		workingVector.set(heading.x-1f, heading.x, 0f);
 		SGVec_3f perpHeading = workingVector;
 		return new sgRayf(this.p1,  workingVector.add(this.p1));
 	}
 
-	public SGVec_3f intercepts2fStrict(sgRayf r) { 
+	public SGVec_3f intercepts2DStrict(sgRayf r) { 
 		//will also return null if the intersection does not occur on the 
 		//line segment specified by the ray.
 		SGVec_3f result =  p1.copy();
@@ -810,7 +812,7 @@ public class sgRayf {
 		h.set(0f,0f,0f);
 		h =  h.sub(rp1);  // h=r.o-c.M
 		float lf = e.dot(h);                      // lf=e.h
-		float s = (float)(Math.pow(radius, 2)-h.dot(h)+Math.pow(lf, 2));   // s=r^2-h^2+lf^2
+		float s = MathUtils.pow(radius, 2)-h.dot(h)+MathUtils.pow(lf, 2);   // s=r^2-h^2+lf^2
 		if (s < 0.0) return 0;                    // no intersection points ?
 		s = (float)Math.sqrt(s);                              // s=sqrt(r^2-h^2+lf^2)
 
@@ -864,18 +866,18 @@ public class sgRayf {
 		float z = Math.abs(m.z);
 
 		if (x >= y && x >= z) {
-			nu = triArea2f(pt.y, pt.z, bt.y, bt.z, ct.y, ct.z);
-			nv = triArea2f(pt.y, pt.z, ct.y, ct.z, at.y, at.z);
+			nu = triArea2D(pt.y, pt.z, bt.y, bt.z, ct.y, ct.z);
+			nv = triArea2D(pt.y, pt.z, ct.y, ct.z, at.y, at.z);
 			ood = 1.0f / m.x;
 		}
 		else if (y >= x && y >= z) {
-			nu = triArea2f(pt.x, pt.z, bt.x, bt.z, ct.x, ct.z);
-			nv = triArea2f(pt.x, pt.z, ct.x, ct.z, at.x, at.z);
+			nu = triArea2D(pt.x, pt.z, bt.x, bt.z, ct.x, ct.z);
+			nv = triArea2D(pt.x, pt.z, ct.x, ct.z, at.x, at.z);
 			ood = 1.0f / -m.y;
 		}
 		else {
-			nu = triArea2f(pt.x, pt.y, bt.x, bt.y, ct.x, ct.y);
-			nv = triArea2f(pt.x, pt.y, ct.x, ct.y, at.x, at.y);
+			nu = triArea2D(pt.x, pt.y, bt.x, bt.y, ct.x, ct.y);
+			nv = triArea2D(pt.x, pt.y, ct.x, ct.y, at.x, at.y);
 			ood = 1.0f / m.z;
 		}
 		uvw[0] = nu * ood;
@@ -885,11 +887,14 @@ public class sgRayf {
 
 	@Override
 	public String toString() {
-		String result = "sgRay " + System.identityHashCode(this) + "\n"+this.p1+"\n             v \n" + this.p2+"\n ------------";
+		String result = "sgRay " + System.identityHashCode(this) + "\n"
+					+"("+(float)this.p1.x +" ->  " +(float)this.p2.x + ") \n " 
+					+"("+(float)this.p1.y +" ->  " +(float)this.p2.y + ") \n "
+					+"("+(float)this.p1.z +" ->  " +(float)this.p2.z+ ") \n ";
 		return result;		
 	}
 
-	public static float triArea2f(float x1, float y1, float x2, float y2, float x3, float y3) {
+	public static float triArea2D(float x1, float y1, float x2, float y2, float x3, float y3) {
 		return (x1 - x2) * (y2 - y3) - (x2 - x3) * (y1 - y2);   
 	}
 

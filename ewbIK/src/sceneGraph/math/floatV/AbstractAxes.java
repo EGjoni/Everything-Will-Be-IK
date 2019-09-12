@@ -22,12 +22,8 @@ package sceneGraph.math.floatV;
 
 import java.util.ArrayList;
 
-import IK.doubleIK.G;
 import data.Saveable;
-import sceneGraph.math.floatV.Matrix4f;
-import sceneGraph.math.floatV.SGVec_3f;
-import sceneGraph.math.floatV.Vecf;
-import sceneGraph.math.floatV.sgRayf;
+import sceneGraph.numerical.Precision.MathIllegalArgumentException;
 
 /**
  * @author Eron Gjoni
@@ -108,13 +104,20 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 			if(this.areGlobal) {
 				globalMBasis.adoptValues(this.localMBasis);
 			} else {
+				//parent.markDirty();
 				parent.updateGlobal();
 				//if(this.debug) {
 					//System.out.println("====== " + this + " =========");
 					//System.out.println("LOCAL rotation prior:  \n" + localMBasis.rotation);
 					//System.out.println("Global Rotation prior: \n" + globalMBasis.rotation);
 					//}
-				parent.globalMBasis.setToGlobalOf(this.localMBasis, this.globalMBasis);
+				
+				try {
+					parent.globalMBasis.setToGlobalOf(this.localMBasis, this.globalMBasis);
+				} catch (MathIllegalArgumentException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 				/*if(this.debug) {	
 					System.out.println("Global Rotation post: \n" + globalMBasis.rotation);
 				}*/
@@ -278,17 +281,17 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 		Matrix4f startLocalShear = start.localMBasis.getShearScaleMatrix();
 		Matrix4f endLocalShear = end.localMBasis.getShearScaleMatrix();
 
-		localShear.val[Matrix4f.M00] = (float) G.lerp(startLocalShear.val[Matrix4f.M00], endLocalShear.val[Matrix4f.M00], amount);
-		localShear.val[Matrix4f.M10] = (float) G.lerp(startLocalShear.val[Matrix4f.M10], endLocalShear.val[Matrix4f.M10], amount);
-		localShear.val[Matrix4f.M20] = (float) G.lerp(startLocalShear.val[Matrix4f.M20], endLocalShear.val[Matrix4f.M20], amount);
+		localShear.val[Matrix4f.M00] = MathUtils.lerp(startLocalShear.val[Matrix4f.M00], endLocalShear.val[Matrix4f.M00], amount);
+		localShear.val[Matrix4f.M10] = MathUtils.lerp(startLocalShear.val[Matrix4f.M10], endLocalShear.val[Matrix4f.M10], amount);
+		localShear.val[Matrix4f.M20] = MathUtils.lerp(startLocalShear.val[Matrix4f.M20], endLocalShear.val[Matrix4f.M20], amount);
 
-		localShear.val[Matrix4f.M01] = (float) G.lerp(startLocalShear.val[Matrix4f.M01], endLocalShear.val[Matrix4f.M01], amount);
-		localShear.val[Matrix4f.M11] = (float) G.lerp(startLocalShear.val[Matrix4f.M11], endLocalShear.val[Matrix4f.M11], amount);
-		localShear.val[Matrix4f.M21] = (float) G.lerp(startLocalShear.val[Matrix4f.M21], endLocalShear.val[Matrix4f.M21], amount);
+		localShear.val[Matrix4f.M01] = MathUtils.lerp(startLocalShear.val[Matrix4f.M01], endLocalShear.val[Matrix4f.M01], amount);
+		localShear.val[Matrix4f.M11] = MathUtils.lerp(startLocalShear.val[Matrix4f.M11], endLocalShear.val[Matrix4f.M11], amount);
+		localShear.val[Matrix4f.M21] = MathUtils.lerp(startLocalShear.val[Matrix4f.M21], endLocalShear.val[Matrix4f.M21], amount);
 
-		localShear.val[Matrix4f.M02] = (float) G.lerp(startLocalShear.val[Matrix4f.M02], endLocalShear.val[Matrix4f.M02], amount);
-		localShear.val[Matrix4f.M12] = (float) G.lerp(startLocalShear.val[Matrix4f.M12], endLocalShear.val[Matrix4f.M12], amount);
-		localShear.val[Matrix4f.M22] = (float) G.lerp(startLocalShear.val[Matrix4f.M22], endLocalShear.val[Matrix4f.M22], amount);
+		localShear.val[Matrix4f.M02] = MathUtils.lerp(startLocalShear.val[Matrix4f.M02], endLocalShear.val[Matrix4f.M02], amount);
+		localShear.val[Matrix4f.M12] = MathUtils.lerp(startLocalShear.val[Matrix4f.M12], endLocalShear.val[Matrix4f.M12], amount);
+		localShear.val[Matrix4f.M22] = MathUtils.lerp(startLocalShear.val[Matrix4f.M22], endLocalShear.val[Matrix4f.M22], amount);
 
 		this.localMBasis.translate = SGVec_3f.lerp(start.localMBasis.translate, end.localMBasis.translate, amount);
 		this.localMBasis.refreshMatrices();
@@ -314,22 +317,27 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 		Matrix4f startGlobalShear = start.globalMBasis.getShearScaleMatrix();
 		Matrix4f endGlobalShear = end.globalMBasis.getShearScaleMatrix();
 
-		globalShear.val[Matrix4f.M00] = (float) G.lerp(startGlobalShear.val[Matrix4f.M00], endGlobalShear.val[Matrix4f.M00], amount);
-		globalShear.val[Matrix4f.M10] = (float) G.lerp(startGlobalShear.val[Matrix4f.M10], endGlobalShear.val[Matrix4f.M10], amount);
-		globalShear.val[Matrix4f.M20] = (float) G.lerp(startGlobalShear.val[Matrix4f.M20], endGlobalShear.val[Matrix4f.M20], amount);
+		globalShear.val[Matrix4f.M00] = MathUtils.lerp(startGlobalShear.val[Matrix4f.M00], endGlobalShear.val[Matrix4f.M00], amount);
+		globalShear.val[Matrix4f.M10] = MathUtils.lerp(startGlobalShear.val[Matrix4f.M10], endGlobalShear.val[Matrix4f.M10], amount);
+		globalShear.val[Matrix4f.M20] = MathUtils.lerp(startGlobalShear.val[Matrix4f.M20], endGlobalShear.val[Matrix4f.M20], amount);
 
-		globalShear.val[Matrix4f.M01] = (float) G.lerp(startGlobalShear.val[Matrix4f.M01], endGlobalShear.val[Matrix4f.M01], amount);
-		globalShear.val[Matrix4f.M11] = (float) G.lerp(startGlobalShear.val[Matrix4f.M11], endGlobalShear.val[Matrix4f.M11], amount);
-		globalShear.val[Matrix4f.M21] = (float) G.lerp(startGlobalShear.val[Matrix4f.M21], endGlobalShear.val[Matrix4f.M21], amount);
+		globalShear.val[Matrix4f.M01] = MathUtils.lerp(startGlobalShear.val[Matrix4f.M01], endGlobalShear.val[Matrix4f.M01], amount);
+		globalShear.val[Matrix4f.M11] = MathUtils.lerp(startGlobalShear.val[Matrix4f.M11], endGlobalShear.val[Matrix4f.M11], amount);
+		globalShear.val[Matrix4f.M21] = MathUtils.lerp(startGlobalShear.val[Matrix4f.M21], endGlobalShear.val[Matrix4f.M21], amount);
 
-		globalShear.val[Matrix4f.M02] = (float) G.lerp(startGlobalShear.val[Matrix4f.M02], endGlobalShear.val[Matrix4f.M02], amount);
-		globalShear.val[Matrix4f.M12] = (float) G.lerp(startGlobalShear.val[Matrix4f.M12], endGlobalShear.val[Matrix4f.M12], amount);
-		globalShear.val[Matrix4f.M22] = (float) G.lerp(startGlobalShear.val[Matrix4f.M22], endGlobalShear.val[Matrix4f.M22], amount);
+		globalShear.val[Matrix4f.M02] = MathUtils.lerp(startGlobalShear.val[Matrix4f.M02], endGlobalShear.val[Matrix4f.M02], amount);
+		globalShear.val[Matrix4f.M12] = MathUtils.lerp(startGlobalShear.val[Matrix4f.M12], endGlobalShear.val[Matrix4f.M12], amount);
+		globalShear.val[Matrix4f.M22] = MathUtils.lerp(startGlobalShear.val[Matrix4f.M22], endGlobalShear.val[Matrix4f.M22], amount);
 
 		this.globalMBasis.translate = SGVec_3f.lerp(start.globalMBasis.translate, end.globalMBasis.translate, amount);
 		this.globalMBasis.refreshMatrices();
 
-		this.parent.globalMBasis.setToLocalOf(this.globalMBasis, this.localMBasis);
+		try {
+			this.parent.globalMBasis.setToLocalOf(this.globalMBasis, this.localMBasis);
+		} catch (MathIllegalArgumentException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		this.markDirty();
 	}
 
@@ -354,7 +362,7 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 		}
 		if(autoFlip >= 0) {
 			this.flipFlag = autoFlip;
-
+  try {
 			if(autoFlip == 0) {
 
 				Rot newRot = new Rot(this.parent.globalMBasis.getOrthonormalYHead(), this.parent.globalMBasis.getOrthonormalZHead(), yHeading, zHeading);//new Rot(this.globalMBasis.yBase, this.globalMBasis.zBase, localY, localZ);/
@@ -366,6 +374,10 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 				Rot newRot = new Rot(this.parent.globalMBasis.getOrthonormalXHead(), this.parent.globalMBasis.getOrthonormalYHead(), xHeading, yHeading);
 				this.localMBasis.rotation = this.parent.globalMBasis.getLocalOfRotation(newRot);
 			}
+  } catch (Exception e) { 
+	  e.printStackTrace();
+	  
+  }
 
 		}
 
@@ -639,7 +651,11 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 		}
 		if(intendedParent != null && intendedParent != this) {
 			intendedParent.updateGlobal(); 
-			intendedParent.globalMBasis.setToLocalOf(globalMBasis, localMBasis);			
+			try {
+				intendedParent.globalMBasis.setToLocalOf(globalMBasis, localMBasis);
+			} catch (MathIllegalArgumentException e) {
+				e.printStackTrace();
+			}			
 
 			if(this.parent != null) this.parent.disown(this);
 			this.parent = intendedParent;
@@ -881,7 +897,12 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 
 	public void setToRawLocalOf(Basis input, Basis output) {
 		this.updateGlobal();
-		this.globalMBasis.setToLocalOf(input, output);
+		try {
+			this.globalMBasis.setToLocalOf(input, output);
+		} catch (MathIllegalArgumentException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	public void setToOrthoNormalizedLocalOf(Basis input, Basis output) {
@@ -934,7 +955,12 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 	}
 
 	public void setToLocalOf(Basis input, Basis output) {
-		this.globalMBasis.setToLocalOf(input, output);
+		try {
+			this.globalMBasis.setToLocalOf(input, output);
+		} catch (MathIllegalArgumentException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	public sgRayf getLocalOf(sgRayf in) {
@@ -1064,24 +1090,28 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 		this.updateGlobal();
 	}
 
-	public void rotateAboutX(float angle, boolean orthonormalized) {
+	public void rotateAboutX(float angle, boolean orthonormalized)  {
 		this.updateGlobal();
-		Rot xRot = new Rot(globalMBasis.getOrthonormalXHead(), angle);		
-		this.rotateBy(xRot);
+		Rot xRot;
+		xRot = new Rot(globalMBasis.getOrthonormalXHead(), angle);		
+		this.rotateBy(xRot);		
 		this.markDirty();
 	}
 
-	public void rotateAboutY(float angle, boolean orthonormalized) {
+	public void rotateAboutY(float angle, boolean orthonormalized)  {
 		this.updateGlobal();	
-		Rot yRot = new Rot(globalMBasis.getOrthonormalYHead(), angle); 
-		this.rotateBy(yRot);
+		Rot yRot;
+		yRot = new Rot(globalMBasis.getOrthonormalYHead(), angle);		
+		this.rotateBy(yRot); 
 		this.markDirty();
 	}
 
 	public void rotateAboutZ(float angle, boolean orthonormalized) {
 		this.updateGlobal();
-		Rot zRot = new Rot(globalMBasis.getOrthonormalZHead(), angle);
+		Rot zRot;
+		zRot = new Rot(globalMBasis.getOrthonormalZHead(), angle);
 		this.rotateBy(zRot);
+		
 		this.markDirty();
 	}
 
@@ -1099,8 +1129,14 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 	public void rotateBy(MRotation apply) {
 		this.updateGlobal();		
 		if(parent != null) {		
-			Rot newRot = this.parent.globalMBasis.getLocalOfRotation(new Rot(apply));
-			this.localMBasis.rotateBy(newRot);
+			Rot newRot;
+			try {
+				newRot = this.parent.globalMBasis.getLocalOfRotation(new Rot(apply));
+				this.localMBasis.rotateBy(newRot);
+			} catch (MathIllegalArgumentException e) {
+				e.printStackTrace();
+			}
+			
 		} else {
 			this.localMBasis.rotateBy(new Rot(apply));
 		}		
@@ -1116,8 +1152,14 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 
 		this.updateGlobal();		
 		if(parent != null) {
-			Rot newRot = this.parent.globalMBasis.getLocalOfRotation(apply);;
-			this.localMBasis.rotateBy(newRot);
+			Rot newRot;
+			try {
+				newRot = this.parent.globalMBasis.getLocalOfRotation(apply);
+				this.localMBasis.rotateBy(newRot);
+			} catch (MathIllegalArgumentException e) {
+				e.printStackTrace();
+			};
+			
 		} else {
 			this.localMBasis.rotateBy(apply);
 		}
@@ -1248,7 +1290,11 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 		targetAxes.updateGlobal();
 		this.updateGlobal();
 		if(this.parent != null) {
-			parent.globalMBasis.setToLocalOf(targetAxes.globalMBasis, localMBasis);	
+			try {
+				parent.globalMBasis.setToLocalOf(targetAxes.globalMBasis, localMBasis);
+			} catch (MathIllegalArgumentException e) {
+				e.printStackTrace();
+			}	
 		} else {
 			this.localMBasis.adoptValues(targetAxes.globalMBasis);
 		}
@@ -1261,7 +1307,12 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 		this.updateGlobal();
 		if(this.parent != null) {
 			this.globalMBasis.rotateTo(targetAxes.globalMBasis.rotation);
-			parent.globalMBasis.setToLocalOf(this.globalMBasis, this.localMBasis);
+			try {
+				parent.globalMBasis.setToLocalOf(this.globalMBasis, this.localMBasis);
+			} catch (MathIllegalArgumentException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		} else {
 			this.localMBasis.rotateTo(targetAxes.globalMBasis.rotation);
 		}

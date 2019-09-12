@@ -16,6 +16,7 @@
 
 package sceneGraph.math;
 
+import sceneGraph.math.doubleV.Interpolation;
 import sceneGraph.math.doubleV.SGVec_2d;
 import sceneGraph.math.doubleV.SGVec_3d;
 

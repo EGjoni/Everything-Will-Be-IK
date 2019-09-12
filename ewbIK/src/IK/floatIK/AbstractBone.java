@@ -21,8 +21,6 @@ import java.util.ArrayList;
 
 import IK.IKExceptions;
 import IK.IKExceptions.NullParentForBoneException;
-import IK.floatIK.AbstractBone;
-import IK.floatIK.Constraint;
 import data.CanLoad;
 import data.EWBIKLoader;
 import data.EWBIKSaver;
@@ -37,13 +35,14 @@ import sceneGraph.math.floatV.RotationOrder;
 import sceneGraph.math.floatV.SGVec_3f;
 import sceneGraph.math.floatV.Vec3f;
 import sceneGraph.math.floatV.sgRayf;
+import sceneGraph.numerical.Precision.MathIllegalArgumentException;
 
 
 /**
  * @author Eron Gjoni
  *
  */
-public abstract class AbstractBone implements Saveable {
+public abstract class AbstractBone implements Saveable, Comparable<AbstractBone> {
 	
 	public static enum frameType {GLOBAL, RELATIVE};
 
@@ -139,7 +138,7 @@ public abstract class AbstractBone implements Saveable {
 			this.parent.addFreeChild(this);
 			this.parent.addChild(this);
 			this.updateAncestorCount();
-			this.updateSegmentedArmature();	
+			//this.updateSegmentedArmature();	
 		} else {
 			throw IKExceptions.NullParentForBoneException();
 		}
@@ -172,7 +171,9 @@ public abstract class AbstractBone implements Saveable {
 			this.boneHeight = inputBoneHeight;
 
 			AbstractAxes tempAxes = par.localAxes().getGlobalCopy();
-			Rot newRot = new Rot(new MRotation(RotationOrder.XZY, xAngle, yAngle, zAngle));
+			Rot newRot;
+			try {
+				newRot = new Rot(new MRotation(RotationOrder.XZY, xAngle, yAngle, zAngle));
 			tempAxes.rotateBy(newRot);			
 
 			this.parent = par;
@@ -191,11 +192,37 @@ public abstract class AbstractBone implements Saveable {
 			this.parent.addFreeChild(this);
 			this.parent.addChild(this);
 			this.updateAncestorCount();
-			this.updateSegmentedArmature();	
+			} catch (MathIllegalArgumentException e) {
+				e.printStackTrace();
+			}
+			//this.updateSegmentedArmature();	
 		} else {
 			throw IKExceptions.NullParentForBoneException();
 		}
 
+	}
+	
+	
+	private void updateAncestorCount() {
+		int countedAncestors = 0;
+		AbstractBone currentBone = this.parent;
+		while(currentBone != null) {
+			countedAncestors++; 
+			currentBone = currentBone.parent;
+		}
+		setAncestorCount(countedAncestors);
+	}
+	
+	/**updates the ancestor count for this bone, and 
+	 * sets the ancestor count of all child bones 
+	 * to this bone's ancestor count +1;
+	 * @param count
+	 */
+	private void setAncestorCount(int count) {
+		this.ancestorCount = count; 
+		for(AbstractBone b : this.children) {
+			b.setAncestorCount(this.ancestorCount +1);
+		}
 	}
 	
 	/** 
@@ -285,7 +312,7 @@ public abstract class AbstractBone implements Saveable {
 			this.parent.addChild(this);
 			this.parent.addFreeChild(this);
 			this.updateAncestorCount();
-			this.updateSegmentedArmature();	
+			//this.updateSegmentedArmature();	
 		} else {
 			throw new NullParentForBoneException();
 		}
@@ -350,7 +377,7 @@ public abstract class AbstractBone implements Saveable {
 
 			this.boneHeight = inputBoneHeight;
 			this.updateAncestorCount();
-			this.updateSegmentedArmature();	
+			//this.updateSegmentedArmature();	
 
 
 		} else {
@@ -410,35 +437,12 @@ public abstract class AbstractBone implements Saveable {
 			
 			parentArmature.addToBoneList(this);
 			this.updateAncestorCount();
-			this.updateSegmentedArmature();	
+			this.updateSegmentedArmature();
 
 		} else {
 			throw new NullParentForBoneException();
 		}
 
-	}
-	
-	
-	private void updateAncestorCount() {
-		int countedAncestors = 0;
-		AbstractBone currentBone = this.parent;
-		while(currentBone != null) {
-			countedAncestors++; 
-			currentBone = currentBone.parent;
-		}
-		setAncestorCount(countedAncestors);
-	}
-	
-	/**updates the ancestor count for this bone, and 
-	 * sets the ancestor count of all child bones 
-	 * to this bone's ancestor count +1;
-	 * @param count
-	 */
-	private void setAncestorCount(int count) {
-		this.ancestorCount = count; 
-		for(AbstractBone b : this.children) {
-			b.setAncestorCount(this.ancestorCount +1);
-		}
 	}
 	
 	public AbstractBone() {
@@ -776,7 +780,7 @@ public abstract class AbstractBone implements Saveable {
 	 */
 	public void enablePin() {
 		//System.out.println("pinning");
-		if(pin == null) pin = createAndReturnPinAtOrigin(this.getTip_());
+		if(pin == null) pin = createAndReturnPinAtOrigin(this.getBase_());
 		pin.enable();
 		//System.out.println("clearing children");
 		freeChildren.clear(); 
@@ -788,7 +792,7 @@ public abstract class AbstractBone implements Saveable {
 			}
 		}
 		//System.out.println("notifying ancestors");
-		notifyAncestorsOfPin();
+		notifyAncestorsOfPin(false);
 		//System.out.println("updating segment armature");
 		this.updateSegmentedArmature();	
 		//System.out.println("segment armature updated");
@@ -857,6 +861,7 @@ public abstract class AbstractBone implements Saveable {
 	}
 
 	public AbstractAxes getPinnedAxes() {
+		if(this.pin == null) return null;
 		return this.pin.getAxes();
 	}
 
@@ -1086,7 +1091,7 @@ public abstract class AbstractBone implements Saveable {
 		this.setStiffness(j.getFloat("stiffness"));
 		
 		if(j.hasKey("constraints")) 
-			this.constraints = (Constraint) EWBIKLoader.getObjectFromClassMaps(this.getConstraint().getClass(), j.getString("constraints"));
+			this.constraints = (AbstractKusudama) EWBIKLoader.getObjectFromClassMaps(this.getConstraint().getClass(), j.getString("constraints"));
 		if(j.hasKey("IKPin")) 
 			this.pin = (AbstractIKPin) EWBIKLoader.getObjectFromClassMaps(this.getIKPin().getClass(), j.getString("constraints"));
 	}
@@ -1140,5 +1145,10 @@ public abstract class AbstractBone implements Saveable {
 	public void setLoading(boolean loading) {
 		// TODO Auto-generated method stub
 		
+	}
+	
+	@Override 
+	public int compareTo(AbstractBone i) {
+		return this.ancestorCount - i.ancestorCount;
 	}
 }

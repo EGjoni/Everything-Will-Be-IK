@@ -1,26 +1,27 @@
-package IK.doubleIK;
+package IK.floatIK;
 
-import sceneGraph.math.doubleV.MRotation;
-import sceneGraph.math.doubleV.MathUtils;
-import sceneGraph.math.doubleV.Matrix3d;
-import sceneGraph.math.doubleV.Matrix4d;
-import sceneGraph.math.doubleV.Rot;
-import sceneGraph.math.doubleV.SGVec_3d;
+import sceneGraph.math.floatV.MRotation;
+import sceneGraph.math.floatV.MathUtils;
+import sceneGraph.math.floatV.Matrix3f;
+import sceneGraph.math.floatV.Matrix4f;
+import sceneGraph.math.floatV.Rot;
+import sceneGraph.math.floatV.SGVec_3f;
+import sceneGraph.numerical.Precision.NotARotationMatrixException;
 
 public class QCP {
 
 	/**
-	 * Implementation of the Quaternion-Based Characteristic Polynomial algorithm
+	 * Implementation of the Quaternionf-Based Characteristic Polynomial algorithm
 	 * for RMSD and Superposition calculations.
 	 * <p>
 	 * Usage:
 	 * <p>
-	 * The input consists of 2 SGVec_3d arrays of equal length. The input coordinates
+	 * The input consists of 2 SGVec_3f arrays of equal length. The input coordinates
 	 * are not changed.
 	 *
 	 * <pre>
-	 *    SGVec_3d[] x = ...
-	 *    SGVec_3d[] y = ...
+	 *    SGVec_3f[] x = ...
+	 *    SGVec_3f[] y = ...
 	 *    SuperPositionQCP qcp = new SuperPositionQCP();
 	 *    qcp.set(x, y);
 	 * </pre>
@@ -28,7 +29,7 @@ public class QCP {
 	 * or with weighting factors [0 - 1]]
 	 *
 	 * <pre>
-	 *    double[] weights = ...
+	 *    float[] weights = ...
 	 *    qcp.set(x, y, weights);
 	 * </pre>
 	 * <p>
@@ -37,19 +38,19 @@ public class QCP {
 	 * A. Calculate rmsd only
 	 *
 	 * <pre>
-	 * double rmsd = qcp.getRmsd();
+	 * float rmsd = qcp.getRmsd();
 	 * </pre>
 	 * <p>
 	 * B. Calculate a 4x4 transformation (rotation and translation) matrix
 	 *
 	 * <pre>
-	 * Matrix4d rottrans = qcp.getTransformationMatrix();
+	 * Matrix4f rottrans = qcp.getTransformationMatrix();
 	 * </pre>
 	 * <p>
 	 * C. Get transformated points (y superposed onto the reference x)
 	 *
 	 * <pre>
-	 * SGVec_3d[] ySuperposed = qcp.getTransformedCoordinates();
+	 * SGVec_3f[] ySuperposed = qcp.getTransformedCoordinates();
 	 * </pre>
 	 * <p>
 	 * Citations:
@@ -86,33 +87,34 @@ public class QCP {
 	 * @author Pu Liu (original C code)
 	 * @author Peter Rose (adopted to Java)
 	 * @author Aleix Lafita (adopted to Java)
-	 * @author Eron Gjoni (adopted to EWB IK)
 	 */
 
 
-	private double evec_prec = 1E-6;
-	private double eval_prec = 1E-11;
+	private float evec_prec = 1E-6f;
+	private float eval_prec = 1E-11f;
 
-	private SGVec_3d[] target;
-	private SGVec_3d[] moved;
+	private SGVec_3f[] x;
+	private SGVec_3f[] y;
 
-	private double[] weight;
-	private double wsum;
+	private float[] weight;
+	private float wsum;
 
-	private SGVec_3d targetCenter = new SGVec_3d();
-	private SGVec_3d movedCenter =  new SGVec_3d();
+	private SGVec_3f[] xref;
+	private SGVec_3f[] yref;
+	private SGVec_3f xtrans;
+	private SGVec_3f ytrans;
 
-	private double e0;
-	//private Matrix3d rotmat = new Matrix3d();
-	//private Matrix4d transformation = new Matrix4d();
-	private double rmsd = 0;
-	private double Sxy, Sxz, Syx, Syz, Szx, Szy;
-	private double SxxpSyy, Szz, mxEigenV, SyzmSzy, SxzmSzx, SxymSyx;
-	private double SxxmSyy, SxypSyx, SxzpSzx;
-	private double Syy, Sxx, SyzpSzy;
+	private float e0;
+	private Matrix3f rotmat = new Matrix3f();
+	private Matrix4f transformation = new Matrix4f();
+	private float rmsd = 0;
+	private float Sxy, Sxz, Syx, Syz, Szx, Szy;
+	private float SxxpSyy, Szz, mxEigenV, SyzmSzy, SxzmSzx, SxymSyx;
+	private float SxxmSyy, SxypSyx, SxzpSzx;
+	private float Syy, Sxx, SyzpSzy;
 	private boolean rmsdCalculated = false;
 	private boolean transformationCalculated = false;
-	private int length;
+
 
 
 	/**
@@ -126,7 +128,7 @@ public class QCP {
 	 * @param eval_prec
 	 *            required eigenvalue precision
 	 */
-	public QCP( double evec_prec, double eval_prec) {
+	public QCP( float evec_prec, float eval_prec) {
 		this.evec_prec = evec_prec;
 		this.eval_prec = eval_prec;
 	}
@@ -136,13 +138,13 @@ public class QCP {
 	 * length. Input coordinates are not modified.
 	 *
 	 * @param x
-	 *            3d points of reference coordinate set
+	 *            3f points of reference coordinate set
 	 * @param y
-	 *            3d points of coordinate set for superposition
+	 *            3f points of coordinate set for superposition
 	 */
-	private void set(SGVec_3d[] target, SGVec_3d[] moved) {
-		this.moved = target;
-		this.target = moved;
+	private void set(SGVec_3f[] x, SGVec_3f[] y) {
+		this.x = x;
+		this.y = y;
 		rmsdCalculated = false;
 		transformationCalculated = false;
 	}
@@ -151,16 +153,16 @@ public class QCP {
 	 * Sets the two input coordinate arrays and weight array. All input arrays
 	 * must be of equal length. Input coordinates are not modified.
 	 *
-	 * @param fixed
-	 *            3d points of reference coordinate set
-	 * @param moved
-	 *            3d points of coordinate set for superposition
+	 * @param x
+	 *            3f points of reference coordinate set
+	 * @param y
+	 *            3f points of coordinate set for superposition
 	 * @param weight
 	 *            a weight in the inclusive range [0,1] for each point
 	 */
-	private void set(SGVec_3d[] moved, SGVec_3d[] target, double[] weight) {
-		this.target = target;
-		this.moved = moved;		
+	private void set(SGVec_3f[] x, SGVec_3f[] y, float[] weight) {
+		this.x = x;
+		this.y = y;
 		this.weight = weight;
 		rmsdCalculated = false;
 		transformationCalculated = false;
@@ -174,9 +176,9 @@ public class QCP {
 	 *
 	 * @return root mean square deviation for superposition of y onto x
 	 */
-	private double getRmsd() {
+	private float getRmsd() {
 		if (!rmsdCalculated) {
-			calcRmsd(moved, target);
+			calcRmsd(x, y);
 			rmsdCalculated = true;
 		}
 		return rmsd;
@@ -191,37 +193,20 @@ public class QCP {
 	 *            array of weigths for each equivalent point position
 	 * @return
 	 */
-	public Rot weightedSuperpose( SGVec_3d[] moved, SGVec_3d[] target, double[] weight, boolean translate) {
-		set(moved, target, weight);
-
-		if(translate) {
-			getWeightedCenter(moved, weight, movedCenter);
-			wsum = 0.0; //set wsum to 0 so we don't double up. 
-			getWeightedCenter(target, weight, targetCenter);
-			translate(movedCenter.multCopy(-1d), moved);
-			translate(targetCenter.multCopy(-1d), target);
-		} else {
-			if(weight != null) {
-				for (int i = 0; i < weight.length; i++)  {
-					wsum += weight[i];
-				}
-			} else {
-				wsum = moved.length;
-			}
-		}
-		Rot result = getRotation();
-		//transformation.set(rotmat);
-		return result;//transformation;
+	public Matrix4f weightedSuperpose(SGVec_3f[] fixed, SGVec_3f[] moved, float[] weight) {
+		set(moved, fixed, weight);
+		getRotationMatrix();
+		transformation.set(rotmat);
+		return transformation;
 	}
 
-	private Rot getRotation() {
+	private Matrix3f getRotationMatrix() {
 		getRmsd();
-		Rot result = null; 
 		if (!transformationCalculated) {
-			result = calcRotation();
+			calcRotationMatrix();
 			transformationCalculated = true;
 		}
-		return result;
+		return rotmat;
 	}
 
 	/**
@@ -229,11 +214,11 @@ public class QCP {
 	 * the coordinates to be precentered.
 	 *
 	 * @param x
-	 *            3d points of reference coordinate set
+	 *            3f points of reference coordinate set
 	 * @param y
-	 *            3d points of coordinate set for superposition
+	 *            3f points of coordinate set for superposition
 	 */
-	private void calcRmsd(SGVec_3d[] x, SGVec_3d[] y) {
+	private void calcRmsd(SGVec_3f[] x, SGVec_3f[] y) {
 		innerProduct(y, x);
 		calcRmsd(wsum);
 	}
@@ -243,7 +228,7 @@ public class QCP {
 	/**
 	 * Calculates the inner product between two coordinate sets x and y
 	 * (optionally weighted, if weights set through
-	 * {@link #set(SGVec_3d[], SGVec_3d[], double[])}). It also calculates an
+	 * {@link #set(SGVec_3f[], SGVec_3f[], float[])}). It also calculates an
 	 * upper bound of the most positive root of the key matrix.
 	 * http://theobald.brandeis.edu/qcp/qcprot.c
 	 *
@@ -251,9 +236,9 @@ public class QCP {
 	 * @param coords2
 	 * @return
 	 */
-	private void innerProduct(SGVec_3d[] coords1, SGVec_3d[] coords2) {
-		double x1, x2, y1, y2, z1, z2;
-		double g1 = 0.0, g2 = 0.0;
+	private void innerProduct(SGVec_3f[] coords1, SGVec_3f[] coords2) {
+		float x1, x2, y1, y2, z1, z2;
+		float g1 = 0f, g2 = 0f;
 
 		Sxx = 0;
 		Sxy = 0;
@@ -266,10 +251,10 @@ public class QCP {
 		Szz = 0;
 
 		if (weight != null) {
-			//wsum = 0;
+			wsum = 0;
 			for (int i = 0; i < coords1.length; i++) {
 
-				//wsum += weight[i];
+				wsum += weight[i];
 
 				x1 = weight[i] * coords1[i].x;
 				y1 = weight[i] * coords1[i].y;
@@ -312,30 +297,30 @@ public class QCP {
 				Szy += coords1[i].z * coords2[i].y;
 				Szz += coords1[i].z * coords2[i].z;
 			}
-			//wsum = coords1.length;
+			wsum = coords1.length;
 		}
 
-		e0 = (g1 + g2) * 0.5;
+		e0 = (g1 + g2) * 0.5f;
 	}
 
-	private int calcRmsd(double len) {
-		double Sxx2 = Sxx * Sxx;
-		double Syy2 = Syy * Syy;
-		double Szz2 = Szz * Szz;
+	private int calcRmsd(float len) {
+		float Sxx2 = Sxx * Sxx;
+		float Syy2 = Syy * Syy;
+		float Szz2 = Szz * Szz;
 
-		double Sxy2 = Sxy * Sxy;
-		double Syz2 = Syz * Syz;
-		double Sxz2 = Sxz * Sxz;
+		float Sxy2 = Sxy * Sxy;
+		float Syz2 = Syz * Syz;
+		float Sxz2 = Sxz * Sxz;
 
-		double Syx2 = Syx * Syx;
-		double Szy2 = Szy * Szy;
-		double Szx2 = Szx * Szx;
+		float Syx2 = Syx * Syx;
+		float Szy2 = Szy * Szy;
+		float Szx2 = Szx * Szx;
 
-		double SyzSzymSyySzz2 = 2.0 * (Syz * Szy - Syy * Szz);
-		double Sxx2Syy2Szz2Syz2Szy2 = Syy2 + Szz2 - Sxx2 + Syz2 + Szy2;
+		float SyzSzymSyySzz2 = 2f * (Syz * Szy - Syy * Szz);
+		float Sxx2Syy2Szz2Syz2Szy2 = Syy2 + Szz2 - Sxx2 + Syz2 + Szy2;
 
-		double c2 = -2.0 * (Sxx2 + Syy2 + Szz2 + Sxy2 + Syx2 + Sxz2 + Szx2 + Syz2 + Szy2);
-		double c1 = 8.0 * (Sxx * Syz * Szy + Syy * Szx * Sxz + Szz * Sxy * Syx - Sxx * Syy * Szz - Syz * Szx * Sxy
+		float c2 = -2f * (Sxx2 + Syy2 + Szz2 + Sxy2 + Syx2 + Sxz2 + Szx2 + Syz2 + Szy2);
+		float c1 = 8f * (Sxx * Syz * Szy + Syy * Szx * Sxz + Szz * Sxy * Syx - Sxx * Syy * Szz - Syz * Szx * Sxy
 				- Szy * Syx * Sxz);
 
 		SxzpSzx = Sxz + Szx;
@@ -347,9 +332,9 @@ public class QCP {
 		SxxpSyy = Sxx + Syy;
 		SxxmSyy = Sxx - Syy;
 
-		double Sxy2Sxz2Syx2Szx2 = Sxy2 + Sxz2 - Syx2 - Szx2;
+		float Sxy2Sxz2Syx2Szx2 = Sxy2 + Sxz2 - Syx2 - Szx2;
 
-		double c0 = Sxy2Sxz2Syx2Szx2 * Sxy2Sxz2Syx2Szx2
+		float c0 = Sxy2Sxz2Syx2Szx2 * Sxy2Sxz2Syx2Szx2
 				+ (Sxx2Syy2Szz2Syz2Szy2 + SyzSzymSyySzz2) * (Sxx2Syy2Szz2Syz2Szy2 - SyzSzymSyySzz2)
 				+ (-(SxzpSzx) * (SyzmSzy) + (SxymSyx) * (SxxmSyy - Szz))
 				* (-(SxzmSzx) * (SyzpSzy) + (SxymSyx) * (SxxmSyy + Szz))
@@ -362,14 +347,13 @@ public class QCP {
 
 		mxEigenV = e0;
 
-
 		int i;
 		for (i = 1; i < 51; ++i) {
-			double oldg = mxEigenV;
-			double x2 = mxEigenV * mxEigenV;
-			double b = (x2 + c2) * mxEigenV;
-			double a = b + c1;
-			double delta = ((a * mxEigenV + c0) / (2.0 * x2 * mxEigenV + b + a));
+			float oldg = mxEigenV;
+			float x2 = mxEigenV * mxEigenV;
+			float b = (x2 + c2) * mxEigenV;
+			float a = b + c1;
+			float delta = ((a * mxEigenV + c0) / (2f * x2 * mxEigenV + b + a));
 			mxEigenV -= delta;
 
 			if (Math.abs(mxEigenV - oldg) < Math.abs(eval_prec * mxEigenV))
@@ -386,40 +370,40 @@ public class QCP {
 		 * the fabs() is to guard against extremely small, but *negative*
 		 * numbers due to floating point error
 		 */
-		rmsd = Math.sqrt(Math.abs(2.0 * (e0 - mxEigenV) / len));
+		rmsd = MathUtils.sqrt(MathUtils.abs(2f * (e0 - mxEigenV) / len));
 
 		return 1;
 	}
 
-	private Rot calcRotation() {
-		double a11 = SxxpSyy + Szz - mxEigenV;
-		double a12 = SyzmSzy;
-		double a13 = -SxzmSzx;
-		double a14 = SxymSyx;
-		double a21 = SyzmSzy;
-		double a22 = SxxmSyy - Szz - mxEigenV;
-		double a23 = SxypSyx;
-		double a24 = SxzpSzx;
-		double a31 = a13;
-		double a32 = a23;
-		double a33 = Syy - Sxx - Szz - mxEigenV;
-		double a34 = SyzpSzy;
-		double a41 = a14;
-		double a42 = a24;
-		double a43 = a34;
-		double a44 = Szz - SxxpSyy - mxEigenV;
-		double a3344_4334 = a33 * a44 - a43 * a34;
-		double a3244_4234 = a32 * a44 - a42 * a34;
-		double a3243_4233 = a32 * a43 - a42 * a33;
-		double a3143_4133 = a31 * a43 - a41 * a33;
-		double a3144_4134 = a31 * a44 - a41 * a34;
-		double a3142_4132 = a31 * a42 - a41 * a32;
-		double q1 = a22 * a3344_4334 - a23 * a3244_4234 + a24 * a3243_4233;
-		double q2 = -a21 * a3344_4334 + a23 * a3144_4134 - a24 * a3143_4133;
-		double q3 = a21 * a3244_4234 - a22 * a3144_4134 + a24 * a3142_4132;
-		double q4 = -a21 * a3243_4233 + a22 * a3143_4133 - a23 * a3142_4132;
+	private int calcRotationMatrix() {
+		float a11 = SxxpSyy + Szz - mxEigenV;
+		float a12 = SyzmSzy;
+		float a13 = -SxzmSzx;
+		float a14 = SxymSyx;
+		float a21 = SyzmSzy;
+		float a22 = SxxmSyy - Szz - mxEigenV;
+		float a23 = SxypSyx;
+		float a24 = SxzpSzx;
+		float a31 = a13;
+		float a32 = a23;
+		float a33 = Syy - Sxx - Szz - mxEigenV;
+		float a34 = SyzpSzy;
+		float a41 = a14;
+		float a42 = a24;
+		float a43 = a34;
+		float a44 = Szz - SxxpSyy - mxEigenV;
+		float a3344_4334 = a33 * a44 - a43 * a34;
+		float a3244_4234 = a32 * a44 - a42 * a34;
+		float a3243_4233 = a32 * a43 - a42 * a33;
+		float a3143_4133 = a31 * a43 - a41 * a33;
+		float a3144_4134 = a31 * a44 - a41 * a34;
+		float a3142_4132 = a31 * a42 - a41 * a32;
+		float q1 = a22 * a3344_4334 - a23 * a3244_4234 + a24 * a3243_4233;
+		float q2 = -a21 * a3344_4334 + a23 * a3144_4134 - a24 * a3143_4133;
+		float q3 = a21 * a3244_4234 - a22 * a3144_4134 + a24 * a3142_4132;
+		float q4 = -a21 * a3243_4233 + a22 * a3143_4133 - a23 * a3142_4132;
 
-		double qsqr = q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4;
+		float qsqr = q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4;
 
 		/*
 		 * The following code tries to calculate another column in the adjoint
@@ -435,9 +419,9 @@ public class QCP {
 			qsqr = q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4;
 
 			if (qsqr < evec_prec) {
-				double a1324_1423 = a13 * a24 - a14 * a23, a1224_1422 = a12 * a24 - a14 * a22;
-				double a1223_1322 = a12 * a23 - a13 * a22, a1124_1421 = a11 * a24 - a14 * a21;
-				double a1123_1321 = a11 * a23 - a13 * a21, a1122_1221 = a11 * a22 - a12 * a21;
+				float a1324_1423 = a13 * a24 - a14 * a23, a1224_1422 = a12 * a24 - a14 * a22;
+				float a1223_1322 = a12 * a23 - a13 * a22, a1124_1421 = a11 * a24 - a14 * a21;
+				float a1123_1321 = a11 * a23 - a13 * a21, a1122_1221 = a11 * a22 - a12 * a21;
 
 				q1 = a42 * a1324_1423 - a43 * a1224_1422 + a44 * a1223_1322;
 				q2 = -a41 * a1324_1423 + a43 * a1124_1421 - a44 * a1123_1321;
@@ -457,109 +441,116 @@ public class QCP {
 						 * if qsqr is still too small, return the identity
 						 * matrix.
 						 */
-						//rotmat.idt();
+						rotmat.idt();
 
-						return new Rot();
+						return 0;
 					}
 				}
 			}
 		}
 
-		return new Rot(q1, q2, q3, q4, true);
+		float normq = MathUtils.sqrt(qsqr);
+		q1 /= normq;
+		q2 /= normq;
+		q3 /= normq;
+		q4 /= normq;
+
+		float a2 = q1 * q1;
+		float x2 = q2 * q2;
+		float y2 = q3 * q3;
+		float z2 = q4 * q4;
+
+		float xy = q2 * q3;
+		float az = q1 * q4;
+		float zx = q4 * q2;
+		float ay = q1 * q3;
+		float yz = q3 * q4;
+		float ax = q1 * q2;
+
+		rotmat.val[Matrix3f.M00] = a2 + x2 - y2 - z2;
+		rotmat.val[Matrix3f.M01] = 2 * (xy + az);
+		rotmat.val[Matrix3f.M02] = 2 * (zx - ay);
+
+		rotmat.val[Matrix3f.M10] = 2 * (xy - az);
+		rotmat.val[Matrix3f.M11] = a2 - x2 + y2 - z2;
+		rotmat.val[Matrix3f.M12] = 2 * (yz + ax);
+
+		rotmat.val[Matrix3f.M20] = 2 * (zx + ay);
+		rotmat.val[Matrix3f.M21] = 2 * (yz - ax);
+		rotmat.val[Matrix3f.M22] = a2 - x2 - y2 + z2;
+
+		return 1;
 	}
 
-
-
-
-	public double getRmsd(SGVec_3d[] fixed, SGVec_3d[] moved) {
+	public float getRmsd(SGVec_3f[] fixed, SGVec_3f[] moved) {
 		set(moved, fixed);
 		return getRmsd();
 	}
 
 
-	public Rot superpose(SGVec_3d[] fixed, SGVec_3d[] moved) {
+	public Rot superpose(SGVec_3f[] fixed, SGVec_3f[] moved) {
 		set(moved, fixed);
 		//getRotationMatrix();
 		//transformation.set(rotmat);
-		/*Matrix3d rMat = getRotationMatrix();
-		double[][] resultArr = new double[3][3];
-		resultArr[0][0] = rMat.val[Matrix3d.M00]; 
-		resultArr[0][1] = rMat.val[Matrix3d.M01];
-		resultArr[0][2] = rMat.val[Matrix3d.M02];
-
-		resultArr[1][0] = rMat.val[Matrix3d.M10]; 
-		resultArr[1][1] = rMat.val[Matrix3d.M11];
-		resultArr[1][2] = rMat.val[Matrix3d.M12];
-
-		resultArr[2][0] = rMat.val[Matrix3d.M20]; 
-		resultArr[2][1] = rMat.val[Matrix3d.M21];
-		resultArr[2][2] = rMat.val[Matrix3d.M22];
-
-		return new Rot(new MRotation(resultArr, MathUtils.DOUBLE_ROUNDING_ERROR));*/
-		return getRotation();
+		Matrix3f rMat = getRotationMatrix();
+		float[][] resultArr = new float[3][3];
+		resultArr[0][0] = rMat.val[Matrix3f.M00]; 
+		resultArr[0][1] = rMat.val[Matrix3f.M01];
+		resultArr[0][2] = rMat.val[Matrix3f.M02];
+		
+		resultArr[1][0] = rMat.val[Matrix3f.M10]; 
+		resultArr[1][1] = rMat.val[Matrix3f.M11];
+		resultArr[1][2] = rMat.val[Matrix3f.M12];
+		
+		resultArr[2][0] = rMat.val[Matrix3f.M20]; 
+		resultArr[2][1] = rMat.val[Matrix3f.M21];
+		resultArr[2][2] = rMat.val[Matrix3f.M22];
+		
+		Rot result = null;
+				try {
+					result =	new Rot(new MRotation(resultArr, MathUtils.FLOAT_ROUNDING_ERROR));
+				} catch (NotARotationMatrixException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+		return result;
 	}
 
-
-
-
-	public static void translate(SGVec_3d trans, SGVec_3d[] x) {
-		for (SGVec_3d p : x) {
-			p.add(trans);
-		}
+	/**
+	 * @param fixed
+	 * @param moved
+	 * @param weight
+	 *            array of weigths for each equivalent point position
+	 * @return weighted RMSD.
+	 */
+	public float getWeightedRmsd(SGVec_3f[] fixed, SGVec_3f[] moved, float[] weight) {
+		set(moved, fixed, weight);
+		return getRmsd();
 	}
-
-
-	public SGVec_3d getWeightedCenter(SGVec_3d[] toCenter, double[] weight, SGVec_3d center)	{	    	    
-
-		if (weight != null) {
-			for (int i = 0; i < toCenter.length; i++)
-			{
-				center.mulAdd(toCenter[i], weight[i]);
-				wsum += weight[i];
-			}
-
-			center.div(wsum);
-		}
-		else   {
-			for (int i = 0; i < toCenter.length; i++)
-			{
-				center.add(toCenter[i]);
-				wsum ++;
-			}
-			center.div(wsum);
-		}
-
-		return center;
-	}
-
-	public SGVec_3d getTranslation() {
-		return targetCenter.subCopy(movedCenter);		
-	}
-
 
 	/**
 	 * The QCP method can be used as a two-step calculation: first compute the
 	 * RMSD (fast) and then compute the superposition.
 	 *
 	 * This method assumes that the RMSD of two arrays of points has been
-	 * already calculated using {@link #getRmsd(SGVec_3d[], SGVec_3d[])} method
+	 * already calculated using {@link #getRmsd(SGVec_3f[], SGVec_3f[])} method
 	 * and calculates the transformation of the same two point arrays.
 	 *
 	 * @param fixed
-	 * @param target
-	 * @return transformation matrix as a Matrix4d to superpose moved onto fixed
+	 * @param moved
+	 * @return transformation matrix as a Matrix4f to superpose moved onto fixed
 	 *         point arraysW
 	 */
-	public Matrix4d superposeAfterRmsd() {
+	public Matrix4f superposeAfterRmsd() {
 
 		if (!rmsdCalculated) {
 			throw new IllegalStateException("The RMSD was not yet calculated. Use the superpose() method instead.");
 		}
 
-		//getRotationMatrix();
-		//transformation.set(rotmat);
+		getRotationMatrix();
+		transformation.set(rotmat);
 
-		return null;
+		return transformation;
 	}
 
 }

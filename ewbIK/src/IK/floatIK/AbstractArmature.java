@@ -17,19 +17,17 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
  */
 package IK.floatIK;
+import java.nio.channels.SeekableByteChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import IK.floatIK.Constraint;
-import IK.floatIK.G;
 import IK.floatIK.StrandedArmature.Strand;
+import IK.floatIK.AbstractBone;
 import data.EWBIKLoader;
 import data.EWBIKSaver;
 import data.JSONObject;
 import data.Saveable;
 import sceneGraph.*;
-import sceneGraph.math.doubleV.SGVec_3d;
-import sceneGraph.math.doubleV.sgRayd;
 import sceneGraph.math.floatV.*;
 import sceneGraph.math.floatV.AbstractAxes;
 import sceneGraph.math.floatV.Rot;
@@ -39,8 +37,8 @@ import sceneGraph.math.floatV.Rot;
  */
 
 public abstract class AbstractArmature implements Saveable {
-	
-	
+
+
 	/**This solver aims to minimize the total distance to the target pins, however if the pins
 	 * are impossible to reach AND the armature is under-constrained, this solver can become unstable. 
 	 * 
@@ -48,7 +46,7 @@ public abstract class AbstractArmature implements Saveable {
 	 * That is -- it is stable if you constrain all bones affected by the solver with Kusudamas such that 
 	 * full 360 degree rotations on any axis are disallowed.*/
 	public final static int AMBITIOUS = 0; 
-	
+
 	/** 
 	 * Highly stable even when under-constrained, and also when over-constrained (by Kusudamas)
 	 *
@@ -63,15 +61,15 @@ public abstract class AbstractArmature implements Saveable {
 	 * is encountered. If the entire armature only contains one pin, the entire armature gets translated
 	 * to meet the requirements of that pin. */
 	public final static int TRANQUIL = 1; 
-	
+
 	/**
 	 * Applies alternating solutions of AMBITIOUS and TRANQUIL solvers. 
 	 * This is about twice as slow for very little improvemet, and should be avoided unless 
 	 * you're trying to do fancy error correction stuff. 
 	 */
 	public final static int MIXED = 2; 
-	
-	
+
+
 	/**
 	 * The orientation aware solver attempts to account for target orientation, and not just position. 
 	 * This solver tends to give the best quality when it works, however, it is slower than the other solvers, 
@@ -99,13 +97,13 @@ public abstract class AbstractArmature implements Saveable {
 
 	protected int IKType = ORIENTATIONAWARE; 
 	protected int IKIterations = 15;
-	protected float dampening = (float)Math.toRadians(10f);
+	protected float dampening = (float) Math.toRadians(10f);
 	private boolean abilityBiasing = false;
 
 	public float IKSolverStability = 0f; 
 	PerformanceStats performance = new PerformanceStats(); 
-	
-	
+
+
 
 	public AbstractArmature() {}
 
@@ -114,6 +112,7 @@ public abstract class AbstractArmature implements Saveable {
 		this.tempWorkingAxes = localAxes.getGlobalCopy();
 		this.tag = name;
 		createRootBone(localAxes.y_().heading(), localAxes.z_().heading(), tag+" : rootBone", 1f, AbstractBone.frameType.GLOBAL);
+
 	}
 
 
@@ -122,6 +121,9 @@ public abstract class AbstractArmature implements Saveable {
 		this.rootBone = inputBone;
 		this.segmentedArmature = new SegmentedArmature(rootBone);
 		this.strandedArmature = new StrandedArmature(rootBone);
+		fauxParent = rootBone.localAxes().getGlobalCopy();
+		errorBaseAxes = rootBone.localAxes().getGlobalCopy();
+		errorTipAxes = errorBaseAxes.getGlobalCopy();
 		return rootBone;
 	}
 
@@ -129,6 +131,9 @@ public abstract class AbstractArmature implements Saveable {
 		initializeRootBone(this, tipHeading, rollHeading, inputTag, boneHeight, coordinateType);
 		this.segmentedArmature = new SegmentedArmature(rootBone);
 		this.strandedArmature = new StrandedArmature(rootBone);
+		fauxParent = rootBone.localAxes().getGlobalCopy();
+		errorBaseAxes = rootBone.localAxes().getGlobalCopy();
+		errorTipAxes = errorBaseAxes.getGlobalCopy();
 		return rootBone;
 	}
 
@@ -137,12 +142,12 @@ public abstract class AbstractArmature implements Saveable {
 			String inputTag, 
 			float boneHeight, 
 			AbstractBone.frameType coordinateType);
-	
+
 	public void setDefaultIterations(int iter) {
 		this.IKIterations = iter;
 	}
-	
-	
+
+
 	/**
 	 * MIXED MODE APPLIES ONE ITERATION OF 
 	 * TRANQUIL TO GET A STABLE STARTING TEMPLATE
@@ -238,23 +243,23 @@ public abstract class AbstractArmature implements Saveable {
 	public void setTag(String newTag) {
 		this.tag = newTag;
 	}
-	
-	
+
+
 	protected boolean satisfyTwist = true;
 	protected boolean satisfyOrientation = true;
 	protected boolean inverseWeighted = false;
-	
+
 	/**
 	 * This option is is only applicable to the orientation aware solver its default value is "true".  
 	 * @return if true, performs an additional bi-directional pass on the chain to account for the desired
 	 * twist of the target pin. (for example, if a character is attempting to look behind itself, the but the 
 	 * constraints on the neck bone disallow it, this will cause the spine to twist and accomodate)
 	 */	
-	
+
 	public boolean isSatisfyTwist() {
 		return satisfyTwist; 
 	}
-	
+
 	/**
 	 * This value is only relevant to the orientation aware solver.
 	 * @return if true, performs an additional pass on the chain attempting to 
@@ -262,12 +267,12 @@ public abstract class AbstractArmature implements Saveable {
 	 * a character look down, but the constraints on the characters neck disallow it, this will allow 
 	 * the spine to compensate by straightening up and outward to give the neck bone more leeway.
 	 */
-	
+
 	public boolean isSatisfyOrientation() {
 		return satisfyOrientation; 
 	}
-	
-	
+
+
 	/**
 	 * This option is is only applicable to the orientation aware solver its default value is "true".  
 	 * @param satisfyTwist if true, performs an additional bi-directional pass on the chain to account for the desired
@@ -277,8 +282,8 @@ public abstract class AbstractArmature implements Saveable {
 	public void setSatifyTwist(boolean satisfyTwist) {
 		this.satisfyTwist = satisfyTwist; 
 	}
-	
-	
+
+
 	/**
 	 * This option is is only applicable to the orientation aware solver its default value is "true".  
 	 * @param satisfyTwist if true, performs an additional pass on the chain attempting to 
@@ -290,8 +295,8 @@ public abstract class AbstractArmature implements Saveable {
 	public void setSatisfyOrientation(boolean satisfyOrientation) {
 		this.satisfyOrientation = satisfyOrientation;
 	}
-	
-	
+
+
 	/**
 	 * @param inverseWeighted  if true, will apply an additional rotation penalty on the
 	 * peripheral bones near a target so as to result in more natural poses with less need for dampening. 
@@ -299,7 +304,7 @@ public abstract class AbstractArmature implements Saveable {
 	public void setInverseWeighted(boolean inverseWeighted) {
 		this.inverseWeighted = inverseWeighted;
 	}
-	
+
 	public boolean isInverseWeighted() {
 		return this.inverseWeighted;
 	}
@@ -366,8 +371,8 @@ public abstract class AbstractArmature implements Saveable {
 	}
 
 	public void IKSolver(AbstractBone bone, float dampening, int iterations) {
-		
-		//performance.resetPerformanceStat();
+
+		performance.resetPerformanceStat();
 		performance.startPerformanceMonitor();
 		if(this.IKType == AMBITIOUS) {
 			ambitiousIKSolver(bone, dampening, iterations);
@@ -377,7 +382,8 @@ public abstract class AbstractArmature implements Saveable {
 			tranquilIKSolver(bone, dampening, iterations);
 			ambitiousIKSolver(bone, dampening, iterations);
 		} else if(this.IKType == ORIENTATIONAWARE) {
-			orientationAwareSolver(bone, dampening, iterations, isInverseWeighted(), isSatisfyOrientation(), isSatisfyTwist());
+			//orientationAwareSolver(bone, dampening, iterations, isInverseWeighted(), isSatisfyOrientation(), isSatisfyTwist());
+			improvedSolver(bone, dampening, iterations);
 		}
 		performance.solveFinished();
 		performance.printStats();
@@ -424,9 +430,9 @@ public abstract class AbstractArmature implements Saveable {
 		//acceptable to do so. so, doing so.
 	}
 
-	
-	
-	
+
+
+
 	protected void solveIK(SegmentedArmature chain, float dampening, int iterations) {
 		ArrayList<SegmentedArmature> pinnedChains = chain.pinnedDescendants;
 
@@ -747,13 +753,13 @@ public abstract class AbstractArmature implements Saveable {
 			innerIterations += Math.max(0, (iterations - (outerIterations*innerIterations))); 
 			for(int i =0; i<iterations; i++) {
 				if(thisStrandCollection != null) {
-					recursivelyCallFabriCCDSolver(thisStrandCollection, dampening, 1, inverseWeighting, orientationAware, twistAware);		
+					recursivelyCallFabriCCDSolver(thisStrandCollection, dampening, 1, inverseWeighting, orientationAware, true);		
 				}	
 			}		
 			thisStrandCollection.alignBonesToSimulationAxes();
 
 			recursivelyNotifyBonesOfCompletedIKSolution(thisStrandCollection);
-			
+
 		}
 	}
 
@@ -805,7 +811,7 @@ public abstract class AbstractArmature implements Saveable {
 			int iterations,
 			boolean inverseWeighting,
 			boolean orientationAware,
-			boolean twistAware ) {
+			boolean twistAware) {
 		collection.updateSimulatedStrandRootParentAxes();
 		ArrayList<Strand> strands = collection.strands;
 		/**
@@ -821,28 +827,377 @@ public abstract class AbstractArmature implements Saveable {
 		for(int i = 0; i< iterations; i++) {
 			for(Strand s: strands) {
 				s.alignSimulationAxesToBones();
-				SGVec_3f fauxTip = new SGVec_3f(0f, s.getStrandTip().getBoneHeight(), 0f);
-				if(orientationAware) {
-					AbstractAxes strandTargetAxes = s.getStrandTip().getPinnedAxes();
-					saneCCD(dampening, s, fauxTip, s.getStrandTip().getBoneHeight(), s.getStrandTip(), s.getStrandRoot(), inverseWeighting, true); 	
-					saneCCD(dampening, s, base, 0f, s.getStrandTip().parent, s.getStrandRoot(), inverseWeighting, true);
-					AbstractAxes simulatedTipAxes = s.simulatedLocalAxes.get(s.getStrandTip()); simulatedTipAxes.updateGlobal();
-					simulatedTipAxes.alignOrientationTo(strandTargetAxes);	
-					AbstractKusudama constraint =  ((AbstractKusudama)s.getStrandTip().getConstraint());
-					if(constraint != null) {
-						constraint.setAxesToOrientationSnap(simulatedTipAxes, s.simulatedConstraintAxes.get(s.getStrandTip()), constraint.getStrength());
-					}	
+				SGVec_3f fauxTip = new SGVec_3f(0f, s.getStrandTip().getBoneHeight(), 0f);				
+				AbstractAxes strandTargetAxes = s.getStrandTip().getPinnedAxes();				
+				AbstractAxes simulatedTipAxes = s.simulatedLocalAxes.get(s.getStrandTip())[0]; simulatedTipAxes.updateGlobal();
+				AbstractKusudama constraintTip =  ((AbstractKusudama)s.getStrandTip().getConstraint());
+				simulatedTipAxes.alignOrientationTo(strandTargetAxes);	
+				if(orientationAware) {				
+					saneCCD(dampening, s, fauxTip, s.getStrandTip().getBoneHeight(), s.getStrandTip(), s.getStrandRoot(), inverseWeighting, true); 				
+					//simulatedTipAxes.alignOrientationTo(strandTargetAxes);					
+					if(twistAware) 
+						fabriTwist(s, s.getStrandRoot());
+					if(constraintTip != null) 
+						constraintTip.setAxesToOrientationSnap(simulatedTipAxes, s.simulatedConstraintAxes.get(s.getStrandTip())[0], constraintTip.getStrength());					
+					saneCCD(dampening, s, base, 0f, s.getStrandTip().parent, s.getStrandRoot(), inverseWeighting, true);			
+
 				} else {
 					saneCCD(dampening, s, base, s.getStrandTip().getBoneHeight(), s.getStrandTip(), s.getStrandRoot(), inverseWeighting, true);
 				}			
-				
+
 				if(twistAware) 
-					fabriTwist(s, s.getStrandRoot()); 				
+					fabriTwist(s, s.getStrandRoot());
+
+				if(constraintTip != null) 
+					constraintTip.setAxesToOrientationSnap(simulatedTipAxes, s.simulatedConstraintAxes.get(s.getStrandTip())[0], constraintTip.getStrength());
+
+			}
+			applyAverageWeightedRotationsToSimulationAxes(collection, true);
+
+		}
+		strandedArmature.translateToAverageTipError(true);	
+		//applyAverageWeightedRotationsToSimulationAxes(collection, true);
+		//strandedArmature.translateToAverageTipError(true);			
+	}
+
+
+	public void improvedSolver(AbstractBone startFrom, float dampening, int iterations) {
+		SegmentedArmature armature = segmentedArmature.getChainFor(startFrom);		
+		if(debug) iterations = 1;
+		if(armature != null) {
+			while(!armature.isBasePinned()) {
+				if(armature.getParentSegment() == null) 
+					break;
+				armature = armature.getParentSegment(); 
+			}
+			armature.alignSimulationAxesToBones();
+			for(int i = 0; i<iterations; i++) {
+				
+				if(armature.getParentSegment() == null && armature.segmentTip.getPinnedAxes() != null) {
+					SGVec_3f baseTranslate = armature.segmentTip.getPinnedAxes().origin_().subCopy(
+							armature.simulatedLocalAxes.get(armature.segmentTip).origin_());
+					armature.simulatedLocalAxes.get(armature.segmentRoot).translateByGlobal(baseTranslate);
+					armature.simulatedConstraintAxes.get(armature.segmentRoot).translateByGlobal(baseTranslate);
+				}
+
+				alignSegmentTipOrientationsFor(armature, dampening);				
+				//recursivelyCallImprovedSolver(armature, dampening, iterations);
+				iterativelyCallImprovedSlver(armature, dampening, iterations);
+				armature.setProcessed(false);
+
+				//TODO: make this use temporary simulated boneAxes until all iterations have completed. 
+				
+			}
+		armature.recursivelyAlignBonesToSimAxesFrom(armature.segmentRoot);
+		}
+	}
+
+	/**given a segmented armature, solves each chain from its pinned 
+	 * tips down to its pinned root. Then call itself again on any segmented armatures 
+	 * which are children of the pinned tips.
+	 * @param armature
+	 */
+	public void recursivelyCallImprovedSolver(SegmentedArmature armature, float dampening, int iterations) {
+		if(armature.childSegments == null && !armature.isTipPinned()) {
+			return; 
+		} else if(!armature.isTipPinned()) {
+			for(SegmentedArmature c: armature.childSegments) {
+				alignSegmentTipOrientationsFor(c, dampening);
+				recursivelyCallImprovedSolver(c, dampening, iterations);
+				c.setProcessed(true);
 			}
 		}
-		applyAverageWeightedRotationsToSimulationAxes(collection, false);
-		strandedArmature.translateToAverageTipError(true);	
+		planarCCD(armature, dampening,  true, true, false, false);
+	}
 
+	public void iterativelyCallImprovedSlver(
+			SegmentedArmature baseSegment, 
+			float dampening, 
+			int iterations) {
+		ArrayList<SegmentedArmature> processQueue =  new ArrayList<>(); 
+		baseSegment.getRootMostUnprocessedChains(processQueue);
+		while(processQueue.size() > 0) {
+			for(SegmentedArmature sa: processQueue) {
+				alignSegmentTipOrientationsFor(sa, dampening);
+				planarCCD(sa, dampening, true, true, true, false);
+				sa.setProcessed(true);
+			}
+			processQueue.clear(); 
+			baseSegment.getRootMostUnprocessedChains(processQueue);
+		}
+	}
+
+	private void alignSegmentTipOrientationsFor(SegmentedArmature chain, float dampening) {
+		ArrayList<SegmentedArmature> pinnedTips = chain.pinnedDescendants;
+
+		for(SegmentedArmature tipChain : pinnedTips) {
+			AbstractBone tipBone = tipChain.segmentTip; 
+			AbstractAxes currentBoneSimulatedAxes = tipChain.simulatedLocalAxes.get(tipBone); 
+			currentBoneSimulatedAxes.updateGlobal();
+		
+			AbstractAxes pinAxes = tipBone.getPinnedAxes();
+			pinAxes.updateGlobal();
+			currentBoneSimulatedAxes.alignOrientationTo(pinAxes);
+			currentBoneSimulatedAxes.markDirty(); currentBoneSimulatedAxes.updateGlobal();
+			
+			tipBone.setAxesToSnapped(currentBoneSimulatedAxes,  tipChain.simulatedConstraintAxes.get(tipBone));
+			currentBoneSimulatedAxes.markDirty();
+			currentBoneSimulatedAxes.updateGlobal();
+			
+		}
+		/*if(debug) {
+			lastDebugBone = null;//currentBone;
+			currentBone = null;
+		}*/
+	}
+
+	/*
+	 * New Approach idea (still implementing)
+	 * In most cases, stability in  unsolvable situations is preferable to completeness over all solvable ones. 
+	 * So it is better to have one poorly convergent solution than many divergent solutions. 
+	 * 
+	 *  Since we want orientation awareness, we can treat twist, direction, and location as separate effector types we are trying to 
+	 *  satisfy. Ultimately though, we want to minimize the disagreement between these three solution types before averaging.
+	 *  So it won't do to solve them all from the same base solution. It would (probably) be much more stable to start one solution 
+	 *  from the rest post of the previous solution, and THEN average them. So our input simulatedAxes and our output simulatedAxes 
+	 *  are not necessarily going to be the same. Their target Axes however, are. 
+	 *  
+	 * All bones in the collection are already oredered by their depth from the root, so it should be safe to reference strands per bone. 
+	 * So our procedure is 
+	 * 	for, each bone  
+	 * 		get the average rotation and position of the strand tips across all strands.  (should average be nlerp or axis components)?  
+	 * 		get the average rotation and position of the strand target across all strands. (should average be nlerp or axis components)?
+	 * 		solve bone to get average strand tip base-position to average strand target position. [vector -> vector solution]
+	 * 		store the solution
+	 * 		exit loop.
+	 * 	for each bone 
+	 * 		get the average rotation and position of the strand tips as per the previous solution across all strands.
+	 * 		get the average rotation and position of the strand target across all strands.
+	 * 		solve bone to get average strand tip from base->y to average strand target position from base->y. [plane -> plane solution (use custom precedent-respecting version?)]
+	 * 		store the solution in new array element.
+	 * 		exit loop. 
+	 * 	for each bone
+	 * 		get the average rotation and position of the strand tips as per the previous solution across all strands .
+	 * 		get the average rotation and position of the strand target across all strands.
+	 * 		solve bone to bring average strand tip base->z to average strand target position base->z. [plane -> plane solution (use custom precedent-respecting version?)]
+	 * 		store the solution in new array element.
+	 * 		exit loop. 
+	 *		(optional?) for each bone
+	 * 		get the average rotation and position of the strand tips as per the previous solution across all strands .
+	 * 		get the average rotation and position of the strand target across all strands.
+	 * 		solve bone to bring average strand tip base->x to average strand target position base->x. [plane -> plane solution (use custom precedent-respecting version?)]
+	 * 		store the solution in new array element.  
+	 *		for each bone 
+	 *			average all of the solutions 
+	 *
+	 *		Actually, StrangedArmature is probably overkill for this approach. 
+	 */
+
+	boolean debug = true;
+	AbstractBone lastDebugBone = null; 
+
+	/**
+	 * Performs ccd, attempting if possible (depending on input) to rotate one triangle onto another instead of one ray onto another.
+	 * see {@link IK.floatIK.AbstractArmature.contextualPlanarRotation} for more information about the rotation procedure. 
+	 */
+	private void planarCCD(
+			SegmentedArmature chain, 
+			float dampening, 
+			boolean orientationAware, 
+			boolean twistAware, 
+			boolean useRedundancy, // might improve convergence and stability in some situations, but slower
+			boolean inverseWeighting) {
+
+		debug =false;
+		float passCount = 0; 
+		short modeCode = 0; 
+		if(orientationAware) {
+			passCount++;
+			modeCode +=1; 
+		}
+		if(twistAware) {
+			passCount++;
+			modeCode += 2; 
+		}
+		if(useRedundancy) {
+			passCount++;
+			modeCode +=4;
+		}
+		//lastDebugBone = null;
+		AbstractBone startFrom = debug && lastDebugBone != null ? lastDebugBone :  chain.segmentTip;		
+		AbstractBone stopAfter = chain.segmentRoot;
+
+
+
+		AbstractBone currentBone = startFrom;
+		if(chain.isTipPinned()) { //if the tip is pinned, it should have already been oriented before this function was called.
+			if(currentBone == stopAfter)
+				currentBone = null; 
+			else 
+				currentBone = startFrom.getParent();
+		}
+
+		if(debug && chain.simulatedLocalAxes.size() < 2) {
+
+		} else {
+			//System.out.print("---------");
+			while(currentBone != null) {			
+				if(!currentBone.getIKOrientationLock()) {
+					boolean printRMSD =  currentBone.getParent() == stopAfter; 
+					chain.updateOptimalRotaitonToPinnedDescendants(currentBone, modeCode, dampening);
+					
+				} else {
+					int debug = 0;
+				}
+
+
+				if(currentBone == stopAfter) currentBone = null;
+				else currentBone = currentBone.getParent();
+
+				if(debug) { 
+					lastDebugBone = currentBone; 
+					break;
+				}
+			}
+		}
+	}
+
+
+
+	/**
+	 * triangles are rotated with edge precedence, meaning, instead of optimizing so that the perpendicular 
+	 *bisectors of two triangles align, one edge of each triangle is defined as mandatory, and rotation 
+	 *is performed with that edge as the axis of rotation to align the rest of the triangle. This
+	 *planar step is optional. If a null parameter is given for any pair of edges, only the non-null edges are accounted for. 
+	 *If any two vectors defining a triangle have (roughly) zero magnitude, a non-planar rotation 
+	 *is performed.
+	 *Additionally, the rotation is scaled in proportion to the distances between its start and target 
+	 *vectors. So, for example, if the distance between startEdge1 and startEdge2 is 0.5, then the resulting rotation is halved. 
+	 *This is to better account for degenerate situations, where naive averaging of multiple rotation matrices can cause 
+	 *basis vectors to cancel each other out. These cancellations occur due to opposing rotations, but manifest as reflections, 
+	 *so we simply treat reflections as encoding opposing rotations. This can probably be formalized, but it's not important. 
+	 *
+	 *If some combination of invalid inputs is given which cannot be accounted for, the identity rotation is returned (no rotation)
+	 * 
+	 * @param sharedOrigin a point shared by both triangles
+	 * @param startEdge1 the first adjacent edge on the start triangle (emanating from the origin), 
+	 * this takes precedence in the rotation and will be aligned to target edge no so long as it has greater than zero magnitude 
+	 * relative to the origin
+	 * @param startEdge2  the second adjacent edge on the start triangle. If null, planar rotation will not be performed. If startEdge1
+	 * is of zero magnitude relative to the origin, then this is used as the only edge to rotate, (onto targetEdge2). 
+	 * @param targetEdge1 the first target edge (takes precedence), 
+	 * @param targetEdge2 the second target edge (takes precedence).
+	 */
+	protected static Rot contextualPlanarRotation(
+			SGVec_3f sharedOrigin, 
+			SGVec_3f startEdge1, 	SGVec_3f startEdge2, 
+			SGVec_3f targetEdge1, SGVec_3f targetEdge2
+			) {
+		Rot result;
+		SGVec_3f precedenceStartEdge, precedenceTargetEdge;
+		boolean skipMinor = false;
+		if(startEdge1 == null ) {
+			precedenceStartEdge = startEdge2;
+			precedenceTargetEdge = targetEdge2;
+			skipMinor=true;
+		} else {
+			precedenceStartEdge = startEdge1; 
+			precedenceTargetEdge = targetEdge1;
+		}
+
+		if(precedenceStartEdge == null || precedenceTargetEdge == null) 
+			return new Rot();
+		else {
+			precedenceStartEdge = precedenceStartEdge.subCopy(sharedOrigin);  
+			precedenceTargetEdge = precedenceTargetEdge.subCopy(sharedOrigin);
+			if(precedenceStartEdge.magSq() <= MathUtils.DOUBLE_ROUNDING_ERROR 
+					|| precedenceTargetEdge.magSq() <= MathUtils.DOUBLE_ROUNDING_ERROR) {
+				if(skipMinor) {
+					return new Rot(); 
+				} else {
+					precedenceStartEdge = startEdge2.subCopy(sharedOrigin);
+					precedenceTargetEdge = targetEdge2.subCopy(sharedOrigin);
+					if(precedenceStartEdge.magSq() <= MathUtils.DOUBLE_ROUNDING_ERROR ||
+							precedenceTargetEdge.magSq() <= MathUtils.DOUBLE_ROUNDING_ERROR)
+						return new Rot(); 
+					else {
+						skipMinor = true;
+					}
+				}
+			}
+		}
+		result = new Rot(precedenceStartEdge, precedenceTargetEdge);
+		SGVec_3f normPrecStart = precedenceStartEdge.copy().normalize();
+		SGVec_3f normPrecTarget = precedenceTargetEdge.copy().normalize();
+		
+		Rot testResult = new Rot(normPrecStart, normPrecTarget);
+		
+		SGVec_3f sanityCheck_toOrigin_notrolled = result.applyToCopy(normPrecStart);
+		SGVec_3f sanityCheck_toOrigin_notrolled_norm = testResult.applyToCopy(normPrecStart);
+		//SGVec_3f sanityCheck_toAxis_notrolled = result.applyToCopy(sanityCheck_toAxis);
+		if(skipMinor) 
+			return result; 
+		else {
+			SGVec_3f minorStartEdge = startEdge2.subCopy(sharedOrigin);
+			SGVec_3f minorTargetEdge = targetEdge2.subCopy(sharedOrigin);
+			if(minorStartEdge.magSq() <= MathUtils.DOUBLE_ROUNDING_ERROR ||
+					minorTargetEdge.magSq() <= MathUtils.DOUBLE_ROUNDING_ERROR) 
+				return result; 
+			else {
+				SGVec_3f minorStartEdgeRotated = result.applyToCopy(minorStartEdge); 
+				//minorStartEdge.normalize(); minorTargetEdge.normalize();
+				SGVec_3f minorStartProjected = minorStartEdgeRotated.getPlaneProjectionOf(precedenceTargetEdge);
+				SGVec_3f minorTargetProjected = minorTargetEdge.getPlaneProjectionOf(precedenceTargetEdge);
+				if(minorStartProjected.magSq() <= MathUtils.DOUBLE_ROUNDING_ERROR || 
+						minorTargetProjected.magSq() <= MathUtils.DOUBLE_ROUNDING_ERROR) {
+					return result; 
+				} else {
+
+					//Rot minorRotation = new Rot(minorStartEdge, minorTargetEdge); 
+					//result = minorRotation.applyTo(result);
+
+					/**
+					 * When the projected minor vectors are very small, we approach a degenerate situation, 
+					 * however, we can't just discard them, because this would cause our solutions to jump 
+					 * when we leave the degenerate threshold. Instead, we between the vector to vector rotation 
+					 * and the plane to plane rotation by apparent usefulness of the plane-plane rotation. 
+					 * 
+					 * Don't be fooled by the elegant-looking weighting formula. 
+					 * I have no clue if this is actually a meaningful way to be weighing the influence 
+					 * and have yet to try to determine if a truly meaningful one. 
+					 */
+
+					float maxStartEdgeLengthSQ = minorStartEdge.subCopy(precedenceTargetEdge).magSq();
+					float maxTargetEdgeLengthSQ = minorTargetEdge.subCopy(precedenceTargetEdge).magSq();
+
+					float normalizedMinorStart = (minorStartProjected.magSq()/maxStartEdgeLengthSQ);
+					float normalizedMinorTarget = (minorTargetProjected.magSq() /maxTargetEdgeLengthSQ);
+					
+					float pythagoreanWeight =  (normalizedMinorStart + normalizedMinorTarget);// 1.414213562373095f; 
+					pythagoreanWeight = MathUtils.sqrt(pythagoreanWeight/2f);
+					//float pythagoreanSlow = (minorStartProjected.mag() / minorStartEdge.mag()) + (minorTargetProjected.mag() / minorTargetEdge.mag());
+					//pythagoreanSlow = Math.sqrt(pythagoreanSlow);
+					//System.out.println("weight: " + pythagoreanWeight);
+					SGVec_3f sanityCheck_toOrigin = normPrecStart.copy();
+					SGVec_3f sanityCheck_toAxis = minorStartEdge.copy();
+					
+					Rot minorRotation = new Rot(minorStartProjected, minorTargetProjected); 
+					minorRotation = new Rot(minorRotation.getAxis(), minorRotation.getAngle()*(pythagoreanWeight));
+					Rot rolledRot = minorRotation.applyTo(result); 				
+					
+					SGVec_3f sanityCheck_toOrigin_rolled = rolledRot.applyToCopy(normPrecStart);
+					SGVec_3f sanityCheck_toAxis_rolled = rolledRot.applyToCopy(sanityCheck_toAxis);
+					
+					float[] weights = {pythagoreanWeight, 1f-pythagoreanWeight};
+					Rot[] toAvg = {rolledRot, result};
+					Rot nresult = Rot.nlerp(toAvg, weights);
+					Rot sresult = new Rot(Rot.slerp(pythagoreanWeight, result.rotation, rolledRot.rotation));				
+					Rot iresult = Rot.instantaneousAvg(toAvg, weights);
+					//result = new Rot(precedenceStartEdge, minorStartEdge, precedenceTargetEdge, minorTargetEdge);
+					return rolledRot;
+				}
+			}					
+		}		
 	}
 
 
@@ -856,7 +1211,7 @@ public abstract class AbstractArmature implements Saveable {
 			boolean inverseWeighting,
 			boolean snapLast) {
 		AbstractAxes strandTargetAxes = chain.getStrandTip().getPinnedAxes();
-		AbstractAxes strandTipAxes = chain.simulatedLocalAxes.get(chain.getStrandTip());
+		AbstractAxes strandTipAxes = chain.simulatedLocalAxes.get(chain.getStrandTip())[0];
 		//strandTipAxes.alignOrientationTo(strandTargetAxes);
 		SGVec_3f pinLocation = strandTargetAxes.getGlobalOf(pointOnTarget);
 		SGVec_3f alongBoneLocation = new SGVec_3f(0f, lengthAlongTipBone, 0f);
@@ -872,40 +1227,38 @@ public abstract class AbstractArmature implements Saveable {
 			float scalar;
 			while(currentBone != upTo.parent) {
 
-				AbstractAxes currentSimulatedAxes = chain.simulatedLocalAxes.get(currentBone);
+				AbstractAxes currentSimulatedAxes = chain.simulatedLocalAxes.get(currentBone)[0];
 				currentBoneDirRay.setP1(currentSimulatedAxes.origin_()); 
 				currentBoneDirRay.setP2(strandTipAxes.getGlobalOf(alongBoneLocation));
 
-					goalRay.setP1(currentBoneDirRay.p1());
-					goalRay.setP2(pinLocation); 
+				goalRay.setP1(currentBoneDirRay.p1());
+				goalRay.setP2(pinLocation); 
 
-					Rot rotateToTarget = new Rot(
-							currentBoneDirRay.heading(), 
-							goalRay.heading()
-							);
-					
-					angle = rotateToTarget.getAngle();
-					scalar = angle < 0 ? -1 : 1;
-					angle = Math.abs(dampening) > Math.abs(angle) ? angle : dampening * scalar;
-					angle *= (1f-currentBone.getStiffness());
-					if(inverseWeighting)
-						angle *= (boneCount/bonesInChain);
-					
-					if(!currentBone.getIKOrientationLock()) {
-						currentSimulatedAxes.rotateBy(new Rot(rotateToTarget.getAxis(), angle));
-						if(currentBone.getConstraint() != null) {
-							currentSimulatedAxes.updateGlobal();
-							Constraint constraint =  currentBone.getConstraint();
-							((AbstractKusudama)currentBone.getConstraint()).setAxesToOrientationSnap(
-									currentSimulatedAxes, 
-									chain.simulatedConstraintAxes.get(currentBone), 
-									((AbstractKusudama)constraint).getStrength());							
-						}
+				Rot rotateToTarget = new Rot(currentBoneDirRay.heading(), goalRay.heading());
+
+				angle = rotateToTarget.getAngle();
+				scalar = angle < 0 ? -1 : 1;
+				angle = Math.abs(dampening) > Math.abs(angle) ? angle : dampening * scalar;
+				angle *= (1f-currentBone.getStiffness());
+				if(inverseWeighting)
+					angle *= (boneCount/bonesInChain);
+
+				if(!currentBone.getIKOrientationLock()) {
+					currentSimulatedAxes.rotateBy(new Rot(rotateToTarget.getAxis(), angle));
+					if(currentBone.getConstraint() != null) {
+						currentSimulatedAxes.updateGlobal();
+						Constraint constraint =  currentBone.getConstraint();
+						((AbstractKusudama)currentBone.getConstraint()).setAxesToOrientationSnap(
+								currentSimulatedAxes, 
+								chain.simulatedConstraintAxes.get(currentBone)[0], 
+								((AbstractKusudama)constraint).getStrength());							
 					}
+				}
 				currentBone = currentBone.parent;
 				boneCount++;			
 			}
-			
+
+
 		}
 	}
 
@@ -916,23 +1269,23 @@ public abstract class AbstractArmature implements Saveable {
 	 */
 	private void fabriTwist(Strand chain, AbstractBone upTo) {		
 		AbstractBone childBone = chain.getStrandTip();
-		AbstractAxes childAxes = chain.simulatedLocalAxes.get(childBone);
+		AbstractAxes childAxes = chain.simulatedLocalAxes.get(childBone)[0];
 		AbstractAxes childAxesCopy = childAxes.getGlobalCopy();
 		AbstractBone currentBone = childBone.getParent();
-		AbstractAxes childInverseConstraints = chain.simulatedConstraintAxes.get(chain.getStrandTip()); 
+		AbstractAxes childInverseConstraints = chain.simulatedConstraintAxes.get(chain.getStrandTip())[0]; 
 		if(childInverseConstraints != null) childInverseConstraints = childInverseConstraints.getGlobalCopy();
 		AbstractAxes currentAxesCopy = childAxes.getGlobalCopy();
 		AbstractKusudama childConstraint = ((AbstractKusudama)childBone.getConstraint());
 
 		//backwad pass (from tip to root)
 		while(childBone != upTo) {
-			AbstractAxes currentAxes = chain.simulatedLocalAxes.get(currentBone);
+			AbstractAxes currentAxes = chain.simulatedLocalAxes.get(currentBone)[0];
 			currentAxesCopy.alignGlobalsTo(currentAxes);
 			if(childConstraint != null && !currentBone.getIKOrientationLock()) {
 				((AbstractKusudama)childBone.getConstraint()).setAxesToInverseLimitingAxes(
-						chain.simulatedLocalAxes.get(currentBone), 
+						chain.simulatedLocalAxes.get(currentBone)[0], 
 						childAxes, 
-						chain.simulatedConstraintAxes.get(childBone), 
+						chain.simulatedConstraintAxes.get(childBone)[0], 
 						childInverseConstraints);
 				if(childConstraint.axiallyConstrained) {
 					childConstraint.snapToInvertedLimit(
@@ -951,7 +1304,7 @@ public abstract class AbstractArmature implements Saveable {
 		}
 
 
-		AbstractAxes tempChildAxes = chain.getStrandTipTracerAxes().getGlobalCopy();
+		AbstractAxes tempChildAxes = chain.getStrandTip().getPinnedAxes().getGlobalCopy();
 		AbstractAxes simulatedChildAxes = null;
 		int i= chain.bones.size()-1; 
 		while(i >= 0) {
@@ -960,26 +1313,28 @@ public abstract class AbstractArmature implements Saveable {
 			if(i > 0) childBone = chain.bones.get(i-1);
 
 			if(currentBone.parent != null) {
-				AbstractAxes simulatedCurrentAxes = chain.simulatedLocalAxes.get(currentBone);
+				AbstractAxes simulatedCurrentAxes = chain.simulatedLocalAxes.get(currentBone)[0];
 				if(childBone != null) {
-					simulatedChildAxes = chain.simulatedLocalAxes.get(childBone);
+					simulatedChildAxes = chain.simulatedLocalAxes.get(childBone)[0];
 					tempChildAxes.alignGlobalsTo(simulatedChildAxes);					
 				} 	
 
 				AbstractKusudama constraint = ((AbstractKusudama)currentBone.getConstraint());
 				if(constraint != null) {
-					constraint.snapToTwistLimits(simulatedCurrentAxes, chain.simulatedConstraintAxes.get(currentBone));
+					constraint.setAxesToSnapped(simulatedCurrentAxes, chain.simulatedConstraintAxes.get(currentBone)[0]);
+					//constraint.snapToTwistLimits(simulatedCurrentAxes, chain.simulatedConstraintAxes.get(currentBone));
 				}
 				if(childBone != null) { 
 					simulatedChildAxes.alignGlobalsTo(tempChildAxes);
 					simulatedChildAxes.updateGlobal();
 				}
+
 			}
 			i--;
 		}
 	}
-	
-	
+
+
 
 
 
@@ -990,7 +1345,7 @@ public abstract class AbstractArmature implements Saveable {
 	 * @param snap
 	 */
 	private void applyAverageWeightedRotationsToSimulationAxes(StrandedArmature collection, boolean snap) {
-
+		Quaternionf neighborhood =new Quaternionf(MRotation.IDENTITY.getQ0(), MRotation.IDENTITY.getQ1(), MRotation.IDENTITY.getQ2(), MRotation.IDENTITY.getQ3()); 
 		for(AbstractBone b : collection.allBonesInStrandCollection) {
 
 			//float totalDist = 0f;
@@ -1007,20 +1362,30 @@ public abstract class AbstractArmature implements Saveable {
 			float yT = 0; 
 			float zT = 0;
 
+			/*Quaternionf neighborhood =new Quaternionf(
+					b.majorRotationAxes.localMBasis.rotation.rotation.getQ0(),
+					b.majorRotationAxes.localMBasis.rotation.rotation.getQ1(),
+					b.majorRotationAxes.localMBasis.rotation.rotation.getQ2(),
+					b.majorRotationAxes.localMBasis.rotation.rotation.getQ3());*/
 			//totalDist = collection.totalPinDist;
 			float totalFreedomForBone = 0f; 			
 			for(Strand s : strandList) {
 				//float distance = s.distToTarget; 					
-				AbstractAxes simulatedLocal = s.simulatedLocalAxes.get(b);
+				AbstractAxes simulatedLocal = s.simulatedLocalAxes.get(b)[0];
 				//simulatedLocal.updateGlobal();
 				Rot r = simulatedLocal.localMBasis.rotation;
+				//float errorPenalty = measurePositionalTipErrorForRotAppliedTo(r, b.localAxes(), strandList); 
+				//System.out.println("error size : " + errorPenalty);
 				//r = new Rot(r.getAxis(), r.getAngle()*(distance/totalDist));
+				Rot limitAxesRot = s.simulatedConstraintAxes.get(b)[0].localMBasis.rotation;
+
 				Quaternionf current = G.getSingleCoveredQuaternionf(
 						new Quaternionf(r.rotation.getQ0(), 
 								r.rotation.getQ1(),
 								r.rotation.getQ2(), 
 								r.rotation.getQ3()), 
-						initialQ);
+						neighborhood
+						);
 
 				float freedomForBoneThisStrand = getAbilityBiasing() ? s.getRemainingFreedomAtBone(b) : 1f; 
 				float weight = 1f/freedomForBoneThisStrand;
@@ -1034,11 +1399,7 @@ public abstract class AbstractArmature implements Saveable {
 				//totalDist += distance;
 			}
 			//if(strandList.size() > 1) System.out.println();
-			Rot avg = new Rot(
-					wT/totalFreedomForBone, 
-					xT/totalFreedomForBone, 
-					yT/totalFreedomForBone, 
-					zT/totalFreedomForBone, true);
+			Rot avg = new Rot(wT/totalFreedomForBone, xT/totalFreedomForBone, yT/totalFreedomForBone, zT/totalFreedomForBone, true);
 			//Rot avg = new Rot(wT/totalCount, xT/totalCount, yT/totalCount, zT/totalCount, true);
 
 
@@ -1056,23 +1417,52 @@ public abstract class AbstractArmature implements Saveable {
 
 
 			for(Strand s : strandList) {
-				AbstractAxes strandAxes = s.simulatedLocalAxes.get(b);
+				if(snap) {
+					b.setAxesToSnapped(composedAxes, s.simulatedConstraintAxes.get(b)[0]);
+				}
+				composedAxes.markDirty();
+				composedAxes.updateGlobal();
+				AbstractAxes strandAxes = s.simulatedLocalAxes.get(b)[0];
 				strandAxes.localMBasis.adoptValues(composedAxes.localMBasis);
 				strandAxes.markDirty();
-				strandAxes.updateGlobal();
-				if(snap) {
-					b.setAxesToSnapped(strandAxes, s.simulatedConstraintAxes.get(b));
-				}
+				strandAxes.updateGlobal();			
 			}
 			//b.rotateBy(avg);
 
 			//TODO DEBUG: TEST WHAT HAPPENS IF I ENABLE SNAPPING TO CONSTRAINTS HERE
 
 			//b.snapToConstraints();
-			collection.setDeltaMeasureForBone(b, avg.getAngle());
+			//collection.setDeltaMeasureForBone(b, avg.getAngle());
 		}
-
 	}	
+
+	AbstractAxes fauxParent;
+	AbstractAxes errorBaseAxes;
+	AbstractAxes  errorTipAxes;
+	public float measurePositionalTipErrorForRotAppliedTo(
+			Rot rotation, 
+			AbstractAxes appliedTo, 
+			ArrayList<Strand> strands) {
+
+		if(appliedTo.getParentAxes() != null)
+			fauxParent.alignGlobalsTo(appliedTo.getParentAxes());
+		errorBaseAxes.setParent(fauxParent);
+		errorBaseAxes.alignGlobalsTo(appliedTo);
+		errorTipAxes.setParent(errorBaseAxes);
+
+		float errorSize = 0f; 
+
+		for(Strand s: strands) {
+			errorBaseAxes.alignGlobalsTo(appliedTo);
+			errorTipAxes.alignGlobalsTo(s.parentStrandCollection.averageSimulatedAxes.get(s.getStrandTip()));
+			AbstractAxes targetAxes = s.getStrandTip().getPinnedAxes();
+			errorBaseAxes.localMBasis.rotateTo(rotation);
+			errorSize += errorTipAxes.origin_().dist(targetAxes.origin_());
+		}		
+
+		return errorSize;
+	}
+
 	//debug code -- use to set a minimum distance an effector must move
 	// in order to trigger a chain iteration 
 	float debugMag = 5f; 
@@ -1088,7 +1478,7 @@ public abstract class AbstractArmature implements Saveable {
 		return rotTo;
 	}
 
-	
+
 	public void setAbilityBiasing(boolean enabled) {
 		abilityBiasing = enabled;
 	}
@@ -1130,14 +1520,14 @@ public abstract class AbstractArmature implements Saveable {
 		long averageSolutionTime = 0;
 		int solutionCount = 0; 
 		float iterationsPerSecond = 0f; 
-		 
-		
+
+
 		long startTime = 0;
 		public void startPerformanceMonitor() {
 			totalIterationsThisSolverCall = 0;
 			startTime = System.currentTimeMillis();
 		}
-		
+
 		public void solveFinished() {
 			long thisSolutionTime = System.currentTimeMillis() - startTime; 
 			averageSolutionTime *= solutionCount; 
@@ -1145,7 +1535,7 @@ public abstract class AbstractArmature implements Saveable {
 			averageSolutionTime += thisSolutionTime; 
 			averageSolutionTime = (long)((float)averageSolutionTime / (float)solutionCount);
 		}
-		
+
 		public void resetPerformanceStat() {
 			startTime = 0;
 			totalIterationsThisSolverCall = 0; 
@@ -1153,21 +1543,21 @@ public abstract class AbstractArmature implements Saveable {
 			solutionCount = 0; 
 			iterationsPerSecond = 0f; 
 		}
-		
+
 		public void printStats() {
 			System.out.println(
 					"average solution time: " + (averageSolutionTime)+  "ms \n");
 		}
-		
+
 	}
-	
+
 	@Override
 	public void makeSaveable() {
 		EWBIKSaver.addToSaveState(this);
 		this.localAxes().makeSaveable(); 
 		this.rootBone.makeSaveable();
 	}
-	
+
 	@Override
 	public JSONObject getSaveJSON() {
 		JSONObject saveJSON = new JSONObject(); 
@@ -1183,8 +1573,8 @@ public abstract class AbstractArmature implements Saveable {
 		saveJSON.setString("tag", this.getTag());
 		return saveJSON;
 	}
-	
-	
+
+
 	public void loadFromJSONObject(JSONObject j) {
 		this.localAxes = EWBIKLoader.getObjectFor(localAxes().getClass(), j, j.getString("localAxes"));
 		this.rootBone = EWBIKLoader.getObjectFor(getRootBone().getClass(), j, j.getString("rootBone"));
@@ -1197,17 +1587,17 @@ public abstract class AbstractArmature implements Saveable {
 		this.tag = j.getString("tag");
 	}
 
-	
+
 	@Override
 	public void notifyOfSaveIntent() {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void notifyOfSaveCompletion() {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
@@ -1219,7 +1609,8 @@ public abstract class AbstractArmature implements Saveable {
 	@Override
 	public void setLoading(boolean loading) {
 		// TODO Auto-generated method stub
-		
+
 	}
+
 
 }

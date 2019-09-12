@@ -3,7 +3,6 @@ package IK.floatIK;
 import sceneGraph.math.Vec;
 import sceneGraph.math.floatV.AbstractAxes;
 import sceneGraph.math.floatV.SGVec_3f;
-import sceneGraph.math.floatV.Vec3f;
 
 public interface Constraint {
 	

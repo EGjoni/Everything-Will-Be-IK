@@ -18,11 +18,14 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 package IK.floatIK;
 import sceneGraph.*;
+import sceneGraph.math.doubleV.SGVec_3d;
+import sceneGraph.math.doubleV.sgRayd;
 import sceneGraph.math.floatV.MathUtils;
 import sceneGraph.math.floatV.Quaternionf;
 import sceneGraph.math.floatV.Rot;
 import sceneGraph.math.floatV.SGVec_3f;
 import sceneGraph.math.floatV.sgRayf;
+import sceneGraph.numerical.Precision.MathIllegalArgumentException;
 import sceneGraph.math.floatV.SGVec_3f;
 import sceneGraph.math.floatV.sgRayf;
 
@@ -35,7 +38,7 @@ import java.util.ArrayList;
  */
 public class G {
 	
-	public static float PI = MathUtils.PI;
+	public static float PI = (float)Math.PI;
 	public static float TAU = 2*PI;
 	
 	public static float lerp(float a, float b, float t) {
@@ -51,11 +54,11 @@ public class G {
 	}
 
 	public static float dist(float x1, float y1, float x2, float y2) {
-		return (float)Math.sqrt(Math.pow(x1-x2, 2) + Math.pow(y1-y2, 2)); 
+		return MathUtils.sqrt(MathUtils.pow(x1-x2, 2) + MathUtils.pow(y1-y2, 2)); 
 	}
 
 	public static float sqrt(float in) {
-		return (float)Math.sqrt(in);  
+		return MathUtils.sqrt(in);  
 	}
 
 	public static float degrees(float in) {
@@ -87,7 +90,7 @@ public class G {
 	}
 
 	public static float abs(float in) {
-		return Math.abs(in);  
+		return MathUtils.abs(in);  
 	}
 
 	public static float atan2(float a, float b) {
@@ -95,7 +98,7 @@ public class G {
 	}
 
 	public static float random(float a, float b) {
-		return (float) (a+((abs(a-b))*Math.random())); 
+		return a+((abs(a-b))*(float)Math.random()); 
 	}
 
 	public static float sq(float in) {
@@ -104,8 +107,9 @@ public class G {
 
 	public static SGVec_3f axisRotation(SGVec_3f point, SGVec_3f axis, float angle) {
 		//println("rotting");
-		Rot rotation = new Rot(axis, angle);
-		rotation.applyTo(point, point);
+		Rot rotation;
+			rotation = new Rot(axis, angle);
+			rotation.applyTo(point, point);		
 		return point;
 	}
 
@@ -177,9 +181,12 @@ public class G {
 
 	}
 
-	public static SGVec_3f intersectTest(sgRayf R, SGVec_3f ta, SGVec_3f tb, SGVec_3f tc) {
+	public static SGVec_3f intersectTest(sgRayd R, SGVec_3d ta, SGVec_3d tb, SGVec_3d tc) {
 		float[] uvw = new float[3];
-		return SGVec_3f.add(planeIntersectTest(R.heading(), SGVec_3f.sub(ta, R.p1()), SGVec_3f.sub(tb, R.p1()), SGVec_3f.sub(tc, R.p1()), uvw), R.p1());
+		return SGVec_3f.add(planeIntersectTest(
+				R.heading().toSGVec3f(),
+				SGVec_3f.sub(ta.toSGVec3f(), R.p1().toSGVec3f()), 
+				SGVec_3f.sub(tb.toSGVec3f(), R.p1().toSGVec3f()), SGVec_3f.sub(tc.toSGVec3f(), R.p1().toSGVec3f()), uvw), R.p1().toSGVec3f());
 		//println(uvw);
 		//return SGVec_3f.add(SGVec_3f.add(SGVec_3f.mult(ta, uvw[0]), SGVec_3f.mult(tb, uvw[1])), SGVec_3f.mult(tc, uvw[2]));
 	}
@@ -286,7 +293,7 @@ public class G {
 		a = -(new SGVec_3f(n.x, n.y, n.z).dot(w0));
 		b = new SGVec_3f(n.x, n.y, n.z).dot(dir);
 
-		if ((float)Math.abs(b) <  Double.MIN_VALUE) {
+		if ((float)Math.abs(b) <  Float.MIN_VALUE) {
 			return null;
 		}
 
@@ -336,7 +343,7 @@ public class G {
 		a = -(new SGVec_3f(n.x, n.y, n.z).dot(w0));
 		b = new SGVec_3f(n.x, n.y, n.z).dot(dir);
 
-		if ((float)Math.abs(b) < Double.MIN_VALUE) {
+		if ((float)Math.abs(b) < Float.MIN_VALUE) {
 			return null;
 		}
 
@@ -462,7 +469,8 @@ public class G {
 
 		for(int i = 0; i < rotList.size(); i ++) {
 			Rot rt = rotList.get(i);
-			Rot r = new Rot(rt.getAxis(), rt.getAngle()*(rotWeight.get(i)/totalWeight));
+			Rot r;
+			r = new Rot(rt.getAxis(), rt.getAngle()*(rotWeight.get(i)/totalWeight));
 			Quaternionf current = getSingleCoveredQuaternionf(
 					new Quaternionf(r.rotation.getQ0(), 
 									r.rotation.getQ1(),
@@ -473,6 +481,7 @@ public class G {
 			yT += current.getQ2();
 			zT += current.getQ3();
 			addedSoFar++;
+			
 		}
 
 		return new Rot(wT/addedSoFar, xT/addedSoFar, yT/addedSoFar, zT/addedSoFar, true);
@@ -506,7 +515,8 @@ public class G {
 
 	public static Quaternionf getSingleCoveredQuaternionf(Quaternionf inputQ, Quaternionf targetQ) {
 		//targetQ is the Quaternionf that exists on the target hemisphere
-		if(inputQ.dot(targetQ) < 0f) {
+		float dot = inputQ.dot(targetQ);
+		if(dot <0f) {
 			return new Quaternionf(-inputQ.getQ0(), -inputQ.getQ1(), -inputQ.getQ2(), -inputQ.getQ3());  
 		} else {
 			return inputQ;  
@@ -530,9 +540,14 @@ public class G {
 	}
 	
 	public static float smoothstep(float edge0, float edge1, float x) {
-		float t = (float) Math.min(Math.max((x - edge0) / (edge1 - edge0), 0.0), 1.0);
-		return (float) (t * t * (3.0 - 2.0 * t));
+		float t = (float)Math.min(Math.max((x - edge0) / (edge1 - edge0), 0.0), 1.0);
+		return t * t * (3 - 2 * t);
 	}
 
+	public static SGVec_3f intersectTest(sgRayf r2b, SGVec_3f minorAppoloniusP3A, SGVec_3f minorAppoloniusP1A,
+			SGVec_3f minorAppoloniusP2A) {
+		// TODO Auto-generated method stub
+		return null;
+	}
 
 }

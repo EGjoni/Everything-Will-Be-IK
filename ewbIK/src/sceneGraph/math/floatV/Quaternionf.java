@@ -18,13 +18,10 @@ package sceneGraph.math.floatV;
 
 import java.io.Serializable;
 
-import sceneGraph.math.doubleV.Quaternion;
-
-
 //import com.badlogic.gdx.utils.NumberUtils;
 
 /** A simple quaternion class.
- * @see <a href="http://en.wikipedia.org/wiki/Quaternion">http://en.wikipedia.org/wiki/Quaternion</a>
+ * @see <a href="http://en.wikipedia.org/wiki/Quaternionf">http://en.wikipedia.org/wiki/Quaternionf</a>
  * @author badlogicgames@gmail.com
  * @author vesuvio
  * @author xoppa */
@@ -104,12 +101,12 @@ public class Quaternionf implements Serializable {
 
 	/** @return the euclidean length of the specified quaternion */
 	public final static float len (final float x, final float y, final float z, final float w) {
-		return (float)Math.sqrt(x * x + y * y + z * z + w * w);
+		return MathUtils.sqrt(x * x + y * y + z * z + w * w);
 	}
 
 	/** @return the euclidean length of this quaternion */
 	public float len () {
-		return (float)Math.sqrt(q1 * q1 + q2 * q2 + q3 * q3 + q0 * q0);
+		return MathUtils.sqrt(q1 * q1 + q2 * q2 + q3 * q3 + q0 * q0);
 	}
 
 	@Override
@@ -134,14 +131,14 @@ public class Quaternionf implements Serializable {
 	 * @return this quaternion */
 	public Quaternionf setEulerAnglesRad (float yaw, float pitch, float roll) {
 		final float hr = roll * 0.5f;
-		final float shr = (float)Math.sin(hr);
-		final float chr = (float)Math.cos(hr);
+		final float shr = MathUtils.sin(hr);
+		final float chr = MathUtils.cos(hr);
 		final float hp = pitch * 0.5f;
-		final float shp = (float)Math.sin(hp);
-		final float chp = (float)Math.cos(hp);
+		final float shp = MathUtils.sin(hp);
+		final float chp = MathUtils.cos(hp);
 		final float hy = yaw * 0.5f;
-		final float shy = (float)Math.sin(hy);
-		final float chy = (float)Math.cos(hy);
+		final float shy = MathUtils.sin(hy);
+		final float chy = MathUtils.cos(hy);
 		final float chy_shp = chy * shp;
 		final float shy_chp = shy * chp;
 		final float chy_chp = chy * chp;
@@ -179,7 +176,7 @@ public class Quaternionf implements Serializable {
 	 * @return the rotation around the x axis in radians (between -(PI/2) and +(PI/2)) */
 	public float getPitchRad () {
 		final int pole = getGimbalPole();
-		return pole == 0 ? (float)Math.asin(MathUtils.clamp(2f * (q0 * q1 - q3 * q2), -1f, 1f)) : (float)pole * MathUtils.PI * 0.5f;
+		return pole == 0 ? MathUtils.asin(MathUtils.clamp(2f * (q0 * q1 - q3 * q2), -1f, 1f)) : (float)pole * MathUtils.PI * 0.5f;
 	}
 
 	/** Get the pitch euler angle in degrees, which is the rotation around the x axis. Requires that this quaternion is normalized.
@@ -214,7 +211,7 @@ public class Quaternionf implements Serializable {
 	public Quaternionf nor () {
 		float len = len2();
 		if (len != 0.d && !MathUtils.isEqual(len, 1f)) {
-			len = (float)Math.sqrt(len);
+			len = MathUtils.sqrt(len);
 			q0 /= len;
 			q1 /= len;
 			q2 /= len;
@@ -258,7 +255,7 @@ public class Quaternionf implements Serializable {
 
 	/** Multiplies this quaternion with another one in the form of this = this * other
 	 * 
-	 * @param other Quaternion to multiply with
+	 * @param other Quaternionf to multiply with
 	 * @return This quaternion for chaining */
 	public Quaternionf mul (final Quaternionf other) {
 		final float newX = this.q0 * other.q1 + this.q1 * other.q0 + this.q2 * other.q3 - this.q3 * other.q2;
@@ -272,15 +269,11 @@ public class Quaternionf implements Serializable {
 		return this;
 	}
 
-	public Quaternionf getMultiplied(float scalar) {
-		return this.copy().mul(scalar);
-	}
-
 
 
 	/** Multiplies this quaternion with another one in the form of this = other * this
 	 * 
-	 * @param other Quaternion to multiply with
+	 * @param other Quaternionf to multiply with
 	 * @return This quaternion for chaining */
 	public Quaternionf mulLeft (Quaternionf other) {
 		final float newX = other.q0 * this.q1 + other.q1 * this.q0 + other.q2 * this.q3 - other.q3 * q2;
@@ -340,18 +333,18 @@ public class Quaternionf implements Serializable {
 		matrix[Matrix4f.M33] = 1;
 	}
 
-	/** Sets the quaternion to an identity Quaternion
+	/** Sets the quaternion to an identity Quaternionf
 	 * @return this quaternion for chaining */
 	public Quaternionf idt () {
 		return this.set(1, 0, 0, 0);
 	}
 
-	/** @return If this quaternion is an identity Quaternion */
+	/** @return If this quaternion is an identity Quaternionf */
 	public boolean isIdentity () {
 		return MathUtils.isZero(q1) && MathUtils.isZero(q2) && MathUtils.isZero(q3) && MathUtils.isEqual(q0, 1f);
 	}
 
-	/** @return If this quaternion is an identity Quaternion */
+	/** @return If this quaternion is an identity Quaternionf */
 	public boolean isIdentity (final float tolerance) {
 		return MathUtils.isZero(q1, tolerance) && MathUtils.isZero(q2, tolerance) && MathUtils.isZero(q3, tolerance)
 			&& MathUtils.isEqual(q0, 1f, tolerance);
@@ -397,44 +390,44 @@ public class Quaternionf implements Serializable {
 		if (d == 0f) return idt();
 		d = 1f / d;
 		float l_ang = radians < 0 ? MathUtils.PI2 - (-radians % MathUtils.PI2) : radians % MathUtils.PI2;
-		float l_sin = (float)Math.sin(l_ang / 2);
-		float l_cos = (float)Math.cos(l_ang / 2);
+		float l_sin = MathUtils.sin(l_ang / 2);
+		float l_cos = MathUtils.cos(l_ang / 2);
 		return this.set(l_cos, d * x * l_sin, d * y * l_sin, d * z * l_sin).nor();
 	}
 
-	/** Sets the Quaternion from the given matrix, optionally removing any scaling. */
+	/** Sets the Quaternionf from the given matrix, optionally removing any scaling. */
 	public Quaternionf setFromMatrix (boolean normalizeAxes, Matrix4f matrix) {
 		return setFromAxes(normalizeAxes, matrix.val[Matrix4f.M00], matrix.val[Matrix4f.M01], matrix.val[Matrix4f.M02],
 			matrix.val[Matrix4f.M10], matrix.val[Matrix4f.M11], matrix.val[Matrix4f.M12], matrix.val[Matrix4f.M20],
 			matrix.val[Matrix4f.M21], matrix.val[Matrix4f.M22]);
 	}
 	
-	/** Sets the Quaternion from the given matrix, optionally removing any scaling. */
+	/** Sets the Quaternionf from the given matrix, optionally removing any scaling. */
 	public Quaternionf setFromMatrix (boolean normalizeAxes, float[] val) {
 		return setFromAxes(normalizeAxes, val[Matrix4f.M00], val[Matrix4f.M01], val[Matrix4f.M02],
 			val[Matrix4f.M10], val[Matrix4f.M11], val[Matrix4f.M12], val[Matrix4f.M20],
 			val[Matrix4f.M21], val[Matrix4f.M22]);
 	}
 
-	/** Sets the Quaternion from the given rotation matrix, which must not contain scaling. */
+	/** Sets the Quaternionf from the given rotation matrix, which must not contain scaling. */
 	public Quaternionf setFromMatrix (Matrix4f matrix) {
 		return setFromMatrix(false, matrix);
 	}
 
-	/** Sets the Quaternion from the given matrix, optionally removing any scaling. */
+	/** Sets the Quaternionf from the given matrix, optionally removing any scaling. */
 	public Quaternionf setFromMatrix (boolean normalizeAxes, Matrix3f matrix) {
 		return setFromAxes(normalizeAxes, matrix.val[Matrix3f.M00], matrix.val[Matrix3f.M01], matrix.val[Matrix3f.M02],
 			matrix.val[Matrix3f.M10], matrix.val[Matrix3f.M11], matrix.val[Matrix3f.M12], matrix.val[Matrix3f.M20],
 			matrix.val[Matrix3f.M21], matrix.val[Matrix3f.M22]);
 	}
 
-	/** Sets the Quaternion from the given rotation matrix, which must not contain scaling. */
+	/** Sets the Quaternionf from the given rotation matrix, which must not contain scaling. */
 	public Quaternionf setFromMatrix (Matrix3f matrix) {
 		return setFromMatrix(false, matrix);
 	}
 
 	/** <p>
-	 * Sets the Quaternion from the given x-, y- and z-axis which have to be orthonormal.
+	 * Sets the Quaternionf from the given x-, y- and z-axis which have to be orthonormal.
 	 * </p>
 	 * 
 	 * <p>
@@ -456,7 +449,7 @@ public class Quaternionf implements Serializable {
 	}
 
 	/** <p>
-	 * Sets the Quaternion from the given x-, y- and z-axis.
+	 * Sets the Quaternionf from the given x-, y- and z-axis.
 	 * </p>
 	 * 
 	 * <p>
@@ -496,7 +489,7 @@ public class Quaternionf implements Serializable {
 
 		// we protect the division by s by ensuring that s>=1
 		if (t >= 0) { // |w| >= .5
-			float s = (float)Math.sqrt(t + 1); // |s|>=1 ...
+			float s = MathUtils.sqrt(t + 1); // |s|>=1 ...
 			q0 = 0.5f * s;
 			s = 0.5f / s; // so this division isn't bad
 			q1 = (zy - yz) * s;
@@ -534,7 +527,7 @@ public class Quaternionf implements Serializable {
 	 * @return This quaternion for chaining */
 	public Quaternionf setFromCross (final SGVec_3f v1, final SGVec_3f v2) {
 		final float dot = MathUtils.clamp(v1.dot(v2), -1f, 1f);
-		final float angle = (float)Math.acos(dot);
+		final float angle = MathUtils.acos(dot);
 		return setFromAxisRad(v1.y * v2.z - v1.z * v2.y, v1.z * v2.x - v1.x * v2.z, v1.x * v2.y - v1.y * v2.x, angle);
 	}
 
@@ -548,7 +541,7 @@ public class Quaternionf implements Serializable {
 	 * @return This quaternion for chaining */
 	public Quaternionf setFromCross (final float x1, final float y1, final float z1, final float x2, final float y2, final float z2) {
 		final float dot = MathUtils.clamp(SGVec_3f.dot(x1, y1, z1, x2, y2, z2), -1f, 1f);
-		final float angle = (float)Math.acos(dot);
+		final float angle = MathUtils.acos(dot);
 		return setFromAxisRad(y1 * z2 - z1 * y2, z1 * x2 - x1 * z2, x1 * y2 - y1 * x2, angle);
 	}
 
@@ -569,13 +562,13 @@ public class Quaternionf implements Serializable {
 		// warrant such calculations
 		if ((1 - absDot) > 0.d) {// Get the angle between the 2 quaternions,
 			// and then store the sin() of that angle
-			final float angle = (float)Math.acos(absDot);
-			final float invSinTheta = 1f / (float)Math.sin(angle);
+			final float angle = MathUtils.acos(absDot);
+			final float invSinTheta = 1f / MathUtils.sin(angle);
 
 			// Calculate the scale for q1 and q2, according to the angle and
 			// it's sine value
-			scale0 = ((float)Math.sin((1f - alpha) * angle) * invSinTheta);
-			scale1 = ((float)Math.sin((alpha * angle)) * invSinTheta);
+			scale0 = (MathUtils.sin((1f - alpha) * angle) * invSinTheta);
+			scale1 = (MathUtils.sin((alpha * angle)) * invSinTheta);
 		}
 
 		if (d < 0.d) scale1 = -scale1;
@@ -591,7 +584,7 @@ public class Quaternionf implements Serializable {
 		return this;
 	}
 
-	/** Spherical linearly interpolates multiple quaternions and stores the result in this Quaternion. Will not destroy the data
+	/** Spherical linearly interpolates multiple quaternions and stores the result in this Quaternionf. Will not destroy the data
 	 * previously inside the elements of q. result = (q_1^w_1)*(q_2^w_2)* ... *(q_n^w_n) where w_i=1/n.
 	 * @param q List of quaternions
 	 * @return This quaternion for chaining */
@@ -606,7 +599,7 @@ public class Quaternionf implements Serializable {
 		return this;
 	}
 
-	/** Spherical linearly interpolates multiple quaternions by the given weights and stores the result in this Quaternion. Will not
+	/** Spherical linearly interpolates multiple quaternions by the given weights and stores the result in this Quaternionf. Will not
 	 * destroy the data previously inside the elements of q or w. result = (q_1^w_1)*(q_2^w_2)* ... *(q_n^w_n) where the sum of w_i
 	 * is 1. Lists must be equal in length.
 	 * @param q List of quaternions
@@ -623,28 +616,28 @@ public class Quaternionf implements Serializable {
 	}
 
 	/** Calculates (this quaternion)^alpha where alpha is a real number and stores the result in this quaternion. See
-	 * http://en.wikipedia.org/wiki/Quaternion#Exponential.2C_logarithm.2C_and_power
+	 * http://en.wikipedia.org/wiki/Quaternionf#Exponential.2C_logarithm.2C_and_power
 	 * @param alpha Exponent
 	 * @return This quaternion for chaining */
 	public Quaternionf exp (float alpha) {
 
 		// Calculate |q|^alpha
 		float norm = len();
-		float normExp = (float)Math.pow(norm, alpha);
+		float normExp = MathUtils.pow(norm, alpha);
 
 		// Calculate theta
-		float theta = (float)Math.acos(q0 / norm);
+		float theta = MathUtils.acos(q0 / norm);
 
 		// Calculate coefficient of basis elements
 		float coeff = 0;
-		if (Math.abs(theta) < 0.001) // If theta is small enough, use the limit of sin(alpha*theta) / sin(theta) instead of actual
+		if (MathUtils.abs(theta) < 0.001) // If theta is small enough, use the limit of sin(alpha*theta) / sin(theta) instead of actual
 // value
 			coeff = normExp * alpha / norm;
 		else
-			coeff = (float)(normExp * Math.sin(alpha * theta) / (norm * Math.sin(theta)));
+			coeff = (float)(normExp * MathUtils.sin(alpha * theta) / (norm * MathUtils.sin(theta)));
 
 		// Write results
-		q0 = (float)(normExp * Math.cos(alpha * theta));
+		q0 = (float)(normExp * MathUtils.cos(alpha * theta));
 		q1 *= coeff;
 		q2 *= coeff;
 		q3 *= coeff;
@@ -700,6 +693,10 @@ public class Quaternionf implements Serializable {
 		this.q0 *= scalar;
 		return this;
 	}
+	
+	public Quaternionf getMultiplied(float scalar) {
+		return this.copy().mul(scalar);
+	}
 
 	/** Get the axis angle representation of the rotation in degrees. The supplied vector will receive the axis (x, y and z values)
 	 * of the rotation and the value returned is the angle in degrees around that axis. Note that this method will alter the
@@ -727,17 +724,17 @@ public class Quaternionf implements Serializable {
 	 * @see <a href="http://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToAngle">calculation</a> */
 	public float getAxisAngleRad (SGVec_3f axis) {
 		if (this.q0 > 1) this.nor(); // if w>1 acos and sqrt will produce errors, this cant happen if quaternion is normalised
-		float angle = (float)(2.0 * Math.acos(this.q0));
-		float s = (float) Math.sqrt(1 - this.q0 * this.q0); // assuming quaternion normalised then w is less than 1, so term always positive.
-		if (s < MathUtils.FLOAT_ROUNDING_ERROR) { // test to avoid divide by zero, s is always positive due to sqrt
+		float angle = (2.0f * MathUtils.acos(this.q0));
+		float s = MathUtils.sqrt(1 - this.q0 * this.q0); // assuming quaternion normalised then w is less than 1, so term always positive.
+		if (s < MathUtils.DOUBLE_ROUNDING_ERROR) { // test to avoid divide by zero, s is always positive due to sqrt
 			// if s close to zero then direction of axis not important
 			axis.x = this.q1; // if it is important that axis is normalised then replace with x=1; y=z=0;
 			axis.y = this.q2;
 			axis.z = this.q3;
 		} else {
-			axis.x = (float)(this.q1 / s); // normalise axis
-			axis.y = (float)(this.q2 / s);
-			axis.z = (float)(this.q3 / s);
+			axis.x = (this.q1 / s); // normalise axis
+			axis.y = (this.q2 / s);
+			axis.z = (this.q3 / s);
 		}
 
 		return angle;
@@ -748,7 +745,7 @@ public class Quaternionf implements Serializable {
 	 * {@link #getAngleAroundRad(SGVec_3f)} to get the angle around a specific axis.
 	 * @return the angle in radians of the rotation */
 	public float getAngleRad () {
-		return (float)(2.0 * Math.acos((this.q0 > 1) ? (this.q0 / len()) : this.q0));
+		return (2.0f * MathUtils.acos((this.q0 > 1) ? (this.q0 / len()) : this.q0));
 	}
 
 	/** Get the angle in degrees of the rotation this quaternion represents. Use {@link #getAxisAngle(SGVec_3f)} to get both the axis
@@ -798,8 +795,8 @@ public class Quaternionf implements Serializable {
 	public float getAngleAroundRad (final float axisX, final float axisY, final float axisZ) {
 		final float d = SGVec_3f.dot(this.q1, this.q2, this.q3, axisX, axisY, axisZ);
 		final float l2 = Quaternionf.len2(axisX * d, axisY * d, axisZ * d, this.q0);
-		return MathUtils.isZero(l2) ? 0f : (float)(2.0 * Math.acos(MathUtils.clamp(
-			(float)((d < 0 ? -this.q0 : this.q0) / Math.sqrt(l2)), -1f, 1f)));
+		return MathUtils.isZero(l2) ? 0f : (2.0f * MathUtils.acos(MathUtils.clamp(
+			(float)((d < 0 ? -this.q0 : this.q0) / MathUtils.sqrt(l2)), -1f, 1f)));
 	}
 
 	/** Get the angle in radians of the rotation around the specified axis. The axis must be normalized.

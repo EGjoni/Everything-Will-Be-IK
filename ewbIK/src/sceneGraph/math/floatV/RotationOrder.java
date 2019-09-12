@@ -1,8 +1,6 @@
 package sceneGraph.math.floatV;
 
 import sceneGraph.IKVector;
-import sceneGraph.math.doubleV.SGVec_3d;
-import sceneGraph.math.doubleV.Vec3d;
 
 public final class RotationOrder {
 	
@@ -110,16 +108,16 @@ public final class RotationOrder {
      * This is a utility class that cannot be instantiated by the user,
      * so its only constructor is private.
      * @param name name of the rotation order
-     * @param x2 axis of the first rotation
-     * @param z2 axis of the second rotation
-     * @param y2 axis of the third rotation
+     * @param a1 axis of the first rotation
+     * @param a2 axis of the second rotation
+     * @param a3 axis of the third rotation
      */
     private RotationOrder(final String name,
-                          final SGVec_3f x2, final SGVec_3f z2, final SGVec_3f y2) {
+                          final Vec3f a1, final Vec3f a2, final Vec3f a3) {
         this.name = name;
-        this.a1   = x2;
-        this.a2   = z2;
-        this.a3   = y2;
+        this.a1   = a1;
+        this.a2   = a2;
+        this.a3   = a3;
     }
 
 

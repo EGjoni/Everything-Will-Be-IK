@@ -4,8 +4,6 @@
 package IK.floatIK;
 import java.util.ArrayList;
 
-import IK.floatIK.Constraint;
-import IK.floatIK.G;
 import data.EWBIKLoader;
 import data.EWBIKSaver;
 import data.JSONObject;
@@ -38,12 +36,12 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	 * Defined as some Angle in radians about the limitingAxes Y axis, 0 being equivalent to the
 	 * limitingAxes Z axis. 
 	 */
-	protected float minAxialAngle = MathUtils.PI; 
+	protected float minAxialAngle = G.PI; 
 	/**
 	 * Defined as some Angle in radians about the limitingAxes Y axis, 0 being equivalent to the
 	 * minAxialAngle
 	 */
-	protected float range = MathUtils.PI*3;
+	protected float range = G.PI*3;
 
 	protected boolean orientationallyConstrained = false;
 	protected boolean axiallyConstrained = false;
@@ -97,12 +95,16 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 				for(int i = 0; i<getLimitCones().size()-1; i++) {
 					SGVec_3f thisC = getLimitCones().get(i).getControlPoint().copy();
 					SGVec_3f nextC = getLimitCones().get(i+1).getControlPoint().copy();
-					Rot thisToNext = new Rot(thisC, nextC); 
-					Rot halfThisToNext = new Rot(thisToNext.getAxis(), thisToNext.getAngle()/2f); 
+					try {
+						Rot thisToNext = new Rot(thisC, nextC); 
+						Rot halfThisToNext = new Rot(thisToNext.getAxis(), thisToNext.getAngle()/2f); 
 
-					SGVec_3f halfAngle = halfThisToNext.applyToCopy(thisC);
-					halfAngle.normalize(); halfAngle.mult(thisToNext.getAngle());
-					directions.add(halfAngle);
+						SGVec_3f halfAngle = halfThisToNext.applyToCopy(thisC);
+						halfAngle.normalize(); halfAngle.mult(thisToNext.getAngle());
+						directions.add(halfAngle);
+					} catch (Exception e) {
+						e.printStackTrace();
+					}					
 				}	
 			}
 
@@ -120,8 +122,13 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 
 			sgRayf newYRay = new sgRayf(new SGVec_3f(0,0,0), newY);
 
-			Rot oldYtoNewY = new Rot(limitingAxes.y_().heading(), originalLimitingAxes.getGlobalOf(newYRay).heading());
-			limitingAxes.rotateBy(oldYtoNewY);
+			try {
+				Rot oldYtoNewY = new Rot(limitingAxes.y_().heading(), originalLimitingAxes.getGlobalOf(newYRay).heading());
+				limitingAxes.rotateBy(oldYtoNewY);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		
 
 			for(AbstractLimitCone lc : getLimitCones()) {
 				originalLimitingAxes.setToOrthoNormalizedGlobalOf(lc.controlPoint, lc.controlPoint);
@@ -494,12 +501,16 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 			float distToMin = Math.abs(signedAngleDifference(angleDelta, G.TAU-this.minAxialAngle()));
 			float distToMax =  Math.abs(signedAngleDifference(angleDelta, G.TAU-(this.minAxialAngle()+range)));
 			float turnDiff = limitingAxes.getGlobalChirality(); 
+			try {
 			if(distToMin < distToMax){
 				turnDiff = turnDiff*(fromMinToAngleDelta);
 				toSet.rotateAboutY(turnDiff, true);                                                                                                         
 			} else {                              
 				turnDiff = turnDiff*(range - (G.TAU-fromMinToAngleDelta));
 				toSet.rotateAboutY(turnDiff, true);
+			}
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
 			return turnDiff < 0 ? turnDiff*-1 : turnDiff;
 		} else {
@@ -1008,7 +1019,6 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 		this.axiallyConstrained = j.getBoolean("axiallyConstrained"); 
 		this.orientationallyConstrained = j.getBoolean("orientationallyConstrained");
 	}
-	
 	
 	@Override
 	public void notifyOfSaveIntent() {

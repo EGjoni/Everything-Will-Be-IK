@@ -108,6 +108,10 @@ public final class MathUtils {
 	// ---
 
 	static public Random random = new RandomXS128();
+	
+	public static float lerp(float a, float b, float t) {
+		return (1-t)*a + t*b;
+	}
 
 	/** Returns a random number between 0 (inclusive) and the specified value (inclusive). */
 	static public int random (int range) {

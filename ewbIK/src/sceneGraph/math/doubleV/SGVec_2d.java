@@ -18,7 +18,6 @@ package sceneGraph.math.doubleV;
 
 import java.io.Serializable;
 
-import sceneGraph.math.Interpolation;
 import sceneGraph.math.floatV.SGVec_2f;
 import sceneGraph.math.floatV.Vec2f;
 

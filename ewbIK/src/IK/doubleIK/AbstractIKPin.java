@@ -17,6 +17,9 @@ public abstract class AbstractIKPin implements Saveable {
 	protected AbstractIKPin parentPin; 		
 	protected ArrayList<AbstractIKPin> childPins = new ArrayList<>();
 	double pinWeight  = 1;
+	short modeCode = 7; 
+	int subTargetCount = 4; 	
+	static final short XDir = 1, YDir = 2, ZDir = 4;
 	
 	public AbstractIKPin() {
 		
@@ -49,6 +52,40 @@ public abstract class AbstractIKPin implements Saveable {
 	
 	public void disable() {
 		this.isEnabled = false;
+	}
+	
+	/**
+	 * Sets  the orientation bases which effectors reaching for this target will and won't align with. If all are set to false, then the target is treated as a simple position target. 
+	 * If you care about orientation in addition to position, you may wish to set just two of three of these true. Setting all three true should usually be redundant, but might be useful in some cases.
+	 * 
+	 *  This values this function sets are only considered by the orientation aware solver. 
+	 *  
+	 * @param position
+	 * @param xDir set to true if you want the bone's x basis to point in the same direction as this target's x basis (by this library's convention the x basis corresponds to a limb's twist) 
+	 * @param yDir set to true if you want the bone's y basis to point in the same direction as this target's y basis (by this library's convention the y basis corresponds to a limb's direction) 
+	 * @param zDir set to true if you want the bone's z basis to point in the same direction as this target's z basis (by this library's convention the z basis corresponds to a limb's twist) 
+	 */
+	public void setTargetType(boolean xDir, boolean yDir, boolean zDir) {
+		modeCode =0; 
+		if(xDir) modeCode += XDir; 
+		if(yDir) modeCode += YDir; 
+		if(zDir) modeCode += ZDir;
+		
+		subTargetCount = 1;
+		if((modeCode &1) != 0) subTargetCount++;   
+		if((modeCode &2) != 0) subTargetCount++;   
+		if((modeCode &4) != 0) subTargetCount++; 
+	}
+	
+	/**
+	 * @return the number of bases an effector to this target will attempt to align on.
+	 */
+	public int getSubtargetCount() {
+		return subTargetCount;
+	}
+	
+	public short getModeCode() {
+		return modeCode;
 	}
 	
 	
@@ -187,7 +224,7 @@ public abstract class AbstractIKPin implements Saveable {
 	 * 
 	 */
 	public void setPinWeight(double weight) {
-		
+		this.pinWeight = weight;
 	}
 	
 	@Override

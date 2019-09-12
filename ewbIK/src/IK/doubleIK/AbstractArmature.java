@@ -860,7 +860,8 @@ public abstract class AbstractArmature implements Saveable {
 	}
 
 
-	public void improvedSolver(AbstractBone startFrom, double dampening, int iterations) {
+	public void improvedSolver(AbstractBone startFrom, double dampening, int iterations) {	
+		
 		SegmentedArmature armature = segmentedArmature.getChainFor(startFrom);		
 		if(debug) iterations = 1;
 		if(armature != null) {
@@ -872,11 +873,18 @@ public abstract class AbstractArmature implements Saveable {
 			armature.alignSimulationAxesToBones();
 			for(int i = 0; i<iterations; i++) {
 				
-				if(armature.getParentSegment() == null && armature.segmentTip.getPinnedAxes() != null) {
-					SGVec_3d baseTranslate = armature.segmentTip.getPinnedAxes().origin_().subCopy(
+				/**we start by rotating AND translating the armature's root bone to maximize alignment to the innermost pins. 
+				 * this is so that the armature automatically translates to the rootmost pins.  
+				 */
+				
+				if(!armature.isBasePinned()/*armature.getParentSegment() == null && armature.segmentTip.getPinnedAxes() != null*/) {
+					/*SGVec_3d baseTranslate = armature.segmentTip.getPinnedAxes().origin_().subCopy(
 							armature.simulatedLocalAxes.get(armature.segmentTip).origin_());
 					armature.simulatedLocalAxes.get(armature.segmentRoot).translateByGlobal(baseTranslate);
-					armature.simulatedConstraintAxes.get(armature.segmentRoot).translateByGlobal(baseTranslate);
+					armature.simulatedConstraintAxes.get(armature.segmentRoot).translateByGlobal(baseTranslate);*/
+					alignSegmentTipOrientationsFor(armature, dampening);		
+					armature.updateOptimalRotationToPinnedDescendants(armature.segmentRoot, dampening, true);
+					armature.setProcessed(false);
 				}
 
 				alignSegmentTipOrientationsFor(armature, dampening);				
@@ -901,7 +909,7 @@ public abstract class AbstractArmature implements Saveable {
 			return; 
 		} else if(!armature.isTipPinned()) {
 			for(SegmentedArmature c: armature.childSegments) {
-				alignSegmentTipOrientationsFor(c, dampening);
+				//alignSegmentTipOrientationsFor(c, dampening);
 				recursivelyCallImprovedSolver(c, dampening, iterations);
 				c.setProcessed(true);
 			}
@@ -1043,7 +1051,7 @@ public abstract class AbstractArmature implements Saveable {
 			while(currentBone != null) {			
 				if(!currentBone.getIKOrientationLock()) {
 					boolean printRMSD =  currentBone.getParent() == stopAfter; 
-					chain.updateOptimalRotaitonToPinnedDescendants(currentBone, modeCode, dampening);
+					chain.updateOptimalRotationToPinnedDescendants(currentBone, dampening, false);
 					
 				} else {
 					int debug = 0;

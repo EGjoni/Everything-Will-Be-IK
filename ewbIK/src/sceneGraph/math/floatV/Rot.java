@@ -20,13 +20,12 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 package sceneGraph.math.floatV;
 //import org.apache.commons.math3.geometry.euclidean.threed.*;
 
+import org.apache.commons.math3.complex.*;
 
 import data.JSONArray;
-import sceneGraph.math.floatV.Quaternionf;
-import sceneGraph.math.floatV.Rot;
-import sceneGraph.math.floatV.RotationOrder;
 import sceneGraph.math.floatV.SGVec_3f;
-import sceneGraph.math.floatV.sgRayf;
+import sceneGraph.numerical.Precision.MathArithmeticException;
+import sceneGraph.numerical.Precision.MathIllegalArgumentException;
 
 public class Rot {
 	public MRotation rotation; 
@@ -66,7 +65,7 @@ public class Rot {
 		this.rotation = new MRotation(r.getQ0(), r.getQ1(), r.getQ2(), r.getQ3());
 	}
 
-	public Rot( SGVec_3f v1, SGVec_3f v2, SGVec_3f u1, SGVec_3f u2) {
+	public Rot( SGVec_3f v1, SGVec_3f v2, SGVec_3f u1, SGVec_3f u2)  {
 		try {
 			rotation = new MRotation(
 					new SGVec_3f(v1), 
@@ -74,15 +73,23 @@ public class Rot {
 					new SGVec_3f(u1), 
 					new SGVec_3f(u2));
 		} catch(Exception e) {
-			rotation = new MRotation(v1, 0f);
+			try {
+				rotation = new MRotation(v1, 0f);
+			} catch (MathIllegalArgumentException e1) {
+				e1.printStackTrace();
+			}
 		}
 	}
 
-	public Rot( SGVec_3f  axis, float angle) {		
+	public Rot( SGVec_3f  axis, float angle)  {		
 		try {
 			rotation = new MRotation(axis, angle); 
 		} catch(Exception e) { 
-			rotation = new MRotation(RotationOrder.X, 0f);
+			try {
+				rotation = new MRotation(RotationOrder.X, 0f);
+			} catch (MathIllegalArgumentException e1) {
+				e1.printStackTrace();
+			}
 		}
 	}
 
@@ -90,11 +97,15 @@ public class Rot {
 		this.rotation = new MRotation(w, x, y, z, needsNormalization);  
 	}  
 	
-	public Rot( SGVec_3f begin, SGVec_3f end) {
+	public Rot( SGVec_3f begin, SGVec_3f end)  {
 		try{ 
 			rotation = new MRotation(begin, end);
 		} catch(Exception e) { 
-			rotation = new MRotation(RotationOrder.X, 0f);
+			try {
+				rotation = new MRotation(RotationOrder.X, 0f);
+			} catch (MathIllegalArgumentException e1) {
+				e1.printStackTrace();
+			}
 		}
 	}
 
@@ -134,7 +145,12 @@ public class Rot {
 	 * @param angle
 	 */
 	public void set(SGVec_3f axis, float angle) {
-		this.rotation.set(axis, angle);
+		try {
+			this.rotation.set(axis, angle);
+		} catch (MathIllegalArgumentException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
 	/**
@@ -143,8 +159,12 @@ public class Rot {
 	 * @param axis
 	 * @param angle
 	 */
-	public void set(SGVec_3f startVec, SGVec_3f targetVec) {
-		this.rotation.set(startVec, targetVec);
+	public void set(SGVec_3f startVec, SGVec_3f targetVec)  {
+		try {
+			this.rotation.set(startVec, targetVec);
+		} catch (MathArithmeticException e) {
+			e.printStackTrace();
+		}
 	}
 	
 
@@ -248,12 +268,13 @@ public class Rot {
 	
 	public Rot applyTo(Rot rot) {                                                                                                  
 		MRotation r = rot.rotation;                                                                                                 
-		MRotation tr = this.rotation;                                         
-		float tq0 = r.getQ0() * tr.getQ0() -(r.getQ1() * tr.getQ1() +  r.getQ2() * tr.getQ2() + r.getQ3() * tr.getQ3());
-		float tq1 = r.getQ1() * tr.getQ0() + r.getQ0() * tr.getQ1() + (r.getQ2() * tr.getQ3() - r.getQ3() * tr.getQ2());
-		float tq2 = 	r.getQ2() * tr.getQ0() + r.getQ0() * tr.getQ2() + (r.getQ3() * tr.getQ1() - r.getQ1() * tr.getQ3());
-		float tq3 = r.getQ3() * tr.getQ0() + r.getQ0() * tr.getQ3() + (r.getQ1() * tr.getQ2() - r.getQ2() * tr.getQ1());
-		MRotation result = new MRotation(tq0, tq1, tq2, tq3, true);                                                                                      
+		MRotation tr = this.rotation;                                                                                               
+		MRotation result = new MRotation(                                                                                            
+				r.getQ0() * tr.getQ0() -(r.getQ1() * tr.getQ1() +  r.getQ2() * tr.getQ2() + r.getQ3() * tr.getQ3()),   
+				r.getQ1() * tr.getQ0() + r.getQ0() * tr.getQ1() + (r.getQ2() * tr.getQ3() - r.getQ3() * tr.getQ2()),   
+				r.getQ2() * tr.getQ0() + r.getQ0() * tr.getQ2() + (r.getQ3() * tr.getQ1() - r.getQ1() * tr.getQ3()),   
+				r.getQ3() * tr.getQ0() + r.getQ0() * tr.getQ3() + (r.getQ1() * tr.getQ2() - r.getQ2() * tr.getQ1()),   
+				true);                                                                                      
 		return new Rot(result);                                                                                                    
 	}                                                             
 
@@ -302,7 +323,7 @@ public class Rot {
 	/** Get the swing rotation and twist rotation for the specified axis. The twist rotation represents the rotation around the
 	 * specified axis. The swing rotation represents the rotation of the specified axis itself, which is the rotation around an
 	 * axis perpendicular to the specified axis. The swing and twist rotation can be used to reconstruct the original
-	 * Quaternionf: this = swing * twist
+	 * quaternion: this = swing * twist
 	 * 
 	 * @param axisX the X component of the normalized axis for which to get the swing and twist rotation
 	 * @param axisY the Y component of the normalized axis for which to get the swing and twist rotation
@@ -327,14 +348,14 @@ public class Rot {
 			return new Quaternionf(value1.getQ0(), value1.getQ1(), value1.getQ2(), value1.getQ3());
 		}
 		
-		if (amount < 0.0)
+		if (amount < 0.0f)
 			return value1;
-		else if (amount > 1.0)
+		else if (amount > 1.0f)
 			return value2;
 
 		float dot = value1.dot(value2);
 		float x2, y2, z2, w2;
-		if (dot < 0.0)
+		if (dot < 0.0f)
 		{
 			dot = 0.0f - dot;
 			x2 = 0.0f - value2.getQ1();
@@ -353,10 +374,10 @@ public class Rot {
 		float t1, t2;
 
 		final float EPSILON = 0.0001f;
-		if ((1.0 - dot) > EPSILON) // standard case (slerp)
+		if ((1.0f - dot) > EPSILON) // standard case (slerp)
 		{
-			float angle = (float)Math.acos(dot);
-			float sinAngle = (float) MathUtils.sin(angle);
+			float angle = MathUtils.acos(dot);
+			float sinAngle = MathUtils.sin(angle);
 			t1 = MathUtils.sin((1.0f - amount) * angle) / sinAngle;
 			t2 = MathUtils.sin(amount * angle) / sinAngle;
 		}
@@ -376,17 +397,17 @@ public class Rot {
 	public static MRotation slerp(float amount, MRotation value1, MRotation value2)
 	{
 		
-		if(Double.isNaN(amount)) {
+		if(Float.isNaN(amount)) {
 			return new MRotation(value1.getQ0(), value1.getQ1(), value1.getQ2(), value1.getQ3());
 		}
-		if (amount < 0.0)
+		if (amount < 0.0f)
 			return value1;
-		else if (amount > 1.0)
+		else if (amount > 1.0f)
 			return value2;
 
 		float dot = value1.dotProduct(value2);
 		float x2, y2, z2, w2;
-		if (dot < 0.0)
+		if (dot < 0.0f)
 		{
 			dot = 0.0f - dot;
 			x2 = 0.0f - value2.getQ1();
@@ -405,9 +426,9 @@ public class Rot {
 		float t1, t2;
 
 		final float EPSILON = 0.0001f;
-		if ((1.0 - dot) > EPSILON) // standard case (slerp)
+		if ((1.0f - dot) > EPSILON) // standard case (slerp)
 		{
-			float angle = (float)Math.acos(dot);
+			float angle = MathUtils.acos(dot);
 			float sinAngle = MathUtils.sin(angle);
 			t1 = MathUtils.sin((1.0f - amount) * angle) / sinAngle;
 			t2 = MathUtils.sin(amount * angle) / sinAngle;
@@ -425,13 +446,104 @@ public class Rot {
 				(value1.getQ3() * t1) + (z2 * t2));
 	}
 
+	
+	public static Rot nlerp(Rot[] rotations, float[] weights) {
+	
+		if(weights == null) {		
+			return nlerp(rotations);
+		} else {
+			float q0 = 0f; 
+			float q1 = 0f;
+			float q2 = 0f;
+			float q3 = 0f; 
+			float total = 0f; 
+			
+			for(int i = 0; i<rotations.length; i++) {
+				MRotation r = rotations[i].rotation;
+				float weight = weights[i];
+				q0 += r.getQ0() * weight;
+				q1 += r.getQ1() * weight;
+				q2 += r.getQ2() * weight;
+				q3 += r.getQ3() * weight;
+				total += weight;
+			}			
+			
+			q0 /= total;
+			q1 /= total;
+			q2 /= total;
+			q3 /= total;
+			
+			return new Rot(q0, q1, q2, q3, true);
+		}
+	}
+	
+	public static Rot nlerp(Rot[] rotations) {
+		float q0 = 0f; 
+		float q1 = 0f;
+		float q2 = 0f;
+		float q3 = 0f; 
+		float total = rotations.length; 
+		
+		for(int i = 0; i<rotations.length; i++) {
+			MRotation r = rotations[i].rotation;			
+			q0 += r.getQ0();
+			q1 += r.getQ1();
+			q2 += r.getQ2();
+			q3 += r.getQ3();
+		}	
+		q0 /= total;
+		q1 /= total;
+		q2 /= total;
+		q3 /= total;
+		
+		return new Rot(q0, q1, q2, q3, true);
+	}
+	
+	/**
+	 * finds the instantaneous (optionally weighted) average of the given rotations 
+	 * in an order-agnostic manner. Conceptually, this is equivalent to breaking down 
+	 * each rotation into an infinitesimal sequence of rotations, and then applying the rotations 
+	 * in alternation.
+	 * @param rots
+	 * @param weights if this parameter receives null, equal weights are assumed for all rotations. Otherwise, 
+	 * every element in this array is treated as a weight on the corresponding element of the rots array.  
+	 * @return the weighted average Rotation. If the total weights are 0, then returns null. 
+	 */
+	public static Rot instantaneousAvg(Rot[] rots, float[] weights)  {
+		SGVec_3f accumulatedAxisAngle = new SGVec_3f(); 
+		float totalWeight = rots.length; 
+		if(weights != null) {
+			totalWeight = 0f; 
+			for(int i=0; i<weights.length; i++) {
+				totalWeight += weights[i];
+			}
+		}
+		
+		if(totalWeight == 0) {
+			return null;
+		}
+		
+		for(int i=0; i<rots.length; i++) {
+			SGVec_3f axis = rots[i].getAxis(); 
+			float angle = rots[i].getAngle(); 
+			angle /= totalWeight;
+			if(weights != null) {				
+				angle *= weights[i]; 
+			}
+			axis.mult(angle);
+			accumulatedAxisAngle.add(axis);
+		}
+		float extractAngle = accumulatedAxisAngle.mag(); 
+		accumulatedAxisAngle.div(extractAngle); 
+		return new Rot(accumulatedAxisAngle, extractAngle);
+	}
 
 	public String toString() {
 		return "\n axis: "+ this.getAxis().toSGVec3f() +", \n angle: "+((float)Math.toDegrees(this.getAngle()));
 	}
 	
 	/**
-	 * loads a rotation from a JSON array of Quaternionf values. 
+	 * loads a rotation from a JSON array of quaternion values. 
 	 * 
 	 * where 
 	 * jarray[0] = q0 = w;

@@ -21,7 +21,6 @@ import java.io.Serializable;
 import data.CanLoad;
 import data.JSONArray;
 import data.JSONObject;
-import sceneGraph.math.Interpolation;
 import sceneGraph.math.floatV.SGVec_3f;
 import sceneGraph.math.floatV.Vec3f;
 

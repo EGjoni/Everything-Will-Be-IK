@@ -266,9 +266,9 @@ public class Matrix4f implements Serializable {
 		val[M22] = (1.0f - (xx + yy));
 		val[M23] = translationZ;
 
-		val[M30] = 0.f;
-		val[M31] = 0.f;
-		val[M32] = 0.f;
+		val[M30] = 0f;
+		val[M31] = 0f;
+		val[M32] = 0f;
 		val[M33] = 1.0f;
 		return this;
 	}
@@ -319,9 +319,9 @@ public class Matrix4f implements Serializable {
 		val[M22] = scaleZ * (1.0f - (xx + yy));
 		val[M23] = translationZ;
 
-		val[M30] = 0.f;
-		val[M31] = 0.f;
-		val[M32] = 0.f;
+		val[M30] = 0f;
+		val[M31] = 0f;
+		val[M32] = 0f;
 		val[M33] = 1.0f;
 		return this;
 	}
@@ -637,7 +637,7 @@ public class Matrix4f implements Serializable {
 	 * @param width The width
 	 * @param height The height
 	 * @return This matrix for the purpose of chaining methods together. */
-	public Matrix4f setToOrtho2f (float x, float y, float width, float height) {
+	public Matrix4f setToOrtho2D (float x, float y, float width, float height) {
 		setToOrtho(x, x + width, y, y + height, 0, 1);
 		return this;
 	}
@@ -652,7 +652,7 @@ public class Matrix4f implements Serializable {
 	 * @param near The near plane
 	 * @param far The far plane
 	 * @return This matrix for the purpose of chaining methods together. */
-	public Matrix4f setToOrtho2f (float x, float y, float width, float height, float near, float far) {
+	public Matrix4f setToOrtho2D (float x, float y, float width, float height, float near, float far) {
 		setToOrtho(x, x + width, y, y + height, near, far);
 		return this;
 	}
