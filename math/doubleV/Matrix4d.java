@@ -266,9 +266,9 @@ public class Matrix4d implements Serializable {
 		val[M22] = (1.0d - (xx + yy));
 		val[M23] = translationZ;
 
-		val[M30] = 0.d;
-		val[M31] = 0.d;
-		val[M32] = 0.d;
+		val[M30] = 0d;
+		val[M31] = 0d;
+		val[M32] = 0d;
 		val[M33] = 1.0d;
 		return this;
 	}
@@ -319,9 +319,9 @@ public class Matrix4d implements Serializable {
 		val[M22] = scaleZ * (1.0d - (xx + yy));
 		val[M23] = translationZ;
 
-		val[M30] = 0.d;
-		val[M31] = 0.d;
-		val[M32] = 0.d;
+		val[M30] = 0d;
+		val[M31] = 0d;
+		val[M32] = 0d;
 		val[M33] = 1.0d;
 		return this;
 	}

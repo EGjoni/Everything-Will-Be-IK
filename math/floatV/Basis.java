@@ -2,12 +2,9 @@ package sceneGraph.math.floatV;
 
 
 
-import sceneGraph.math.floatV.Matrix3f;
-import sceneGraph.math.floatV.Matrix4f;
-import sceneGraph.math.floatV.Quaternionf;
-import sceneGraph.math.floatV.SGVec_3f;
-import sceneGraph.math.floatV.sgRayf;
 import sceneGraph.math.floatV.Vec3f;
+import sceneGraph.numerical.Precision.MathIllegalArgumentException;
+import sceneGraph.numerical.Precision.ZeroException;
 
 public class Basis {
 
@@ -92,7 +89,7 @@ public class Basis {
 	 * with the input y-axis, and x-axis (for historical reasons having mostly to do with
 	 * this library's original purpose) regardless of chirality. 
 	 * 
-	 * if it cannot align with both y and z due to non-orthogonality, the orientation
+	 * if it cannot align with both y and z due to non-orthogonality, the orientaiton
 	 * aligns its x to the xy plane, and its y precisely to the yheading.
 	 *
 	 * @param x the x ray. it's p1 value is assumed to be the base's origin. 
@@ -111,7 +108,12 @@ public class Basis {
 		SGVec_3f yDirNew =new SGVec_3f(y.heading()); 
 		SGVec_3f zDirNew = new SGVec_3f(z.heading());   		
 
-		this.rotation = createIdealRotation(xDirNew, yDirNew, zDirNew);
+		try {
+			this.rotation = createPrioritzedRotation(xDirNew, yDirNew, zDirNew);
+		} catch (MathIllegalArgumentException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 
 		//if(shearScaleMatrix.determinant() < 0) {		
 		//this.rotation = createIdealRotation(xDirNew, yDirNew, zDirNew);
@@ -138,10 +140,11 @@ public class Basis {
 		this.refreshMatrices();
 	}
 
-	private Rot createIdealRotation(SGVec_3f xHeading, SGVec_3f yHeading, SGVec_3f zHeading) {
+	private Rot createPrioritzedRotation(SGVec_3f xHeading, SGVec_3f yHeading, SGVec_3f zHeading) throws MathIllegalArgumentException {
+		SGVec_3f tempV = new SGVec_3f();
 		Rot toYX = new Rot(yBase, xBase, yHeading, xHeading); 
-		toYX.applyTo(yBase, tempV_3);
-		Rot toY = new Rot(tempV_3, yHeading);
+		toYX.applyTo(yBase, tempV);
+		Rot toY = new Rot(tempV, yHeading);
 
 		return toY.applyTo(toYX);
 		/*Rot result = new Rot(xBase, yBase, xHeading, yHeading);
@@ -165,6 +168,67 @@ public class Basis {
 		return result;*/
 	}
 
+
+	/**
+	 * see: http://matthias-mueller-fischer.ch/publications/stablePolarDecomp.pdf
+	 * @param referenceOrientation can be null if not known, in which case, 
+	 * the Identity Rotation will be used, but providing something here 
+	 * is strongly encouraged as it speeds up convergence. If you call this function 
+	 * to recompute the rotation frequently, then usually you should feed its previous output 
+	 * rotation to it as the reerence orientation. 
+	 * @param maximumIterations maximum number of times to run the optimization loop.
+	 * according to the paper, in the overwhelming majority of cases you should get usable results 
+	 * in under 5 iterations. According to other papers, you might want to go as high as 12 iterations. 
+	 * @param saetyCheck according to the referenced paper, there are theoretical 
+	 * cases where this scheme does not converge. The paper maintains that these cases are 
+	 * exceedingly rare as per their empirical observations. However, their methodology 
+	 * depends on a random sampling of all possible transformations, while their math implies 
+	 * that the degenerate cases are most likely to arise in precisely the sorts of situations 
+	 * this Basis class is hoping to simplify away -- specifically, reflections across multiple planes.
+	 * For this reason, a safety check parameter is made available. If set to true, this 
+	 * will (as suggested by the paper) attempt to check if the solver is failing to converge, 
+	 * and add a small random perturbation to the input Matrix before running the solver again.
+	 *   
+	 */
+	public Rot extractIdealRotation(Matrix4f affineMatrix, Rot referenceOrientation, int maxIter, boolean safetyCheck) {
+		Matrix3f affine3f = new Matrix3f(affineMatrix.val);
+		return new Rot(extractIdealRotation(affine3f, referenceOrientation.rotation, maxIter, safetyCheck));
+	}
+	
+	public MRotation extractIdealRotation(Matrix3f affineMatrix, MRotation referenceOrientation, int maxIter, boolean safetyCheck) {
+		MRotation q = referenceOrientation.copy();
+		Matrix3f A = affineMatrix;
+		for (int iter = 0; iter < maxIter; iter++) {
+			Matrix3f R = q.getMatrix();
+			SGVec_3f col0 = R.col(0).crs(A.col(0));
+			SGVec_3f col1 = R.col(1).crs(A.col(1));
+			SGVec_3f col2 =R.col(2).crs(A.col(2)); 
+			SGVec_3f sum = col0.addCopy(col1).add(col2);
+			float mag = 	Math.abs(
+					R.col(0).dot(A.col(0)) 
+				+ R.col(1).dot(A.col(1)) 
+				+ R.col(2).dot(A.col(2)));
+			SGVec_3f omega = sum.multCopy(1f/(mag+1.0e-9f));					
+			float w = omega.mag();
+			if (w < 1.0e-9)
+				break;
+			
+			try {
+				q = new MRotation(omega.div(w), w).multiply(q);
+			} catch (MathIllegalArgumentException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}					
+			try {
+				q= q.normalize();
+			} catch (ZeroException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		return q;
+	}
+
 	public Basis(Basis input) {
 		this.adoptValues(input);
 	}
@@ -178,7 +242,7 @@ public class Basis {
 		this.rotation.set(in.rotation);
 		this.shearScaleMatrix.set(in.getShearScaleMatrix());
 		this.composedMatrix.set(in.getComposedMatrix());
-		
+
 		//this.shearScaleTransform.set(this.shearScaleMatrix);
 		//this.composedTransform.set(this.composedMatrix);
 		this.reflectionMatrix.set(in.reflectionMatrix);
@@ -215,9 +279,10 @@ public class Basis {
 	 * this.getGlobalOf(local_output) == global_input.  
 	 *  
 	 * @param input
+	 * @throws MathIllegalArgumentException 
 	 */
 
-	public void setToLocalOf(Basis global_input, Basis local_output) {
+	public void setToLocalOf(Basis global_input, Basis local_output) throws MathIllegalArgumentException {
 
 		///if a matrix is inverted, reflection should be computed by Reflection *Matrix. 
 		//if a matrix is NOT inverted, reflection should be computed by Matrix * Reflection.	
@@ -264,7 +329,7 @@ public class Basis {
 		local_output.refreshMatrices();		
 	}
 
-	public boolean debug = true;
+	public boolean debug = false;
 
 	/**
 	 * sets globalOutput such that the result of 
@@ -272,8 +337,9 @@ public class Basis {
 	 * 
 	 * @param localInput
 	 * @param globalOutput
+	 * @throws MathIllegalArgumentException 
 	 */
-	public void setToGlobalOf(Basis localInput, Basis globalOutput) {		
+	public void setToGlobalOf(Basis localInput, Basis globalOutput) throws MathIllegalArgumentException {		
 
 
 		/**
@@ -388,9 +454,10 @@ public class Basis {
 	 * to the target bases, you are likely using this library in ways you might be better off
 	 * avoiding. Alternatively, this library might be badly designed. I don't know, it's the first time
 	 * I've done this. 
+	 * @throws MathIllegalArgumentException 
 	 */
 	public static Rot getRectifiedRotation(Matrix4f sourceMatrix, Matrix4f targetMatrix,
-			boolean[] flippedAxes) {
+			boolean[] flippedAxes) throws MathIllegalArgumentException {
 		float [] arrVec1 = new float[4];
 		Rot result; 
 
@@ -453,13 +520,14 @@ public class Basis {
 		return oddBasisOut;
 	}
 
-	public Rot getLocalOfRotation(Rot inRot) {                    
-		inRot.getAxis(tempV_3);
+	public Rot getLocalOfRotation(Rot inRot) throws MathIllegalArgumentException {
+		SGVec_3f tempV = new SGVec_3f();
+		inRot.getAxis(tempV);
 		//this.getInverseComposedTransform().transform(tempVec);
-		this.getInverseComposedOrthoNormalMatrix().transform(tempV_3, tempV_2);		
+		this.getInverseComposedOrthoNormalMatrix().transform(tempV, tempV);		
 		//float angle = inRot.getAngle(); 
 		//angle = inRot.getAngle()*this.chirality;
-		return new Rot(tempV_2, inRot.getAngle()*this.chirality);
+		return new Rot(tempV, inRot.getAngle()*this.chirality);
 	}
 
 	public Matrix4f composedOrthoNormalMatrix = new Matrix4f();
@@ -467,27 +535,29 @@ public class Basis {
 	//private Transform3D composedOrthonormalTransform = new Transform3D(); 
 	//private Transform3D inverseComposedOrthonormalTransform = new Transform3D(); 
 
-	private Rot getChrialityModifiedRotationOf(Rot localRot) {
-		localRot.getAxis(tempV_3);
+	private Rot getChrialityModifiedRotationOf(Rot localRot) throws MathIllegalArgumentException {
+		SGVec_3f tempV = new SGVec_3f();
+		localRot.getAxis(tempV);
 		//this.shearScaleTransform.transform(workingPoint);
-		this.reflectionMatrix.transform(tempV_3, tempV_2);
+		this.reflectionMatrix.transform(tempV, tempV);
 		float angle = localRot.getAngle();
 		if(this.chirality == LEFT) angle *=-1;
-		return new Rot(tempV_3, angle);
+		return new Rot(tempV, angle);
 	}
 
-	private void setToChiralityModifiedRotationOf(Rot localRot, Rot outputRot) {
-		localRot.getAxis(tempV_3);
+	private void setToChiralityModifiedRotationOf(Rot localRot, Rot outputRot) throws MathIllegalArgumentException {
+		SGVec_3f tempV = new SGVec_3f();
+		localRot.getAxis(tempV);
 		//localRot.this.setTupleFromDVec(workingVector, workingPoint);
 		//this.shearScaleTransform.transform(workingPoint);
-		this.reflectionMatrix.transform(tempV_3, tempV_2);
+		this.reflectionMatrix.transform(tempV, tempV);
 		float angle = localRot.getAngle();
 		if(this.chirality == LEFT) angle *=-1;
-		outputRot.set(tempV_2, angle);
+		outputRot.set(tempV, angle);
 	}
 
 
-	SGVec_3f tempV_3 = new SGVec_3f(0,0,0);
+	//SGVec_3f tempV_3 = new SGVec_3f(0,0,0);
 
 	/**
 	 * @return the x-heading of the orthonormal rotation matrix of this basis.
@@ -572,27 +642,28 @@ public class Basis {
 	 */
 	public void setToOrthoNormalGlobalOf(SGVec_3f input, SGVec_3f output) {	
 		if(input != null) {
-			tempV_1.set(input);
-			reflectionMatrix.transform(tempV_1, tempV_2);
-			this.rotation.applyTo(tempV_2, tempV_3);
-			output.setX_(tempV_3.x+translate.x); 
-			output.setY_(tempV_3.y+translate.y); 
-			output.setZ_(tempV_3.z+translate.z);  		
+			SGVec_3f tempV = new SGVec_3f(input);
+			reflectionMatrix.transform(tempV, tempV);
+			this.rotation.applyTo(tempV, tempV);
+			output.setX_(tempV.x+translate.x); 
+			output.setY_(tempV.y+translate.y); 
+			output.setZ_(tempV.z+translate.z);  		
 
 		}
 	}
 
 	public void setToOrientationalGlobalOf(SGVec_3f input, SGVec_3f output) {	
-		this.rotation.applyTo(input, tempV_3);
-		output.setX_(tempV_3.x+translate.x); 
-		output.setY_(tempV_3.y+translate.y); 
-		output.setZ_(tempV_3.z+translate.z);  		
+		SGVec_3f tempV = new SGVec_3f();
+		this.rotation.applyTo(input, tempV);
+		output.setX_(tempV.x+translate.x); 
+		output.setY_(tempV.y+translate.y); 
+		output.setZ_(tempV.z+translate.z);  		
 	}
 
 	public void setToGlobalOf(SGVec_3f input, SGVec_3f output) {
-		tempV_2.set(input);
-		this.composedMatrix.transform(tempV_2, tempV_1);		
-		output.set(tempV_1);
+		SGVec_3f tempV = new SGVec_3f(input);
+		this.composedMatrix.transform(tempV, tempV);		
+		output.set(tempV);
 		output.add(this.translate); 	
 	}
 
@@ -608,13 +679,14 @@ public class Basis {
 	}
 
 	public void setToLocalOf(SGVec_3f input, SGVec_3f output) {
-		tempV_1.set(input);
-		tempV_1.x -= translate.x; tempV_1.y -= translate.y; tempV_1.z -= translate.z; 		
+		SGVec_3f tempV = new SGVec_3f(input);
+		tempV.set(input);
+		tempV.x -= translate.x; tempV.y -= translate.y; tempV.z -= translate.z; 		
 
-		this.getInverseComposedMatrix().transform(tempV_1, tempV_2);
-		output.setX_(tempV_2.x); 
-		output.setY_(tempV_2.y); 
-		output.setZ_(tempV_2.z);
+		this.getInverseComposedMatrix().transform(tempV, tempV);
+		output.setX_(tempV.x); 
+		output.setY_(tempV.y); 
+		output.setZ_(tempV.z);
 	}
 
 	public SGVec_3f getLocalOf(SGVec_3f global_input) {
@@ -638,9 +710,10 @@ public class Basis {
 	 * @param output
 	 */
 	public void setToOrientationalLocalOf(SGVec_3f input, SGVec_3f output) {
-		tempV_1.set(input).sub(this.translate);
-		this.rotation.applyInverseTo(tempV_1, tempV_3);
-		output.set(tempV_3);
+		SGVec_3f tempV = new SGVec_3f(input);
+		tempV.set(input).sub(this.translate);
+		this.rotation.applyInverseTo(tempV, tempV);
+		output.set(tempV);
 	}
 
 	/*public void setToOrthoNormalLocalOf(SGVec_3f input, SGVec_3f output) {		
@@ -652,10 +725,11 @@ public class Basis {
 	}*/
 
 	public void setToOrthoNormalLocalOf(SGVec_3f input, SGVec_3f output) {		
-		tempV_1.set(input); 
-		this.setToOrientationalLocalOf(tempV_1, tempV_2);		
-		this.getInverseReflectionMatrix().transform(tempV_2, tempV_1);
-		output.set(tempV_1);
+		SGVec_3f tempV = new SGVec_3f(input);
+		tempV.set(input); 
+		this.setToOrientationalLocalOf(tempV, tempV);		
+		this.getInverseReflectionMatrix().transform(tempV, tempV);
+		output.set(tempV);
 	}
 
 
@@ -679,14 +753,15 @@ public class Basis {
 	}
 
 	public String toString() {
-		setToComposedXBase(tempV_3);
-		Vec3f xh = tempV_3.toSGVec3f();
+		SGVec_3f tempV = new SGVec_3f();
+		setToComposedXBase(tempV);
+		Vec3f xh = tempV.toSGVec3f();
 
-		setToComposedYBase(tempV_3);
-		Vec3f yh = tempV_3.toSGVec3f();
+		setToComposedYBase(tempV);
+		Vec3f yh = tempV.toSGVec3f();
 
-		setToComposedZBase(tempV_3);
-		Vec3f zh = tempV_3.toSGVec3f();
+		setToComposedZBase(tempV);
+		Vec3f zh = tempV.toSGVec3f();
 
 		float xMag = xh.mag();	
 		float yMag = yh.mag();
@@ -895,7 +970,7 @@ public class Basis {
 	float[][] rotMat = new float[4][4];
 
 
-	SGVec_3f tempV_2 = new SGVec_3f();
+	
 
 
 
@@ -1023,8 +1098,7 @@ public class Basis {
 	public void refreshMatrices() {
 
 		//this.shearScaleTransform.set(shearScaleMatrix);
-	
-		applyRotTo(this.rotation, this.shearScaleMatrix, this.composedMatrix);			
+		applyRotTo(this.rotation, this.shearScaleMatrix, this.composedMatrix);
 		//this.composedTransform.set(composedMatrix);
 		//int oldDeterminant = this.chirality;
 
@@ -1036,19 +1110,10 @@ public class Basis {
 		//if(oldDeterminant != this.chirality)
 		this.updateChirality();
 		applyRotTo(this.rotation, this.reflectionMatrix, this.composedOrthoNormalMatrix);
-		
 		//this.composedOrthonormalTransform.set(composedOrthoNormalMatrix);
 		inversesDirty = true;
 	}
 
-	public void matrixNaNDebug(Matrix4f toDebug) {
-		float[] matrixCheck = new float[4];
-		toDebug.getColumn(0, matrixCheck);
-		if(Float.isNaN(matrixCheck[0])) {
-			System.out.println("justNanned");
-		}
-	}
-	
 	public void applyRotTo(Rot rotation, Matrix4f inputMatrix, Matrix4f outputMatrix) {		
 
 		inputMatrix.getColumn(X, arrVec1); 
@@ -1101,17 +1166,18 @@ public class Basis {
 	}
 
 	public void setFlipArrayForMatrix(Matrix4f forMatrix, boolean[] flipArray, Rot rotation) {
+		SGVec_3f tempV = new SGVec_3f();
 		float[] vecArr = new float[4]; 
 		forMatrix.getColumn(Z, vecArr); 
-		tempV_3.x = vecArr[X]; tempV_3.y = vecArr[Y]; tempV_3.z =  vecArr[Z];
+		tempV.x = vecArr[X]; tempV.y = vecArr[Y]; tempV.z =  vecArr[Z];
 		forMatrix.getColumn(Y, vecArr); 
-		tempV_3.x = vecArr[X]; tempV_3.y = vecArr[Y]; tempV_3.z =  vecArr[Z];
+		tempV.x = vecArr[X]; tempV.y = vecArr[Y]; tempV.z =  vecArr[Z];
 		SGVec_3f tempVec = new SGVec_3f(); 
 		rotation.applyTo(xBase, tempVec);		
 		forMatrix.getColumn(X, vecArr); 
-		tempV_3.x = vecArr[X]; tempV_3.y = vecArr[Y]; tempV_3.z =  vecArr[Z];		
+		tempV.x = vecArr[X]; tempV.y = vecArr[Y]; tempV.z =  vecArr[Z];		
 
-		float dot = tempVec.dot(tempV_3);
+		float dot = tempVec.dot(tempV);
 		if( dot < 0) {		
 			flipArray[X] = true;
 		} else {
@@ -1119,23 +1185,23 @@ public class Basis {
 		}
 
 		forMatrix.getColumn(Y, vecArr); 
-		tempV_3.x = vecArr[X]; tempV_3.y = vecArr[Y]; tempV_3.z =  vecArr[Z];
+		tempV.x = vecArr[X]; tempV.y = vecArr[Y]; tempV.z =  vecArr[Z];
 		rotation.applyTo(yBase, tempVec);
-		if(tempVec.dot(tempV_3) < 0) {
+		if(tempVec.dot(tempV) < 0) {
 			flipArray[Y] = true;
 		}
 		else flipArray[Y] = false;
 
 		forMatrix.getColumn(Z, vecArr); 
-		tempV_3.x = vecArr[X]; tempV_3.y = vecArr[Y]; tempV_3.z =  vecArr[Z];
+		tempV.x = vecArr[X]; tempV.y = vecArr[Y]; tempV.z =  vecArr[Z];
 		rotation.applyTo(zBase, tempVec);
-		if(tempVec.dot(tempV_3) < 0) {
+		if(tempVec.dot(tempV) < 0) {
 			flipArray[Z] = true;
 		}
 		else flipArray[Z] = false;		
 	}
-	
-	SGVec_3f tempV_1 = new SGVec_3f();
+
+	//SGVec_3f tempV_1 = new SGVec_3f();
 
 	/*public void setDVecFromTuple(SGVec_3f vec, SGVec_3f tuple) {
 		vec.x = tuple.x; 
@@ -1147,17 +1213,18 @@ public class Basis {
 		tuple.x = vec.x; tuple.y = vec.y; tuple.z = vec.z;
 	}*/
 
-	private void updateRays() {			
+	private void updateRays() {		
+		SGVec_3f tempV = new SGVec_3f();
 		xRay.setP1(this.translate); 		
 		yRay.setP1(this.translate);			
 		zRay.setP1(this.translate);
 
-		setToComposedXBase(tempV_3);
-		xRay.heading(tempV_3);
-		setToComposedYBase(tempV_3);
-		yRay.heading(tempV_3);
-		setToComposedZBase(tempV_3);
-		zRay.heading(tempV_3);		
+		setToComposedXBase(tempV);
+		xRay.heading(tempV);
+		setToComposedYBase(tempV);
+		yRay.heading(tempV);
+		setToComposedZBase(tempV);
+		zRay.heading(tempV);		
 	}
 
 
@@ -1271,11 +1338,11 @@ public class Basis {
 	M10 = 1, M11 = 5, M12 = 9, M13 = 13,
 	M20 = 2, M21 = 6, M22 = 10, M23 = 14, 
 	M30 = 3, M31 = 7, M32 = 11, M33 = 15;
-	
-	
+
+
 	public static final int 
 	mM00 = 0, mM01 = 3, mM02 = 6,
 	mM10 = 1, mM11 = 4, mM12 = 7, 
 	mM20 = 2, mM21 = 5, mM22 = 8; 
-	
+
 }

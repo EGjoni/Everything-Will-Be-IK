@@ -275,17 +275,17 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 		Matrix4d startLocalShear = start.localMBasis.getShearScaleMatrix();
 		Matrix4d endLocalShear = end.localMBasis.getShearScaleMatrix();
 
-		localShear.val[Matrix4d.M00] = G.lerp(startLocalShear.val[Matrix4d.M00], endLocalShear.val[Matrix4d.M00], amount);
-		localShear.val[Matrix4d.M10] = G.lerp(startLocalShear.val[Matrix4d.M10], endLocalShear.val[Matrix4d.M10], amount);
-		localShear.val[Matrix4d.M20] = G.lerp(startLocalShear.val[Matrix4d.M20], endLocalShear.val[Matrix4d.M20], amount);
+		localShear.val[Matrix4d.M00] = MathUtils.lerp(startLocalShear.val[Matrix4d.M00], endLocalShear.val[Matrix4d.M00], amount);
+		localShear.val[Matrix4d.M10] = MathUtils.lerp(startLocalShear.val[Matrix4d.M10], endLocalShear.val[Matrix4d.M10], amount);
+		localShear.val[Matrix4d.M20] = MathUtils.lerp(startLocalShear.val[Matrix4d.M20], endLocalShear.val[Matrix4d.M20], amount);
 
-		localShear.val[Matrix4d.M01] = G.lerp(startLocalShear.val[Matrix4d.M01], endLocalShear.val[Matrix4d.M01], amount);
-		localShear.val[Matrix4d.M11] = G.lerp(startLocalShear.val[Matrix4d.M11], endLocalShear.val[Matrix4d.M11], amount);
-		localShear.val[Matrix4d.M21] = G.lerp(startLocalShear.val[Matrix4d.M21], endLocalShear.val[Matrix4d.M21], amount);
+		localShear.val[Matrix4d.M01] = MathUtils.lerp(startLocalShear.val[Matrix4d.M01], endLocalShear.val[Matrix4d.M01], amount);
+		localShear.val[Matrix4d.M11] = MathUtils.lerp(startLocalShear.val[Matrix4d.M11], endLocalShear.val[Matrix4d.M11], amount);
+		localShear.val[Matrix4d.M21] = MathUtils.lerp(startLocalShear.val[Matrix4d.M21], endLocalShear.val[Matrix4d.M21], amount);
 
-		localShear.val[Matrix4d.M02] = G.lerp(startLocalShear.val[Matrix4d.M02], endLocalShear.val[Matrix4d.M02], amount);
-		localShear.val[Matrix4d.M12] = G.lerp(startLocalShear.val[Matrix4d.M12], endLocalShear.val[Matrix4d.M12], amount);
-		localShear.val[Matrix4d.M22] = G.lerp(startLocalShear.val[Matrix4d.M22], endLocalShear.val[Matrix4d.M22], amount);
+		localShear.val[Matrix4d.M02] = MathUtils.lerp(startLocalShear.val[Matrix4d.M02], endLocalShear.val[Matrix4d.M02], amount);
+		localShear.val[Matrix4d.M12] = MathUtils.lerp(startLocalShear.val[Matrix4d.M12], endLocalShear.val[Matrix4d.M12], amount);
+		localShear.val[Matrix4d.M22] = MathUtils.lerp(startLocalShear.val[Matrix4d.M22], endLocalShear.val[Matrix4d.M22], amount);
 
 		this.localMBasis.translate = SGVec_3d.lerp(start.localMBasis.translate, end.localMBasis.translate, amount);
 		this.localMBasis.refreshMatrices();
@@ -311,17 +311,17 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 		Matrix4d startGlobalShear = start.globalMBasis.getShearScaleMatrix();
 		Matrix4d endGlobalShear = end.globalMBasis.getShearScaleMatrix();
 
-		globalShear.val[Matrix4d.M00] = G.lerp(startGlobalShear.val[Matrix4d.M00], endGlobalShear.val[Matrix4d.M00], amount);
-		globalShear.val[Matrix4d.M10] = G.lerp(startGlobalShear.val[Matrix4d.M10], endGlobalShear.val[Matrix4d.M10], amount);
-		globalShear.val[Matrix4d.M20] = G.lerp(startGlobalShear.val[Matrix4d.M20], endGlobalShear.val[Matrix4d.M20], amount);
+		globalShear.val[Matrix4d.M00] = MathUtils.lerp(startGlobalShear.val[Matrix4d.M00], endGlobalShear.val[Matrix4d.M00], amount);
+		globalShear.val[Matrix4d.M10] = MathUtils.lerp(startGlobalShear.val[Matrix4d.M10], endGlobalShear.val[Matrix4d.M10], amount);
+		globalShear.val[Matrix4d.M20] = MathUtils.lerp(startGlobalShear.val[Matrix4d.M20], endGlobalShear.val[Matrix4d.M20], amount);
 
-		globalShear.val[Matrix4d.M01] = G.lerp(startGlobalShear.val[Matrix4d.M01], endGlobalShear.val[Matrix4d.M01], amount);
-		globalShear.val[Matrix4d.M11] = G.lerp(startGlobalShear.val[Matrix4d.M11], endGlobalShear.val[Matrix4d.M11], amount);
-		globalShear.val[Matrix4d.M21] = G.lerp(startGlobalShear.val[Matrix4d.M21], endGlobalShear.val[Matrix4d.M21], amount);
+		globalShear.val[Matrix4d.M01] = MathUtils.lerp(startGlobalShear.val[Matrix4d.M01], endGlobalShear.val[Matrix4d.M01], amount);
+		globalShear.val[Matrix4d.M11] = MathUtils.lerp(startGlobalShear.val[Matrix4d.M11], endGlobalShear.val[Matrix4d.M11], amount);
+		globalShear.val[Matrix4d.M21] = MathUtils.lerp(startGlobalShear.val[Matrix4d.M21], endGlobalShear.val[Matrix4d.M21], amount);
 
-		globalShear.val[Matrix4d.M02] = G.lerp(startGlobalShear.val[Matrix4d.M02], endGlobalShear.val[Matrix4d.M02], amount);
-		globalShear.val[Matrix4d.M12] = G.lerp(startGlobalShear.val[Matrix4d.M12], endGlobalShear.val[Matrix4d.M12], amount);
-		globalShear.val[Matrix4d.M22] = G.lerp(startGlobalShear.val[Matrix4d.M22], endGlobalShear.val[Matrix4d.M22], amount);
+		globalShear.val[Matrix4d.M02] = MathUtils.lerp(startGlobalShear.val[Matrix4d.M02], endGlobalShear.val[Matrix4d.M02], amount);
+		globalShear.val[Matrix4d.M12] = MathUtils.lerp(startGlobalShear.val[Matrix4d.M12], endGlobalShear.val[Matrix4d.M12], amount);
+		globalShear.val[Matrix4d.M22] = MathUtils.lerp(startGlobalShear.val[Matrix4d.M22], endGlobalShear.val[Matrix4d.M22], amount);
 
 		this.globalMBasis.translate = SGVec_3d.lerp(start.globalMBasis.translate, end.globalMBasis.translate, amount);
 		this.globalMBasis.refreshMatrices();

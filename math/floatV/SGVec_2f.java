@@ -18,7 +18,9 @@ package sceneGraph.math.floatV;
 
 import java.io.Serializable;
 
-import sceneGraph.math.Interpolation;
+import sceneGraph.math.floatV.Interpolation;
+import sceneGraph.math.floatV.SGVec_2f;
+import sceneGraph.math.floatV.Vec2f;
 
 //import com.badlogic.gdx.utils.GdxRuntimeException;
 //import com.badlogic.gdx.utils.NumberUtils;
@@ -388,7 +390,7 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 
 	@Override
 	public SGVec_2f interpolate (SGVec_2f target, float alpha, Interpolation interpolation) {
-		return lerp(target, (float) interpolation.apply(alpha));
+		return lerp(target, interpolation.apply(alpha));
 	}
 
 /*	@Override
@@ -531,8 +533,7 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 		this.y = y;
 	}
 
-	@Override
-	public Vec2f toSGVec2f() {
+	public SGVec_2f toSGVec2f() {
 		return new SGVec_2f((float)x,(float) y);
 	}
 
