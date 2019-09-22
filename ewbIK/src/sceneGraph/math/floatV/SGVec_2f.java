@@ -18,7 +18,9 @@ package sceneGraph.math.floatV;
 
 import java.io.Serializable;
 
-import sceneGraph.math.Interpolation;
+import sceneGraph.math.floatV.Interpolation;
+import sceneGraph.math.floatV.SGVec_2f;
+import sceneGraph.math.floatV.Vec2f;
 
 //import com.badlogic.gdx.utils.GdxRuntimeException;
 //import com.badlogic.gdx.utils.NumberUtils;
@@ -61,12 +63,12 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 	}
 
 	public static float len (float x, float y) {
-		return (float)Math.sqrt(x * x + y * y);
+		return (float)MathUtils.sqrt(x * x + y * y);
 	}
 
 	@Override
 	public float mag () {
-		return (float)Math.sqrt(x * x + y * y);
+		return (float)MathUtils.sqrt(x * x + y * y);
 	}
 
 	public static float len2 (float x, float y) {
@@ -192,14 +194,14 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 	public static float dst (float x1, float y1, float x2, float y2) {
 		final float x_d = x2 - x1;
 		final float y_d = y2 - y1;
-		return (float)Math.sqrt(x_d * x_d + y_d * y_d);
+		return (float)MathUtils.sqrt(x_d * x_d + y_d * y_d);
 	}
 
 	@Override
 	public float dist (SGVec_2f v) {
 		final float x_d = v.x - x;
 		final float y_d = v.y - y;
-		return (float)Math.sqrt(x_d * x_d + y_d * y_d);
+		return (float)MathUtils.sqrt(x_d * x_d + y_d * y_d);
 	}
 
 	/** @param x The x-component of the other vector
@@ -208,7 +210,7 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 	public float dst (float x, float y) {
 		final float x_d = x - this.x;
 		final float y_d = y - this.y;
-		return (float)Math.sqrt(x_d * x_d + y_d * y_d);
+		return (float)MathUtils.sqrt(x_d * x_d + y_d * y_d);
 	}
 
 	public static float dst2 (float x1, float y1, float x2, float y2) {
@@ -242,7 +244,7 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 	public SGVec_2f limitSq (float limit2) {
 		float len2 = magSq();
 		if (len2 > limit2) {
-			return mult((float)Math.sqrt(limit2 / len2));
+			return mult((float)MathUtils.sqrt(limit2 / len2));
 		}
 		return this;
 	}
@@ -252,9 +254,9 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 		final float len2 = magSq();
 		if (len2 == 0f) return this;
 		float max2 = max * max;
-		if (len2 > max2) return mult((float)Math.sqrt(max2 / len2));
+		if (len2 > max2) return mult((float)MathUtils.sqrt(max2 / len2));
 		float min2 = min * min;
-		if (len2 < min2) return mult((float)Math.sqrt(min2 / len2));
+		if (len2 < min2) return mult((float)MathUtils.sqrt(min2 / len2));
 		return this;
 	}
 
@@ -266,7 +268,7 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 	@Override
 	public SGVec_2f setMagSq (float len2) {
 		float oldLen2 = magSq();
-		return (oldLen2 == 0 || oldLen2 == len2) ? this : mult((float)Math.sqrt(len2 / oldLen2));
+		return (oldLen2 == 0 || oldLen2 == len2) ? this : mult((float)MathUtils.sqrt(len2 / oldLen2));
 	}
 
 	/** Converts this {@code Vector2} to a string in the format {@code (x,y)}.
@@ -306,7 +308,7 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 	/** @return the angle in degrees of this vector (point) relative to the x-axis. Angles are towards the positive y-axis (typically
 	 *         counter-clockwise) and between 0 and 360. */
 	public float angle () {
-		float angle = (float)Math.atan2(y, x) * MathUtils.radiansToDegrees;
+		float angle = (float)MathUtils.atan2(y, x) * MathUtils.radiansToDegrees;
 		if (angle < 0) angle += 360;
 		return angle;
 	}
@@ -314,19 +316,19 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 	/** @return the angle in degrees of this vector (point) relative to the given vector. Angles are towards the positive y-axis
 	 *         (typically counter-clockwise.) between -180 and +180 */
 	public float angle (SGVec_2f reference) {
-		return (float)Math.atan2(crs(reference), dot(reference)) * MathUtils.radiansToDegrees;
+		return (float)MathUtils.atan2(crs(reference), dot(reference)) * MathUtils.radiansToDegrees;
 	}
 
 	/** @return the angle in radians of this vector (point) relative to the x-axis. Angles are towards the positive y-axis.
 	 *         (typically counter-clockwise) */
 	public float angleRad () {
-		return (float)Math.atan2(y, x);
+		return (float)MathUtils.atan2(y, x);
 	}
 
 	/** @return the angle in radians of this vector (point) relative to the given vector. Angles are towards the positive y-axis.
 	 *         (typically counter-clockwise.) */
 	public float angleRad (SGVec_2f reference) {
-		return (float)Math.atan2(crs(reference), dot(reference));
+		return (float)MathUtils.atan2(crs(reference), dot(reference));
 	}
 
 	/** Sets the angle of the vector in degrees relative to the x-axis, towards the positive y-axis (typically counter-clockwise).
@@ -353,8 +355,8 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 	/** Rotates the Vector2 by the given angle, counter-clockwise assuming the y-axis points up.
 	 * @param radians the angle in radians */
 	public SGVec_2f rotateRad (float radians) {
-		float cos = (float)Math.cos(radians);
-		float sin = (float)Math.sin(radians);
+		float cos = (float)MathUtils.cos(radians);
+		float sin = (float)MathUtils.sin(radians);
 
 		float newX = this.x * cos - this.y * sin;
 		float newY = this.x * sin + this.y * cos;
@@ -388,7 +390,7 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 
 	@Override
 	public SGVec_2f interpolate (SGVec_2f target, float alpha, Interpolation interpolation) {
-		return lerp(target, (float) interpolation.apply(alpha));
+		return lerp(target, interpolation.apply(alpha));
 	}
 
 /*	@Override
@@ -420,16 +422,16 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 	@Override
 	public boolean epsilonEquals (SGVec_2f other, float epsilon) {
 		if (other == null) return false;
-		if (Math.abs(other.x - x) > epsilon) return false;
-		if (Math.abs(other.y - y) > epsilon) return false;
+		if (MathUtils.abs(other.x - x) > epsilon) return false;
+		if (MathUtils.abs(other.y - y) > epsilon) return false;
 		return true;
 	}
 
 	/** Compares this vector with the other vector, using the supplied epsilon for fuzzy equality testing.
 	 * @return whether the vectors are the same. */
 	public boolean epsilonEquals (float x, float y, float epsilon) {
-		if (Math.abs(x - this.x) > epsilon) return false;
-		if (Math.abs(y - this.y) > epsilon) return false;
+		if (MathUtils.abs(x - this.x) > epsilon) return false;
+		if (MathUtils.abs(y - this.y) > epsilon) return false;
 		return true;
 	}
 
@@ -440,7 +442,7 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 
 	@Override
 	public boolean isUnit (final float margin) {
-		return Math.abs(magSq() - 1f) < margin;
+		return MathUtils.abs(magSq() - 1f) < margin;
 	}
 
 	@Override
@@ -531,8 +533,7 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 		this.y = y;
 	}
 
-	@Override
-	public Vec2f toSGVec2f() {
+	public SGVec_2f toSGVec2f() {
 		return new SGVec_2f((float)x,(float) y);
 	}
 

@@ -18,6 +18,7 @@ package sceneGraph.math.floatV;
 
 import java.util.Random;
 
+import IK.floatIK.G;
 import sceneGraph.math.RandomXS128;
 
 /** Utility and fast math functions.
@@ -34,9 +35,9 @@ public final class MathUtils {
 	static public final float PI2 = PI * 2f;
 	static public final float HALF_PI = PI * 2f;
 
-	static public final double E = Math.E;
+	static public final float E = (float) Math.E;
 
-	static private final int SIN_BITS = 14; // 16KB. Adjust for accuracy.
+	static private final int SIN_BITS = 20; // Adjust for accuracy (eats memory).
 	static private final int SIN_MASK = ~(-1 << SIN_BITS);
 	static private final int SIN_COUNT = SIN_MASK + 1;
 
@@ -49,35 +50,83 @@ public final class MathUtils {
 	static public final float radiansToDegrees = 180f / PI;
 	static public final float radDeg = radiansToDegrees;
 	/** multiply by this to convert from degrees to radians */
-	static public final float degreesToRadians = PI / 180;
+	static public final float degreesToRadians = PI / 180f;
 	static public final float degRad = degreesToRadians;
 
 
 	static private class Sin {
 		static final float[] table = new float[SIN_COUNT];
-
 		static {
 			for (int i = 0; i < SIN_COUNT; i++)
-				table[i] = (float)Math.sin((i + 0.5f) / SIN_COUNT * radFull);
-			for (int i = 0; i < 360; i += 90)
-				table[(int)(i * degToIndex) & SIN_MASK] = (float)Math.sin(i * degreesToRadians);
+				table[i] = (float)Math.sin((float)(i) / SIN_COUNT * radFull);
 		}
 	}
 
 
 	/** Returns the sine in radians from a lookup table. */
 	static public float sin (float radians) {
-		return Sin.table[(int)(radians * radToIndex) & SIN_MASK];
+		return (float)Math.sin((double)radians);
+		/*float rawIndex = (radians * radToIndex);
+		int index = (int) rawIndex; 
+		float remainder = rawIndex - index; 
+		float result1 = Sin.table[index & SIN_MASK];
+		float result2 = Sin.table[index+1 & SIN_MASK]; 
+		return  G.lerp(result1, result2, remainder);*/
 	}
+	
+	
+	/*
+	 * intended for higher accuracy per megabyte (at the cost of some speed)
+	 * @param radians
+	 * @return
+	 */
+	/*static public double iSin(double tx) {
+		boolean negate = false;
+		double x = tx;
+		if(tx<0) {
+			negate = true; 
+			x = -tx;
+		}  
+		if( x >= PI2) {
+			x = x%PI2;
+		}
+				
+		double result = 0d;
+		//System.out.println(x);
+		if(x< HALF_PI) {
+		   result = piSin(x);
+		} else if(x < PI) {
+		   result = piSin(HALF_PI - (x-HALF_PI));
+		} else if(x < THREEHALF_PI) {
+			x = x%PI;
+		   result =-piSin(x); 
+		} else {
+			x = x%PI;
+		   result = -piSin(HALF_PI - (x-HALF_PI));
+		}
+		
+		if(negate) {
+			return -result;
+		} else {
+			return result;
+		}
+	}
+	}*/
+	
 
 	/** Returns the cosine in radians from a lookup table. */
 	static public float cos (float radians) {
-		return Sin.table[(int)((radians + PI / 2) * radToIndex) & SIN_MASK];
+		return sin(radians - 11f);
 	}
 
 	/** Returns the sine in radians from a lookup table. */
 	static public float sinDeg (float degrees) {
-		return Sin.table[(int)(degrees * degToIndex) & SIN_MASK];
+		float rawIndex = (degrees * degToIndex);
+		int index = (int) rawIndex; 
+		float remainder = rawIndex - index; 
+		float result1 = Sin.table[index & SIN_MASK];
+		float result2 = Sin.table[index+1 & SIN_MASK]; 
+		return  G.lerp(result1, result2, remainder);
 	}
 
 	/** Returns the cosine in radians from a lookup table. */
@@ -108,6 +157,10 @@ public final class MathUtils {
 	// ---
 
 	static public Random random = new RandomXS128();
+	
+	public static float lerp(float a, float b, float t) {
+		return (1-t)*a + t*b;
+	}
 
 	/** Returns a random number between 0 (inclusive) and the specified value (inclusive). */
 	static public int random (int range) {
@@ -298,5 +351,42 @@ public final class MathUtils {
 	/** @return the logarithm of value with base 2 */
 	static public double log2 (double value) {
 		return log(2, value);
+	}
+
+	public static float pow(float val, float power) {
+		return (float)Math.pow(val, power);
+	}
+
+	public static float abs(float f) {
+		return (float)Math.abs(f);
+	}
+
+	public static float sqrt(float f) {
+		return (float)Math.sqrt(f);
+	}
+
+	public static float asin(float sqrt) {
+		return (float)Math.asin(sqrt);
+	}
+	
+	public static float acos(float sqrt) {
+		return (float)Math.acos(sqrt);
+	}
+	
+	public static float toDegrees(float radians) {
+		return radians*radiansToDegrees;
+	}
+	
+	public static float toRadians(float radians) {
+		return radians*degreesToRadians;
+	}
+
+
+	public static float max(float a, float b) {
+		return a > b ? a : b;
+	}
+
+	public static float min(float a, float b) {
+		return a < b ? a : b;
 	}
 }

@@ -19,7 +19,6 @@ package sceneGraph.math.floatV;
 import java.io.Serializable;
 
 
-
 /** A 3x3 <a href="http://en.wikipedia.org/wiki/Row-major_order#Column-major_order">column major</a> matrix; useful for 2D
  * transforms.
  * 
@@ -151,8 +150,8 @@ public class Matrix3f implements Serializable {
 	 * @param radians the angle in radians.
 	 * @return This matrix for the purpose of chaining operations. */
 	public Matrix3f setToRotationRad (float radians) {
-		float cos = (float)Math.cos(radians);
-		float sin = (float)Math.sin(radians);
+		float cos = (float)MathUtils.cos(radians);
+		float sin = (float)MathUtils.sin(radians);
 		float[] val = this.val;
 
 		val[M00] = cos;
@@ -170,9 +169,6 @@ public class Matrix3f implements Serializable {
 		return this;
 	}
 
-	public Matrix3f setToRotation (SGVec_3f axis, float degrees) {
-		return setToRotation(axis, MathUtils.cosDeg(degrees), MathUtils.sinDeg(degrees));
-	}
 
 	public Matrix3f setToRotation (SGVec_3f axis, float cos, float sin) {
 		float[] val = this.val;
@@ -326,7 +322,7 @@ public class Matrix3f implements Serializable {
 	/*/** Copies the values from the provided affine matrix to this matrix. The last row is set to (0, 0, 1).
 	 * @param affine The affine matrix to copy.
 	 * @return This matrix for the purposes of chaining. 
-	public Matrix3d set (Affine2 affine) {
+	public Matrix3f set (Affine2 affine) {
 		float[] val = this.val;
 
 		val[M00] = affine.m00;
@@ -455,8 +451,8 @@ public class Matrix3f implements Serializable {
 	 * @return This matrix for the purpose of chaining. */
 	public Matrix3f rotateRad (float radians) {
 		if (radians == 0) return this;
-		float cos = (float)Math.cos(radians);
-		float sin = (float)Math.sin(radians);
+		float cos = (float)MathUtils.cos(radians);
+		float sin = (float)MathUtils.sin(radians);
 		float[] tmp = this.tmp;
 
 		tmp[M00] = cos;
@@ -512,6 +508,68 @@ public class Matrix3f implements Serializable {
 		mul(val, tmp);
 		return this;
 	}
+	
+	public SGVec_3f col(int column) {
+		float[] vecarr = new float[3]; 
+		getColumn(column, vecarr);
+		return new SGVec_3f(vecarr);
+	}
+	
+	/**
+     * Copies the matrix values in the specified column into the array
+     * @param column  the matrix column
+     * @param v    the vector into which the matrix column values will be copied
+     */
+	public void getColumn(int column, float[] arrVec)
+	{
+		switch (column) {
+		case 0:
+			arrVec[0] = val[M00];
+			arrVec[1] = val[M10];
+			arrVec[2] = val[M20];
+			    break;
+                
+		case 1:
+			arrVec[0] = val[M01];
+			arrVec[1] = val[M11];
+			arrVec[2] = val[M21];
+			    break;
+                
+		case 2:
+			arrVec[0] = val[M02];
+			arrVec[1] = val[M12];
+			arrVec[2] = val[M22];
+			    break;            
+		}
+	}
+	
+	public void setColumn(int column, float[] v) 
+	{   
+		setColumn(column, v[0], v[1], v[2], v[3]);
+	}
+	
+	public void setColumn(int column, float x, float y, float z, float w)
+	{
+		switch (column) {
+		case 0:
+			val[M00] = x;
+			val[M10] = y;
+			val[M20] = z;
+			break;
+
+		case 1:
+			val[M01] = x;
+			val[M11] = y;
+			val[M21] = z;
+			break;
+
+		case 2:
+			val[M02] = x;
+			val[M12] = y;
+			val[M22] = z;
+			break;
+		}
+	}
 
 	/** Get the values in this matrix.
 	 * @return The float values that make up this matrix in column-major order. */
@@ -527,17 +585,17 @@ public class Matrix3f implements Serializable {
 
 	public SGVec_2f getScale (SGVec_2f scale) {
 		float[] val = this.val;
-		scale.x = (float)Math.sqrt(val[M00] * val[M00] + val[M01] * val[M01]);
-		scale.y = (float)Math.sqrt(val[M10] * val[M10] + val[M11] * val[M11]);
+		scale.x = (float)MathUtils.sqrt(val[M00] * val[M00] + val[M01] * val[M01]);
+		scale.y = (float)MathUtils.sqrt(val[M10] * val[M10] + val[M11] * val[M11]);
 		return scale;
 	}
 
 	public float getRotation () {
-		return MathUtils.radiansToDegrees * (float)Math.atan2(val[M10], val[M00]);
+		return MathUtils.radiansToDegrees * (float)MathUtils.atan2(val[M10], val[M00]);
 	}
 
 	public float getRotationRad () {
-		return (float)Math.atan2(val[M10], val[M00]);
+		return (float)MathUtils.atan2(val[M10], val[M00]);
 	}
 
 	/** Scale the matrix in the both the x and y components by the scalar value.

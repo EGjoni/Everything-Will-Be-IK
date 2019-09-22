@@ -18,15 +18,20 @@ package sceneGraph.math.floatV;
 
 import java.io.Serializable;
 
+import data.CanLoad;
 import data.JSONArray;
-import sceneGraph.math.Interpolation;
+import data.JSONObject;
+import sceneGraph.math.floatV.Interpolation;
+import sceneGraph.math.doubleV.Vec3d;
+import sceneGraph.math.floatV.SGVec_3f;
+import sceneGraph.math.floatV.Vec3f;
 
 //import com.badlogic.gdx.utils.GdxRuntimeException;
 //import com.badlogic.gdx.utils.NumberUtils;
 
 /** Encapsulates a 3D vector. Allows chaining operations by returning a reference to itself in all modification methods.
  * @author badlogicgames@gmail.com */
-public class SGVec_3f implements Serializable, Vec3f<SGVec_3f> {
+public class SGVec_3f implements Serializable, Vec3f<SGVec_3f>, CanLoad {
 	private static final long serialVersionUID = 3840054589595372522L;
 
 	/** the x-component of this vector **/
@@ -51,8 +56,19 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f> {
 	public SGVec_3f (float x, float y, float z) {
 		this.set(x, y, z);
 	}
+	
+	public SGVec_3f(JSONObject j) {
+		JSONArray components = j.getJSONArray("vec");
+		this.x = components.getFloat(0);
+		this.y = components.getFloat(1);
+		this.z = components.getFloat(2);
+	}
 
-
+	/** Creates a vector from the given vector
+	 * @param vector The vector */
+	public SGVec_3f (final Vec3d vector) {
+		this.set(vector);
+	}
 	
 	/** Creates a vector from the given vector
 	 * @param vector The vector */
@@ -67,6 +83,11 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f> {
 		this.set(values[0], values[1], values[2]);
 	}
 
+	public SGVec_3f (JSONArray j) {
+		this.x = j.getFloat(0);
+		this.y = j.getFloat(1);
+		this.z = j.getFloat(2);
+	}
 
 
 	/** Sets the vector to the given components
@@ -81,6 +102,19 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f> {
 		this.z = z;
 		return this;
 	}
+	
+	/** Sets the vector to the given components
+	 *
+	 * @param x The x-component
+	 * @param y The y-component
+	 * @param z The z-component
+	 * @return this vector for chaining */
+	public SGVec_3f set (double x, double  y, double z) {
+		this.x = (float)x;
+		this.y = (float)y;
+		this.z = (float)z;
+		return this;
+	}
 
 	public SGVec_3f set (final SGVec_3f vector) {
 		return this.set(vector.x, vector.y, vector.z);
@@ -91,7 +125,9 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f> {
 		return this.set(vector.getX(), vector.getY(), vector.getZ());
 	}
 	
-	
+	public SGVec_3f set (final Vec3d vector) {
+		return this.set(vector.getX(), vector.getY(), vector.getZ());
+	}
 
 	/** Sets the components from the array. The array must have at least 3 elements
 	 *
@@ -230,12 +266,12 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f> {
 
 	/** @return The euclidean length */
 	public static float mag (final float x, final float y, final float z) {
-		return (float)Math.sqrt(x * x + y * y + z * z);
+		return MathUtils.sqrt(x * x + y * y + z * z);
 	}
 
 	@Override
 	public float mag () {
-		return (float)Math.sqrt(x * x + y * y + z * z);
+		return MathUtils.sqrt(x * x + y * y + z * z);
 	}
 
 	/** @return The squared euclidean length */
@@ -259,7 +295,7 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f> {
 		final float a = x2 - x1;
 		final float b = y2 - y1;
 		final float c = z2 - z1;
-		return (float)Math.sqrt(a * a + b * b + c * c);
+		return MathUtils.sqrt(a * a + b * b + c * c);
 	}
 
 	@Override
@@ -267,7 +303,7 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f> {
 		final float a = vector.x - x;
 		final float b = vector.y - y;
 		final float c = vector.z - z;
-		return (float)Math.sqrt(a * a + b * b + c * c);
+		return MathUtils.sqrt(a * a + b * b + c * c);
 	}
 
 	/** @return the distance between this point and the given point */
@@ -275,7 +311,7 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f> {
 		final float a = x - this.x;
 		final float b = y - this.y;
 		final float c = z - this.z;
-		return (float)Math.sqrt(a * a + b * b + c * c);
+		return MathUtils.sqrt(a * a + b * b + c * c);
 	}
 
 	/** @return the squared distance between the given points */
@@ -309,7 +345,7 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f> {
 	@Override
 	public SGVec_3f normalize () {
 		final float len2 = this.mag();
-		if (len2 == 0d || len2 == 1d) return this;
+		if (len2 == 0f || len2 == 1f) return this;
 		return this.mult(1f / (float)len2);
 	}
 
@@ -396,7 +432,7 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f> {
 			* l_mat[Matrix3f.M11] + z * l_mat[Matrix3f.M21], x * l_mat[Matrix3f.M02] + y * l_mat[Matrix3f.M12] + z * l_mat[Matrix3f.M22]);
 	}
 
-	/** Multiplies the vector by the given {@link Quaternionf}.
+	/** Multiplies the vector by the given {@link Quaternionff}.
 	 * @return This vector for chaining */
 	public SGVec_3f mul (final Quaternionf quat) {
 		return quat.transform(this);
@@ -413,6 +449,35 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f> {
 		return this.set((x * l_mat[Matrix4f.M00] + y * l_mat[Matrix4f.M01] + z * l_mat[Matrix4f.M02] + l_mat[Matrix4f.M03]) * l_w, (x
 			* l_mat[Matrix4f.M10] + y * l_mat[Matrix4f.M11] + z * l_mat[Matrix4f.M12] + l_mat[Matrix4f.M13])
 			* l_w, (x * l_mat[Matrix4f.M20] + y * l_mat[Matrix4f.M21] + z * l_mat[Matrix4f.M22] + l_mat[Matrix4f.M23]) * l_w);
+	}
+	
+	
+	/**
+	 * Takes two vectors representing a plane 
+	 * and returns the projection of this vector onto 
+	 * that plane.
+	 * 
+	 * @param p1 vector representing first edge of plane 
+	 * @param p2 vector representing second edge of plane
+	 * @return
+	 */
+	public SGVec_3f getPlaneProjectionOf(SGVec_3f p1, SGVec_3f p2) {
+		return this.getPlaneProjectionOf(p1.crossCopy(p2));
+	}
+	
+	
+	/**
+	 * Takes a vector representing the normal of a plane, and returns 
+	 * the value of this vector projected onto that plane
+	 * @param norm
+	 * @return
+	 */
+	public SGVec_3f getPlaneProjectionOf(SGVec_3f rawNorm) {
+		SGVec_3f norm = rawNorm.copy().normalize();
+		SGVec_3f normProj = norm.multCopy(this.dot(norm));
+		normProj.mult(-1);
+		
+		return normProj.addCopy(this);
 	}
 
 	/** Multiplies this vector by the first three columns of the matrix, essentially only applying rotation and scaling.
@@ -498,7 +563,7 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f> {
 
 	@Override
 	public boolean isUnit (final float margin) {
-		return Math.abs(magSq() - 1f) < margin;
+		return MathUtils.abs(magSq() - 1f) < margin;
 	}
 
 	@Override
@@ -518,7 +583,7 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f> {
 
 	@Override
 	public boolean isOnLine (SGVec_3f other) {
-		return magSq(y * other.z - z * other.y, z * other.x - x * other.z, x * other.y - y * other.x) <= MathUtils.FLOAT_ROUNDING_ERROR;
+		return magSq(y * other.z - z * other.y, z * other.x - x * other.z, x * other.y - y * other.x) <= MathUtils.DOUBLE_ROUNDING_ERROR;
 	}
 
 	@Override
@@ -570,8 +635,8 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f> {
 	}
 
 	@Override
-	public SGVec_3f interpolate(SGVec_3f target, float alpha, Interpolation interpolator) {
-		return lerp(target, (float) interpolator.apply(0f, 1f, alpha));
+	public SGVec_3f interpolate (SGVec_3f target, float alpha, Interpolation interpolator) {
+		return lerp(target, interpolator.apply(0f, 1f, alpha));
 	}
 
 	/** Spherically interpolates between this vector and the target vector by alpha which is in the range [0,1]. The result is
@@ -586,25 +651,25 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f> {
 		if (dot > 0.9995 || dot < -0.9995) return lerp(target, alpha);
 
 		// theta0 = angle between input vectors
-		final float theta0 = (float)Math.acos(dot);
+		final float theta0 = (float)MathUtils.acos(dot);
 		// theta = angle between this vector and result
 		final float theta = theta0 * alpha;
 
-		final float st = (float)Math.sin(theta);
+		final float st = (float)MathUtils.sin(theta);
 		final float tx = target.x - x * dot;
 		final float ty = target.y - y * dot;
 		final float tz = target.z - z * dot;
 		final float l2 = tx * tx + ty * ty + tz * tz;
-		final float dl = st * ((l2 < 0.0001f) ? 1f : 1f / (float)Math.sqrt(l2));
+		final float dl = st * ((l2 < 0.0001f) ? 1f : 1f / MathUtils.sqrt(l2));
 
-		return mult((float)Math.cos(theta)).add(tx * dl, ty * dl, tz * dl).normalize();
+		return mult(MathUtils.cos(theta)).add(tx * dl, ty * dl, tz * dl).normalize();
 	}
 
 	/** Converts this {@code Vector3} to a string in the format {@code (x,y,z)}.
 	 * @return a string representation of this object. */
 	@Override
 	public String toString () {
-		return "(" + x + "," + y + "," + z + ")";
+		return "(" +(float) x + "," + (float)y + "," + (float)z + ")";
 	}
 
 
@@ -617,7 +682,7 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f> {
 	public SGVec_3f limitSq (float limit2) {
 		float len2 = magSq();
 		if (len2 > limit2) {
-			mult((float)Math.sqrt(limit2 / len2));
+			mult(MathUtils.sqrt(limit2 / len2));
 		}
 		return this;
 	}
@@ -630,7 +695,7 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f> {
 	@Override
 	public SGVec_3f setMagSq (float len2) {
 		float oldLen2 = magSq();
-		return (oldLen2 == 0 || oldLen2 == len2) ? this : mult((float)Math.sqrt(len2 / oldLen2));
+		return (oldLen2 == 0 || oldLen2 == len2) ? this : mult(MathUtils.sqrt(len2 / oldLen2));
 	}
 
 	@Override
@@ -638,9 +703,9 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f> {
 		final float len2 = magSq();
 		if (len2 == 0f) return this;
 		float max2 = max * max;
-		if (len2 > max2) return mult((float)Math.sqrt(max2 / len2));
+		if (len2 > max2) return mult(MathUtils.sqrt(max2 / len2));
 		float min2 = min * min;
-		if (len2 < min2) return mult((float)Math.sqrt(min2 / len2));
+		if (len2 < min2) return mult(MathUtils.sqrt(min2 / len2));
 		return this;
 	}
 
@@ -648,18 +713,18 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f> {
 	@Override
 	public boolean epsilonEquals (final SGVec_3f other, float epsilon) {
 		if (other == null) return false;
-		if (Math.abs(other.x - x) > epsilon) return false;
-		if (Math.abs(other.y - y) > epsilon) return false;
-		if (Math.abs(other.z - z) > epsilon) return false;
+		if (MathUtils.abs(other.x - x) > epsilon) return false;
+		if (MathUtils.abs(other.y - y) > epsilon) return false;
+		if (MathUtils.abs(other.z - z) > epsilon) return false;
 		return true;
 	}
 
 	/** Compares this vector with the other vector, using the supplied epsilon for fuzzy equality testing.
 	 * @return whether the vectors are the same. */
 	public boolean epsilonEquals (float x, float y, float z, float epsilon) {
-		if (Math.abs(x - this.x) > epsilon) return false;
-		if (Math.abs(y - this.y) > epsilon) return false;
-		if (Math.abs(z - this.z) > epsilon) return false;
+		if (MathUtils.abs(x - this.x) > epsilon) return false;
+		if (MathUtils.abs(y - this.y) > epsilon) return false;
+		if (MathUtils.abs(z - this.z) > epsilon) return false;
 		return true;
 	}
 
@@ -708,14 +773,14 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f> {
 		
 		float threshold = this.mag() * 0.6f;
 		if(threshold > 0) {
-			if (Math.abs(x) <= threshold) {
-				float inverse  = (float) (1 / Math.sqrt(y * y + z * z));
+			if (MathUtils.abs(x) <= threshold) {
+				float inverse  = 1 / MathUtils.sqrt(y * y + z * z);
 				return new SGVec_3f(0, inverse * z, -inverse * y);
-			} else if (Math.abs(y) <= threshold) {
-				float inverse  = (float) (1 / Math.sqrt(x * x + z * z));
+			} else if (MathUtils.abs(y) <= threshold) {
+				float inverse  = 1 / MathUtils.sqrt(x * x + z * z);
 				return new SGVec_3f(-inverse * z, 0, inverse * x);
 			}
-			float inverse  = (float) (1 / Math.sqrt(x * x + y * y));
+			float inverse  = 1 / MathUtils.sqrt(x * x + y * y);
 			return new SGVec_3f(inverse * y, -inverse * x, 0);
 		}
 
@@ -723,7 +788,7 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f> {
 	}
 
 	@Override
-	public Vec3f toSGVec3f() {
+	public SGVec_3f toSGVec3f() {
 		return new SGVec_3f((float)x,(float)y,(float)z);
 	}
 	
@@ -754,7 +819,7 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f> {
 	
 	/**
 	 * Subtract one vector from another and store in another vector
-	 * @param target SGVec_3d in which to store the result
+	 * @param target SGVec_3f in which to store the result
 	 */
 	static public SGVec_3f sub(SGVec_3f v1, SGVec_3f v2) {
 		return SGVec_3f.sub(v1, v2, null);
@@ -787,8 +852,8 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f> {
 	}
 
 	/**
-	 * Subtract one vector from another and store in another vector
-	 * @param target SGVec_3d in which to store the result
+	 * Subtract v3 from v1 and store in target
+	 * @param target SGVec_3f in which to store the result
 	 * @return 
 	 */
 	static public SGVec_3f sub(SGVec_3f v1, SGVec_3f v2, SGVec_3f target) {
@@ -806,9 +871,9 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f> {
 	}
 	
 	/**
-	 * @param v1 any variable of type SGVec_3d
-	 * @param v2 any variable of type SGVec_3d
-	 * @param target SGVec_3d to store the result
+	 * @param v1 any variable of type SGVec_3f
+	 * @param v2 any variable of type SGVec_3f
+	 * @param target SGVec_3f to store the result
 	 */
 	public static SGVec_3f cross(SGVec_3f v1, SGVec_3f v2, SGVec_3f target) {
 		float crossX = v1.y * v2.z - v2.y * v1.z;
@@ -825,7 +890,7 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f> {
 	
 	
 	/**
-	 * Linear interpolate between two vectors (returns a new SGVec_3d object)
+	 * Linear interpolate between two vectors (returns a new SGVec_3f object)
 	 * @param v1 the vector to start from
 	 * @param v2 the vector to lerp to
 	 */
@@ -836,16 +901,16 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f> {
 	}
 	
 	/**
-	 * ( begin auto-generated from SGVec_3d_angleBetween.xml )
+	 * ( begin auto-generated from SGVec_3f_angleBetween.xml )
 	 *
 	 * Calculates and returns the angle (in radians) between two vectors.
 	 *
 	 * ( end auto-generated )
 	 *
-	 * @webref SGVec_3d:method
+	 * @webref SGVec_3f:method
 	 * @usage web_application
-	 * @param v1 the x, y, and z components of a SGVec_3d
-	 * @param v2 the x, y, and z components of a SGVec_3d
+	 * @param v1 the x, y, and z components of a SGVec_3f
+	 * @param v2 the x, y, and z components of a SGVec_3f
 	 * @brief Calculate and return the angle between two vectors
 	 */
 	static public float angleBetween(SGVec_3f v1, SGVec_3f v2) {
@@ -856,8 +921,8 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f> {
 		if (v2.x == 0 && v2.y == 0 && v2.z == 0 ) return 0.0f;
 
 		float dot = v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
-		float v1mag = (float) Math.sqrt(v1.x * v1.x + v1.y * v1.y + v1.z * v1.z);
-		float v2mag = (float) Math.sqrt(v2.x * v2.x + v2.y * v2.y + v2.z * v2.z);
+		float v1mag = MathUtils.sqrt(v1.x * v1.x + v1.y * v1.y + v1.z * v1.z);
+		float v2mag = MathUtils.sqrt(v2.x * v2.x + v2.y * v2.y + v2.z * v2.z);
 		// This should be a number between -1 and 1, since it's "normalized"
 		float amt = dot / (v1mag * v2mag);
 		// But if it's not due to rounding error, then we need to fix it
@@ -869,7 +934,7 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f> {
 		} else if (amt >= 1) {
 			return 0;
 		}
-		return (float) Math.acos(amt);
+		return (float) MathUtils.acos(amt);
 	}
 
 	@Override
@@ -884,5 +949,24 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f> {
 		return vec;
 	}
 
+	@Override
+	public CanLoad populateSelfFromJSON(JSONObject j) {
+		JSONArray components = j.getJSONArray("vec");
+		this.x = components.getFloat(0);
+		this.y = components.getFloat(1);
+		this.z = components.getFloat(2);
+		return this;
+	}
+
+	@Override
+	public JSONObject toJSONObject() {
+		JSONObject j = new JSONObject(); 
+		JSONArray components = new JSONArray(); 
+		components.append(this.x);
+		components.append(this.y);
+		components.append(this.z);
+		j.setJSONArray("vec", components); 
+		return j;
+	}
 
 }

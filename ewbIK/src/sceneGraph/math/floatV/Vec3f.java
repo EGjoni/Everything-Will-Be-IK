@@ -4,7 +4,9 @@ import data.CanLoad;
 import data.JSONArray;
 import data.JSONObject;
 import sceneGraph.IKVector;
-import sceneGraph.math.Vec3d;
+import sceneGraph.math.doubleV.Vec3d;
+import sceneGraph.math.floatV.SGVec_3f;
+import sceneGraph.math.floatV.Vec3f;
 
 public interface Vec3f<T extends Vec3f<T>> extends Vecf<T> {
 		
@@ -54,10 +56,10 @@ public interface Vec3f<T extends Vec3f<T>> extends Vecf<T> {
 	 * vector implementation requires more than that. 
 	 * @param v
 	 */
-	public default void adoptValuesOf(Vec3d v) {
-		setX_((float)v.getX());
-		setY_((float)v.getY());
-		setZ_((float)v.getZ());
+	public default void adoptValuesOf(Vec3f v) {
+		setX_(v.getX());
+		setY_(v.getY());
+		setZ_(v.getZ());
 	}
 	
 	/**
@@ -67,10 +69,10 @@ public interface Vec3f<T extends Vec3f<T>> extends Vecf<T> {
 	 * vector implementation requires more than that. 
 	 * @param v
 	 */
-	public default void adoptValuesOf(Vec3f v) {
-		setX_(v.getX());
-		setY_(v.getY());
-		setZ_(v.getZ());
+	public default void adoptValuesOf(Vec3d v) {
+		setX_((float)v.getX());
+		setY_((float)v.getY());
+		setZ_((float)v.getZ());
 	}
 	
 	
@@ -109,7 +111,7 @@ public interface Vec3f<T extends Vec3f<T>> extends Vecf<T> {
 	/**
 	 * @return a copy of this Vector cast to a single precision analog.
 	 */
-	public Vec3f toSGVec3f();
+	public SGVec_3f toSGVec3f();
 
 	T crs(T vector); 
 

@@ -16,12 +16,12 @@
 
 package sceneGraph.math.floatV;
 
-import sceneGraph.math.Interpolation;
+import sceneGraph.math.Vec;
 
 /** Encapsulates a general vector. Allows chaining operations by returning a reference to itself in all modification methods. See
- * {@link SGVec_2d} and {@link SGVec_3d} for specific implementations.
+ * {@link SGVec_2f} and {@link SGVec_3f} for specific implementations.
  * @author Xoppa */
-public interface Vecf<T extends Vecf<T>> {	
+public interface Vecf<T extends Vecf<T>> extends Vec<T> {	
 
 	
 
@@ -72,13 +72,13 @@ public interface Vecf<T extends Vecf<T>> {
 	float dot (T v);
 
 	/**
-	 * ( begin auto-generated from SGVec_3d_div.xml )
+	 * ( begin auto-generated from SGVec_3f_div.xml )
 	 *
 	 * Divides a vector by a scalar or divides one vector by another.
 	 *
 	 * ( end auto-generated )
 	 *
-	 * @webref Vecd:method
+	 * @webref Vecf:method
 	 * @usage web_application
 	 * @brief Divide a vector by a scalar
 	 * @param n the number by which to divide the vector

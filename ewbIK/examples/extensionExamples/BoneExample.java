@@ -111,13 +111,11 @@ public class BoneExample extends AbstractBone {
 	@Override
 	protected IKPinExample createAndReturnPinAtOrigin(SGVec_3d origin) {
 		// TODO Auto-generated method stub
+		AbstractAxes thisBoneAxes = localAxes().getGlobalCopy(); 
+		thisBoneAxes.setOrthoNormalityConstraint(true);
+		thisBoneAxes.translateTo(origin);
 		return new IKPinExample(
-				new AxesExample(
-							this.getBase(), 
-							new ExampleVector(1,0,0), 
-							new ExampleVector(0,1,0), 
-							new ExampleVector(0,0,1),
-							true, null), 
+						thisBoneAxes, 
 						true, 
 						this
 				);
