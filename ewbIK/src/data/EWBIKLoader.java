@@ -20,6 +20,7 @@ import IK.doubleIK.AbstractBone;
 import IK.doubleIK.AbstractIKPin;
 import IK.doubleIK.AbstractKusudama;
 import IK.doubleIK.AbstractLimitCone;
+import IK.doubleIK.Constraint;
 import data.JSONArray;
 import data.JSONObject;
 import data.Saveable;
@@ -30,7 +31,7 @@ import sceneGraph.math.doubleV.SGVec_3d;
 import sceneGraph.math.floatV.SGVec_3f;
 import sceneGraph.math.floatV.Vec3f;
 
-public final class EWBIKLoader {
+public class EWBIKLoader implements LoadManager {
 
 	public static final int SINGLE = 1, DOUBLE = 2; 
 	public static int currentMode = DOUBLE;
@@ -40,43 +41,87 @@ public final class EWBIKLoader {
 	public static void setMode(int mode) {
 		currentMode = mode;
 	}
-
-	public static void importFile(File selection) {
+	
+	/**
+	 * NOTE: in order to load custom (extended classes), those classes MUST have a default constructor! 
+	 * 
+	 * @param filePath location of file to import
+	 * @param AxesClass the class object you've used to extend the AbstractAxes class. If null, AbstractAxes will be used. 
+	 * @param BoneClass the class object you've used to extend the AbstractBone class. If null, AbstractBone will be used. 
+	 * @param ArmatureClass the class object you've used to extend the AbstractArmature class. If null, AbstractArmature will be used. 
+	 * @param KusudamaClass the class object you've used to extend the AbstractKusudama class. If null, AbstractKusudama will be used. 
+	 * @param LimitConeClass the class object you've used to extend the AbstractLimitCone class. If null, AbstractLimitCone will be used. 
+	 * @param IKPinClass the class object you've used to extend the AbstractIKPin class. If null, AbstractIKPin will be used. 
+	 * 
+	 * @return a list of all instantiated armatures specified by the input file. 
+	 */
+	public  Collection<? extends AbstractArmature> importDoublePrecisionArmatures(String filepath, 
+			Class<? extends AbstractAxes> AxesClass, 
+			Class<? extends AbstractBone> BoneClass, 
+			Class<? extends AbstractArmature> ArmatureClass, 
+			Class<? extends Constraint> KusudamaClass, 
+			Class<? extends AbstractLimitCone>  LimitConeClass, 
+			Class<? extends AbstractIKPin> IKPinClass) {
+		currentMode = DOUBLE;
+		File selection = new File(filepath);
 		JSONObject loadFile = StringFuncs.loadJSONObject(selection);
 		clearCurrentLoadObjects();
-		loadJSON(loadFile);
+		return DoubleBackedLoader.loadJSON(loadFile, 
+				AxesClass, 
+				BoneClass, 
+				ArmatureClass, 
+				KusudamaClass, 
+				LimitConeClass, 
+				IKPinClass,
+				this);
 	}
-
 	
+	
+	/**
+	 * NOTE: in order to load custom (extended classes), those classes MUST have a default constructor! 
+	 * 
+	 * @param filePath location of file to import
+	 * @param AxesClass the class object you've used to extend the AbstractAxes class. If null, AbstractAxes will be used. 
+	 * @param BoneClass the class object you've used to extend the AbstractBone class. If null, AbstractBone will be used. 
+	 * @param ArmatureClass the class object you've used to extend the AbstractArmature class. If null, AbstractArmature will be used. 
+	 * @param KusudamaClass the class object you've used to extend the AbstractKusudama class. If null, AbstractKusudama will be used. 
+	 * @param LimitConeClass the class object you've used to extend the AbstractLimitCone class. If null, AbstractLimitCone will be used. 
+	 * @param IKPinClass the class object you've used to extend the AbstractIKPin class. If null, AbstractIKPin will be used. 
+	 * 
+	 * @return a list of all instantiated armatures specified by the input file. 
+	 */
 
-	public static void loadJSON(JSONObject loadFile) {
-		if(currentMode == SINGLE) 
-			FloatBackedLoader.loadJSON(loadFile); 
-		else
-			DoubleBackedLoader.loadJSON(loadFile);
+	public Collection<? extends  IK.floatIK.AbstractArmature> importSinglePrecisionArmatures(String filepath,
+			Class<? extends sceneGraph.math.floatV.AbstractAxes> AxesClass, 
+			Class<? extends IK.floatIK.AbstractBone> BoneClass, 
+			Class<? extends IK.floatIK.AbstractArmature> ArmatureClass, 
+			Class<? extends IK.floatIK.Constraint> KusudamaClass, 
+			Class<? extends IK.floatIK.AbstractLimitCone>  LimitConeClass, 
+			Class<? extends IK.floatIK.AbstractIKPin> IKPinClass) {
+		currentMode = SINGLE;
+		File selection = new File(filepath);
+		JSONObject loadFile = StringFuncs.loadJSONObject(selection);
+		clearCurrentLoadObjects();
+		return FloatBackedLoader.loadJSON(loadFile,
+				AxesClass, 
+				BoneClass, 
+				ArmatureClass, 
+				KusudamaClass, 
+				LimitConeClass, 
+				IKPinClass,
+				this); 	
 	}
 
-	private static void clearCurrentSceneObjects() {
-		if(currentMode == SINGLE) 
-			FloatBackedLoader.clearCurrentSceneObjects(); 
-		else
-			DoubleBackedLoader.clearCurrentSceneObjects();
 
-	}
 
 	public static void updateArmatureSegments() {
-		if(currentMode == SINGLE) 
 			FloatBackedLoader.updateArmatureSegments(); 
-		else
 			DoubleBackedLoader.updateArmatureSegments();
 	}
 
 
-
 	public static void clearCurrentLoadObjects() {
-		if(currentMode == SINGLE) 
 			FloatBackedLoader.clearCurrentLoadObjects(); 
-		else
 			DoubleBackedLoader.clearCurrentLoadObjects();
 	}
 
@@ -121,8 +166,6 @@ public final class EWBIKLoader {
 			return DoubleBackedLoader.hashMapFromJSON(json, ti);
 	}
 
-
-
 	public static Object parsePrimitive(Class keyClass, String toParse) {
 		if(keyClass == String.class) return toParse;
 		if(keyClass == Float.class) return Float.parseFloat(toParse);
@@ -153,35 +196,21 @@ public final class EWBIKLoader {
 	 * @return
 	 */
 
-	public static Saveable getObjectFromClassMaps(Class keyClass, String identityHash) {
+	public Saveable getObjectFromClassMaps(Class keyClass, String identityHash) {
 		if(currentMode == SINGLE) 
 			return FloatBackedLoader.getObjectFromClassMaps(keyClass, identityHash);
 		else
 			return DoubleBackedLoader.getObjectFromClassMaps(keyClass, identityHash);
 	}
-
-	
-	public static <T extends Saveable> T getObjectFor(Class objectClass, JSONObject j, String hash) {
-		if(j.hasKey(hash)) {
-			return (T)getObjectFromClassMaps(objectClass, j.getString(hash));
-		} else return null;
-	}
-	
-	public static TypeIdentifier getNewTypeIdentifier(Object k, Object v) {
-		return new TypeIdentifier(k, v);
-	}
-
 	
 
 	public static void setTempLoadDirectory(String tempLoadDirectory) {
 		tempLoadDirectory = tempLoadDirectory;
 	}
 
-	public static<T extends Object> void arrayListFromJSONArray(JSONArray jsonArray, ArrayList<T> list, Class c) {	
-
+	public <T extends Object> void arrayListFromJSONArray(JSONArray jsonArray, ArrayList<T> list, Class c) {	
 		for(int i =0 ; i< jsonArray.size(); i++ ) {
 			Object item = jsonArray.get(i);
-
 			if(c==SGVec_3d.class) list.add((T) new SGVec_3d(jsonArray.getJSONArray(i))); 
 			else if(c == SGVec_3f.class) list.add((T) new SGVec_3f(jsonArray.getJSONArray(i)));
 			else if(c == Rot.class) list.add((T) new Rot(jsonArray.getJSONArray(i)));

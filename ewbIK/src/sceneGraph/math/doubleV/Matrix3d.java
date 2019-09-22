@@ -139,12 +139,6 @@ public class Matrix3d implements Serializable {
 		return this;
 	}
 
-	/** Sets this matrix to a rotation matrix that will rotate any vector in counter-clockwise direction around the z-axis.
-	 * @param degrees the angle in degrees.
-	 * @return This matrix for the purpose of chaining operations. */
-	public Matrix3d setToRotation (double degrees) {
-		return setToRotationRad(MathUtils.degreesToRadians * degrees);
-	}
 
 	/** Sets this matrix to a rotation matrix that will rotate any vector in counter-clockwise direction around the z-axis.
 	 * @param radians the angle in radians.
@@ -169,9 +163,7 @@ public class Matrix3d implements Serializable {
 		return this;
 	}
 
-	public Matrix3d setToRotation (SGVec_3d axis, double degrees) {
-		return setToRotation(axis, MathUtils.cosDeg(degrees), MathUtils.sinDeg(degrees));
-	}
+
 
 	public Matrix3d setToRotation (SGVec_3d axis, double cos, double sin) {
 		double[] val = this.val;
@@ -442,14 +434,6 @@ public class Matrix3d implements Serializable {
 
 	/** Postmultiplies this matrix with a (counter-clockwise) rotation matrix. Postmultiplication is also used by OpenGL ES' 1.x
 	 * glTranslate/glRotate/glScale.
-	 * @param degrees The angle in degrees
-	 * @return This matrix for the purpose of chaining. */
-	public Matrix3d rotate (double degrees) {
-		return rotateRad(MathUtils.degreesToRadians * degrees);
-	}
-
-	/** Postmultiplies this matrix with a (counter-clockwise) rotation matrix. Postmultiplication is also used by OpenGL ES' 1.x
-	 * glTranslate/glRotate/glScale.
 	 * @param radians The angle in radians
 	 * @return This matrix for the purpose of chaining. */
 	public Matrix3d rotateRad (double radians) {
@@ -591,10 +575,6 @@ public class Matrix3d implements Serializable {
 		scale.x = (double)Math.sqrt(val[M00] * val[M00] + val[M01] * val[M01]);
 		scale.y = (double)Math.sqrt(val[M10] * val[M10] + val[M11] * val[M11]);
 		return scale;
-	}
-
-	public double getRotation () {
-		return MathUtils.radiansToDegrees * (double)Math.atan2(val[M10], val[M00]);
 	}
 
 	public double getRotationRad () {

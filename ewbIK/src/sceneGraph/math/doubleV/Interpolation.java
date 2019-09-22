@@ -100,19 +100,19 @@ public abstract class Interpolation {
 
 	static public final Interpolation sine = new Interpolation() {
 		public double apply (double a) {
-			return (1 - MathUtils.cos(a * MathUtils.PI)) / 2;
+			return (1 - Math.cos(a * Math.PI)) / 2;
 		}
 	};
 
 	static public final Interpolation sineIn = new Interpolation() {
 		public double apply (double a) {
-			return 1 - MathUtils.cos(a * MathUtils.PI / 2);
+			return 1 - Math.cos(a * Math.PI / 2);
 		}
 	};
 
 	static public final Interpolation sineOut = new Interpolation() {
 		public double apply (double a) {
-			return MathUtils.sin(a * MathUtils.PI / 2);
+			return Math.sin(a * Math.PI / 2);
 		}
 	};
 
@@ -243,17 +243,17 @@ public abstract class Interpolation {
 			this.value = value;
 			this.power = power;
 			this.scale = scale;
-			this.bounces = bounces * MathUtils.PI * (bounces % 2 == 0 ? 1 : -1);
+			this.bounces = bounces * Math.PI * (bounces % 2 == 0 ? 1 : -1);
 		}
 
 		public double apply (double a) {
 			if (a <= 0.5f) {
 				a *= 2;
-				return (double)Math.pow(value, power * (a - 1)) * MathUtils.sin(a * bounces) * scale / 2;
+				return (double)Math.pow(value, power * (a - 1)) * Math.sin(a * bounces) * scale / 2;
 			}
 			a = 1 - a;
 			a *= 2;
-			return 1 - (double)Math.pow(value, power * (a - 1)) * MathUtils.sin((a) * bounces) * scale / 2;
+			return 1 - (double)Math.pow(value, power * (a - 1)) * Math.sin((a) * bounces) * scale / 2;
 		}
 	}
 
@@ -264,7 +264,7 @@ public abstract class Interpolation {
 
 		public double apply (double a) {
 			if (a >= 0.99) return 1;
-			return (double)Math.pow(value, power * (a - 1)) * MathUtils.sin(a * bounces) * scale;
+			return (double)Math.pow(value, power * (a - 1)) * Math.sin(a * bounces) * scale;
 		}
 	}
 
@@ -275,7 +275,7 @@ public abstract class Interpolation {
 
 		public double apply (double a) {
 			a = 1 - a;
-			return (1 - (double)Math.pow(value, power * (a - 1)) * MathUtils.sin(a * bounces) * scale);
+			return (1 - (double)Math.pow(value, power * (a - 1)) * Math.sin(a * bounces) * scale);
 		}
 	}
 

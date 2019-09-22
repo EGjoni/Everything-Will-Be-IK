@@ -137,11 +137,11 @@ public class SGVec_3d implements Serializable, Vec3d<SGVec_3d>, CanLoad {
 	 * @param polarAngle The angle between z-axis in radians [0, pi]
 	 * @return This vector for chaining */
 	public SGVec_3d setFromSpherical (double azimuthalAngle, double polarAngle) {
-		double cosPolar = MathUtils.cos(polarAngle);
-		double sinPolar = MathUtils.sin(polarAngle);
+		double cosPolar = Math.cos(polarAngle);
+		double sinPolar = Math.sin(polarAngle);
 
-		double cosAzim = MathUtils.cos(azimuthalAngle);
-		double sinAzim = MathUtils.sin(azimuthalAngle);
+		double cosAzim = Math.cos(azimuthalAngle);
+		double sinAzim = Math.sin(azimuthalAngle);
 
 		return this.set(cosAzim * sinPolar, sinAzim * sinPolar, cosPolar);
 	}
@@ -501,13 +501,13 @@ public class SGVec_3d implements Serializable, Vec3d<SGVec_3d>, CanLoad {
 
 	/** Rotates this vector by the given angle in degrees around the given axis.
 	 *
-	 * @param degrees the angle in degrees
+	 * @param rad the angle in radians
 	 * @param axisX the x-component of the axis
 	 * @param axisY the y-component of the axis
 	 * @param axisZ the z-component of the axis
 	 * @return This vector for chaining */
-	public SGVec_3d rotate (double degrees, double axisX, double axisY, double axisZ) {
-		return this.mul(tmpMat.setToRotation(axisX, axisY, axisZ, degrees));
+	public SGVec_3d rotate (double radians, double axisX, double axisY, double axisZ) {
+		return this.mul(tmpMat.setToRotation(axisX, axisY, axisZ, radians));
 	}
 
 	/** Rotates this vector by the given angle in radians around the given axis.

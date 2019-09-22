@@ -534,10 +534,6 @@ public class G {
 		return t * t * (3.0 - 2.0 * t);
 	}
 
-	public static SGVec_3f intersectTest(sgRayf r2b, SGVec_3f minorAppoloniusP3A, SGVec_3f minorAppoloniusP1A,
-			SGVec_3f minorAppoloniusP2A) {
-		// TODO Auto-generated method stub
-		return null;
-	}
+	
 
 }

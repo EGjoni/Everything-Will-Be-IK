@@ -22,9 +22,9 @@ import sceneGraph.math.doubleV.SGVec_3d;
 import sceneGraph.math.doubleV.sgRayd;
 
 
-public class FloatBackedSaver {
+public class FloatBackedSaver implements SaveManager{
 
-	static WeakHashMap<Saveable, Boolean> saveables = new WeakHashMap<Saveable, Boolean>();
+	WeakHashMap<Saveable, Boolean> saveables = new WeakHashMap<Saveable, Boolean>();
 
 	public static String currentFilePath;
 	public static String tempDir;
@@ -47,29 +47,29 @@ public class FloatBackedSaver {
 		//p.println("tempDir = " + tempDir);
 	}
 
-	public static void addToSaveState(Saveable saveObj) {
+	public  void addToSaveState(Saveable saveObj) {
 		saveables.put(saveObj, true);
 	}
 
 
 
-	public static void removeFromSaveState(Saveable saveObj) {
+	public  void removeFromSaveState(Saveable saveObj) {
 		saveables.remove(saveObj);
 	}
 
-	public static void clearSaveState() {
+	public  void clearSaveState() {
 		saveables.clear();
 	}
 
 
-	public static void notifyCurrentSaveablesOfSaveCompletion() {
+	public  void notifyCurrentSaveablesOfSaveCompletion() {
 		ArrayList<Saveable> sarr = new ArrayList<>(saveables.keySet());
 		for(Saveable s : sarr) {
-			s.notifyOfSaveCompletion();
+			s.notifyOfSaveCompletion(this);
 		}
 	}
 
-	public static JSONObject getSaveObject() {	
+	public  JSONObject getSaveObject() {	
 
 		JSONArray axesJSON = new JSONArray();	  
 		JSONArray armaturesJSON = new JSONArray();
@@ -83,7 +83,7 @@ public class FloatBackedSaver {
 		JSONObject saveObject = new JSONObject();
 
 		for(Saveable s: sk) {
-			JSONObject jsonObj = s.getSaveJSON(); 
+			JSONObject jsonObj = s.getSaveJSON(this); 
 			if(jsonObj != null) {
 				if(AbstractAxes.class.isAssignableFrom(s.getClass())) 
 					axesJSON.append(jsonObj);
@@ -115,14 +115,14 @@ public class FloatBackedSaver {
 		return resultString;
 	}
 
-	public static void saveAs(String savePath) {
+	public  void saveAs(String savePath) {
 		//File saveFile = p.saveFile("Save", currentFilePath, ".ga");//p.selectOutput("Save", "saveFileSelected");
 		currentFilePath = savePath;
 		//p.saveFileSelected(new File(currentFilePath));	
 		save();
 	}
 
-	public static void save() {
+	public  void save() {
 
 		JSONObject fileContent = getSaveObject();
 		//p.println(fileContent.toString());
@@ -140,7 +140,7 @@ public class FloatBackedSaver {
 	}
 
 	
-	public static JSONObject hashMapToJSON(HashMap<?, ?> hm) {
+	public  JSONObject hashMapToJSON(HashMap<?, ?> hm) {
 
 		Collection<?> keys = hm.keySet();
 		Iterator<?> keyI = keys.iterator();
@@ -224,7 +224,7 @@ public class FloatBackedSaver {
 	}
 
 
-	public static JSONArray arrayListToJSONArray(ArrayList<?> al) {
+	public  JSONArray arrayListToJSONArray(ArrayList<?> al) {
 		JSONArray result = new JSONArray(); 
 
 		for(int i = 0; i<al.size(); i++) {
@@ -262,7 +262,7 @@ public class FloatBackedSaver {
 		return result;
 	}
 
-	public static JSONArray primitiveArrayToJSONArray(Object a) {
+	public  JSONArray primitiveArrayToJSONArray(Object a) {
 		JSONArray result = null; 
 
 		if(a instanceof int[] || a instanceof Integer[]) 

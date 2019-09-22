@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.WeakHashMap;
 
-import IK.floatIK.StrandedArmature.Strand;
 import sceneGraph.math.floatV.AbstractAxes;
 import sceneGraph.math.floatV.Basis;
 import sceneGraph.math.floatV.MRotation;
@@ -60,6 +59,8 @@ public class SegmentedArmature {
 
 	public int chainLength = 0;
 	boolean includeInIK = true;
+
+	private int subTargetCounts = 0; 
 
 	public SegmentedArmature(AbstractBone rootBone) {
 		debugTipAxes = rootBone.localAxes.getGlobalCopy();
@@ -116,6 +117,21 @@ public class SegmentedArmature {
 		}
 		updatePinnedDescendants();	    
 		generateStrandMaps(); 
+		updateTotalSubTargets();
+	}
+
+	/**
+	 * calculates the total number of bases the immediate effectors emanating from this 
+	 * segment reach for (based on modecode set in the IKPin) 
+	 */
+	private void updateTotalSubTargets() {
+		subTargetCounts = 0;
+		for(int i=0; i< pinnedDescendants.size(); i++) {
+			SegmentedArmature s = pinnedDescendants.get(i);
+			AbstractIKPin pin = s.segmentTip.getIKPin(); 
+			int pinTargets = pin.getSubtargetCount();
+			subTargetCounts += pinTargets; 
+		}
 	}
 
 	/**
@@ -175,6 +191,7 @@ public class SegmentedArmature {
 				simulatedLocalAxes.put(currentBone, currentBone.localAxes().getGlobalCopy());
 				simulatedConstraintAxes.put(currentBone, currentBone.getMajorRotationAxes().getGlobalCopy());
 				boneRotationMap.put(currentBone, new ArrayList<Rot>());
+				strandsBoneList.add(0, currentBone);
 			}
 
 			if(currentBone == stopOn) break;
@@ -182,7 +199,7 @@ public class SegmentedArmature {
 
 		}
 
-		strandsBoneList.addAll(boneRotationMap.keySet());
+		//strandsBoneList.addAll(boneRotationMap.keySet());
 	}
 
 	public ArrayList<AbstractBone> getStrandFromTip(AbstractBone pinnedBone) {
@@ -220,72 +237,197 @@ public class SegmentedArmature {
 		}
 		return innerPinnedChains;
 	}
+
+
+
+	public float getManualMSD(SGVec_3f[] locTips, SGVec_3f[] locTargets, float[] weights ) {
+		float manualMSD = 0f; 
+		float wsum = 0f;
+		for(int i=0; i<locTargets.length; i++) {
+			float xd = locTargets[i].x - locTips[i].x;
+			float yd = locTargets[i].y - locTips[i].y;
+			float zd = locTargets[i].z - locTips[i].z;			
+			float magsq = weights[i]* (xd*xd + yd*yd + zd*zd);
+			manualMSD += magsq;
+			wsum += weights[i];
+		}	
+		manualMSD /= wsum;//(float) locTargets.length; 
+		//manualRMSD = MathUtils.sqrt(manualRMSD);
+
+		return manualMSD;
+	}
+
 	
-	
-	public void updateOptimalRotaitonToPinnedDescendants(
+	/**
+	 * 
+	 * @param forBone
+	 * @param dampening
+	 * @param translate set to true if you wish to allow translation in addition to rotation of the bone (should only be used for unpinned root bones)
+	 * @param stabilizationPasses If you know that your armature isn't likely to succumb to instability in unsolvable configurations, leave this value set to 0. 
+	 * If you value stability in extreme situations more than computational speed, then increase this value. A value of 1 will be completely stable, and just as fast 
+	 * as a value of 0, however, it might result in small levels of robotic looking jerk. The higher the value, the less jerk there will be (but at potentially significant computation cost).
+	 */
+	public void updateOptimalRotationToPinnedDescendants(
 			AbstractBone forBone, 
-			int modeCode,
-			float dampening) {
-		
-		int passCount = 1; 
-		if((modeCode &1) != 0) passCount++;   
-		if((modeCode &2) != 0) passCount++;   
-		if((modeCode &4) != 0) passCount++; 
-		
-		SGVec_3f [] localizedTipHeadings = new SGVec_3f[pinnedDescendants.size()*passCount]; 
-		SGVec_3f[] localizedTargetHeadings = new SGVec_3f[pinnedDescendants.size()*passCount]; 
-		float[] weights = new float[pinnedDescendants.size()*passCount];
+			float dampening,
+			boolean translate,
+			int stabilizationPasses) {
+
+		int targetCount = (subTargetCounts*2)-this.pinnedDescendants.size();
+		SGVec_3f[] localizedTargetHeadings = new SGVec_3f[targetCount]; 
+		SGVec_3f [] localizedTipHeadings = new SGVec_3f[targetCount]; 
+		float[] weights = new float[targetCount];
 		AbstractAxes thisBoneAxes = simulatedLocalAxes.get(forBone);
+		AbstractAxes bestOrientationAxes = thisBoneAxes.getGlobalCopy();
+		if(forBone.getParent() == null || targetCount == 1) 
+			stabilizationPasses = 0;
+
 		
+		updateTargetHeadings(localizedTargetHeadings, weights, thisBoneAxes);
+		upateTipHeadings(localizedTipHeadings, thisBoneAxes);		
+
+
+		float bestRMSD = 0f; 
+		QCP qcpConvergenceCheck = new QCP(MathUtils.FLOAT_ROUNDING_ERROR, MathUtils.FLOAT_ROUNDING_ERROR);
+		float newRMSD = 999999f;
+		
+		if(stabilizationPasses > 0)
+			bestRMSD = getManualMSD(localizedTipHeadings, localizedTargetHeadings, weights);
+				
+		for(int i=0; i<stabilizationPasses + 1; i++) {
+			updateOptimalRotationToPinnedDescendants(forBone, thisBoneAxes, dampening, translate, localizedTipHeadings, localizedTargetHeadings, weights, qcpConvergenceCheck);	
+			if(stabilizationPasses > 0) {
+				upateTipHeadings(localizedTipHeadings, thisBoneAxes);		
+				newRMSD = getManualMSD(localizedTipHeadings, localizedTargetHeadings, weights);
+				
+				if(bestRMSD > newRMSD) {
+					bestOrientationAxes.alignGlobalsTo(thisBoneAxes);
+					bestRMSD = newRMSD;					
+					break;				
+				}
+			}
+		}
+		if(stabilizationPasses > 0) { 
+			thisBoneAxes.alignGlobalsTo(bestOrientationAxes);
+			thisBoneAxes.markDirty(); 
+		}
+
+	}
+
+	private void updateOptimalRotationToPinnedDescendants(
+			AbstractBone forBone, 
+			AbstractAxes thisBoneAxes,
+			float dampening,
+			boolean translate,
+			SGVec_3f[] localizedTipHeadings,
+			SGVec_3f[] localizedTargetHeadings, 
+			float[] weights,
+			QCP qcpOrientationAligner) {
+
+		qcpOrientationAligner.setMaxIterations(5);
+		Rot qcpRot = qcpOrientationAligner.weightedSuperpose(localizedTipHeadings, localizedTargetHeadings, weights, translate);
+		SGVec_3f translateBy = qcpOrientationAligner.getTranslation();
+		float predamp = 1f-forBone.getStiffness();
+		dampening = forBone.getParent() == null ? MathUtils.PI : predamp * dampening;
+		Rot dampened = new Rot(qcpRot.getAxis(),  MathUtils.clamp(qcpRot.getAngle(), -dampening, dampening));
+		thisBoneAxes.rotateBy(dampened);
+		AbstractAxes simAxes = simulatedConstraintAxes.get(forBone);
+		forBone.setAxesToSnapped(thisBoneAxes,simAxes);
+		simAxes.translateByGlobal(translateBy);
+		thisBoneAxes.translateByGlobal(translateBy); 
+			
+	}
+
+	public float getRMSD(
+			SGVec_3f[] localizedTargetHeadings, 
+			SGVec_3f[] localizedTipHeadings, 
+			float[] weights, 
+			AbstractAxes thisBoneAxes, 
+			boolean translate,
+			QCP qcpObj) {
+		if(translate) 
+			updateTargetHeadings(localizedTargetHeadings, weights, thisBoneAxes);
+		upateTipHeadings(localizedTipHeadings, thisBoneAxes);
+
+		qcpObj.setMaxIterations(5);
+		qcpObj.set(localizedTipHeadings, localizedTargetHeadings, weights, translate);
+
+		float snappedRMSD = qcpObj.getRmsd();
+		return snappedRMSD;		
+	}
+
+	public void updateTargetHeadings(SGVec_3f[] localizedTargetHeadings, float[] weights, AbstractAxes thisBoneAxes) {		
+		int subTargetsSoFar = 0;
+		for(int i=0; i< pinnedDescendants.size(); i++) {
+			SegmentedArmature s = pinnedDescendants.get(i);
+			AbstractIKPin pin = s.segmentTip.getIKPin();
+			AbstractAxes targetAxes = s.segmentTip.getPinnedAxes();
+			targetAxes.updateGlobal();
+			localizedTargetHeadings[subTargetsSoFar] = SGVec_3f.sub(targetAxes.origin_(), thisBoneAxes.origin_());
+			weights[subTargetsSoFar] = pin.getPinWeight();
+			subTargetsSoFar++;
+			int modeCode = pin.getModeCode();
+
+			if((modeCode & 1<<0) != 0) {
+				sgRayf xTarget = targetAxes.x_norm_();
+				localizedTargetHeadings[subTargetsSoFar] = SGVec_3f.sub(xTarget.p2(), thisBoneAxes.origin_());
+				localizedTargetHeadings[subTargetsSoFar+1] = SGVec_3f.sub(xTarget.getRayScaledBy(-1f).p2(), thisBoneAxes.origin_());
+				weights[subTargetsSoFar] = pin.getPinWeight() * pin.getXPriority();
+				weights[subTargetsSoFar+1] = weights[subTargetsSoFar];
+				subTargetsSoFar+=2;
+			}
+			if((modeCode & 1<<1) != 0) {
+				sgRayf yTarget = targetAxes.y_norm_();
+				localizedTargetHeadings[subTargetsSoFar] = SGVec_3f.sub(yTarget.p2(), thisBoneAxes.origin_());
+				localizedTargetHeadings[subTargetsSoFar+1] = SGVec_3f.sub(yTarget.getRayScaledBy(-1f).p2(), thisBoneAxes.origin_());
+				weights[subTargetsSoFar] = pin.getPinWeight() * pin.getYPriority();
+				weights[subTargetsSoFar+1] = weights[subTargetsSoFar];
+				subTargetsSoFar+=2;
+			}
+			if((modeCode & 1<<2) != 0) {
+				sgRayf zTarget = targetAxes.z_norm_();
+				localizedTargetHeadings[subTargetsSoFar] = SGVec_3f.sub(zTarget.p2(), thisBoneAxes.origin_());	
+				localizedTargetHeadings[subTargetsSoFar+1] = SGVec_3f.sub(zTarget.getRayScaledBy(-1f).p2(), thisBoneAxes.origin_());
+				weights[subTargetsSoFar] = pin.getPinWeight() * pin.getZPriority();
+				weights[subTargetsSoFar+1] = weights[subTargetsSoFar];
+				subTargetsSoFar+=2;
+			}
+		}
+	}
+
+	public void upateTipHeadings(SGVec_3f[] localizedTipHeadings, AbstractAxes thisBoneAxes) {
+		int subTargetsSoFar = 0;
 		for(int i=0; i< pinnedDescendants.size(); i++) {
 			SegmentedArmature s = pinnedDescendants.get(i);
 			AbstractAxes tipAxes = s.simulatedLocalAxes.get(s.segmentTip);
-			AbstractAxes targetAxes = s.segmentTip.getPinnedAxes();
 			tipAxes.updateGlobal();
-			targetAxes.updateGlobal();
-			
-			localizedTipHeadings[i*passCount] =  SGVec_3f.sub(tipAxes.origin_(), thisBoneAxes.origin_());
-			localizedTargetHeadings[i*passCount] = SGVec_3f.sub(targetAxes.origin_(), thisBoneAxes.origin_());
-			weights[i*passCount] = s.segmentTip.getIKPin().getPinWeight();
-			
+
+			localizedTipHeadings[subTargetsSoFar] =  SGVec_3f.sub(tipAxes.origin_(), thisBoneAxes.origin_());
+			subTargetsSoFar++;
+
+			AbstractIKPin pin = s.segmentTip.getIKPin();
+			int modeCode = pin.getModeCode();
+
 			if((modeCode & 1<<0) != 0) {
 				sgRayf xTip = tipAxes.x_norm_();
-				sgRayf xTarget = targetAxes.x_norm_();
-				localizedTipHeadings[(i*passCount)+1] = SGVec_3f.sub(xTip.p2(), thisBoneAxes.origin_());
-				localizedTargetHeadings[(i*passCount)+1] = SGVec_3f.sub(xTarget.p2(), thisBoneAxes.origin_());
-				weights[(i*passCount)+1] = s.segmentTip.getIKPin().getPinWeight();;
+				localizedTipHeadings[subTargetsSoFar] = SGVec_3f.sub(xTip.p2(), thisBoneAxes.origin_());
+				localizedTipHeadings[subTargetsSoFar+1] = SGVec_3f.sub(xTip.getRayScaledBy(-1f).p2(), thisBoneAxes.origin_());
+				subTargetsSoFar+=2;
 			}
 			if((modeCode & 1<<1) != 0) {
 				sgRayf yTip = tipAxes.y_norm_();
-				sgRayf yTarget = targetAxes.y_norm_();
-				localizedTipHeadings[(i*passCount)+2] = SGVec_3f.sub(yTip.p2(), thisBoneAxes.origin_());
-				localizedTargetHeadings[(i*passCount)+2] = SGVec_3f.sub(yTarget.p2(), thisBoneAxes.origin_());
-				weights[(i*passCount)+2] = s.segmentTip.getIKPin().getPinWeight();;
+				localizedTipHeadings[subTargetsSoFar] = SGVec_3f.sub(yTip.p2(), thisBoneAxes.origin_());
+				localizedTipHeadings[subTargetsSoFar+1] = SGVec_3f.sub(yTip.getRayScaledBy(-1f).p2(), thisBoneAxes.origin_());
+				subTargetsSoFar+=2;
 			}
 			if((modeCode & 1<<2) != 0) {
 				sgRayf zTip = tipAxes.z_norm_();
-				sgRayf zTarget = targetAxes.z_norm_();
-				localizedTipHeadings[(i*passCount)+3] = SGVec_3f.sub(zTip.p2(), thisBoneAxes.origin_());
-				localizedTargetHeadings[(i*passCount)+3] = SGVec_3f.sub(zTarget.p2(), thisBoneAxes.origin_());	
-				weights[(i*passCount)+3] = s.segmentTip.getIKPin().getPinWeight();;
+				localizedTipHeadings[subTargetsSoFar] = SGVec_3f.sub(zTip.p2(), thisBoneAxes.origin_());
+				localizedTipHeadings[subTargetsSoFar+1] = SGVec_3f.sub(zTip.getRayScaledBy(-1f).p2(), thisBoneAxes.origin_());
+				subTargetsSoFar+=2;
 			}
 		}
-		
-		/*KabschAlignment orientationAligner = new KabschAlignment(localizedTipHeadings, null, localizedTargetHeadings, null);
-		orientationAligner.align();
-		Rot rotBy = orientationAligner.getRotation();*/	
-		QCP qcpOrientationAligner = new QCP(MathUtils.FLOAT_ROUNDING_ERROR, MathUtils.FLOAT_ROUNDING_ERROR);
-		Rot qcpRot = qcpOrientationAligner.superpose(localizedTargetHeadings, localizedTipHeadings);
-		
-		
-		Rot dampened = new Rot(qcpRot.getAxis(), Math.min(qcpRot.getAngle(), MathUtils.clamp(qcpRot.getAngle(), -dampening, dampening)));
-		thisBoneAxes.rotateBy(dampened);
-		thisBoneAxes.markDirty(); thisBoneAxes.updateGlobal();
-		forBone.setAxesToSnapped(thisBoneAxes, simulatedConstraintAxes.get(forBone));
-		thisBoneAxes.markDirty(); thisBoneAxes.updateGlobal();
 	}
-	
-
 
 	/**
 	 * 
@@ -377,10 +519,28 @@ public class SegmentedArmature {
 	 */
 
 	public void alignSimulationAxesToBones() {
-		for(SegmentedArmature c : pinnedDescendants) {
-			recursivelyAlignSimAxesRootwardFrom(c.segmentTip);
+		if(!this.isBasePinned() && this.getParentSegment() != null) {
+			this.getParentSegment().alignSimulationAxesToBones();
+		} else {
+			recursivelyAlignSimAxesOutwardFrom(segmentRoot);
 		}
 	}
+
+	public void recursivelyAlignSimAxesOutwardFrom(AbstractBone b) {
+		SegmentedArmature bChain = getChildSegmentContaining(b);
+		if(bChain != null) {
+			AbstractAxes bAxes = bChain.simulatedLocalAxes.get(b); 
+			AbstractAxes cAxes = bChain.simulatedConstraintAxes.get(b);
+			bAxes.alignGlobalsTo(b.localAxes());
+			bAxes.markDirty(); bAxes.updateGlobal();			
+			cAxes.alignGlobalsTo(b.getMajorRotationAxes());
+			cAxes.markDirty(); cAxes.updateGlobal();
+			for(AbstractBone bc: b.getChildren()) {
+				bChain.recursivelyAlignSimAxesOutwardFrom(bc);	
+			}			
+		}
+	}
+
 
 
 	public void recursivelyAlignSimAxesRootwardFrom(AbstractBone b) {
@@ -415,7 +575,7 @@ public class SegmentedArmature {
 	 */
 	public void recursivelyAlignBonesToSimAxesFrom(AbstractBone b) {
 		SegmentedArmature chain =getChainFor(b);		
-		if(chain != null && chain.simAligned) {			
+		if(chain != null) {			
 			AbstractAxes simulatedLocalAxes = chain.simulatedLocalAxes.get(b);
 			if(b.getParent() == null) {
 				b.localAxes().alignGlobalsTo(simulatedLocalAxes);
@@ -435,7 +595,7 @@ public class SegmentedArmature {
 	}
 
 	/**
-	 * popultes the given arraylist with the rootmost unprocessed chains of this segmented armature 
+	 * populates the given arraylist with the rootmost unprocessed chains of this segmented armature 
 	 * and its descenedants up until their pinned tips. 
 	 * @param segments
 	 */

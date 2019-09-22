@@ -29,51 +29,50 @@ import sceneGraph.math.floatV.SGVec_3f;
 import sceneGraph.math.floatV.sgRayf;
 
 
-public final class EWBIKSaver {
+public class EWBIKSaver implements SaveManager {
 
 
-	static WeakHashMap<Saveable, Boolean> saveables = new WeakHashMap<Saveable, Boolean>();
+	WeakHashMap<Saveable, Boolean> saveables = new WeakHashMap<Saveable, Boolean>();
 
 	public static String currentFilePath;
 	public static String tempDir;
 
-	public void saveArmature(AbstractArmature toSave, String absolutePath)  {
-		try {
-			File tempFile = File.createTempFile("GiftedApprentice", ".tmp");
-			System.out.println(tempFile.getParent());
-			System.out.println(tempFile.getParent() + File.separator);
-			System.out.println(tempFile.getParent() + File.separator + "GiftedApprentice"+System.currentTimeMillis());
-			tempDir = tempFile.getParent()+ File.separator + "GiftedApprentice"+System.currentTimeMillis();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} 
-
-		//p.println("tempDir = " + tempDir);
+	public void saveArmature(IK.doubleIK.AbstractArmature toSave, String path)  {
+		clearSaveState();
+		((IK.doubleIK.AbstractArmature)toSave).notifyOfSaveIntent(this);
+		saveAs(path);
+		notifyCurrentSaveablesOfSaveCompletion();
+	}
+	
+	public void saveArmature(IK.floatIK.AbstractArmature toSave, String path)  {
+		clearSaveState();
+		((IK.floatIK.AbstractArmature)toSave).notifyOfSaveIntent(this);
+		saveAs(path);
+		notifyCurrentSaveablesOfSaveCompletion();
 	}
 
-	public static void addToSaveState(Saveable saveObj) {
+	public void addToSaveState(Saveable saveObj) {
 		saveables.put(saveObj, true);
 	}
 
-
-
-	public static void removeFromSaveState(Saveable saveObj) {
+	public void removeFromSaveState(Saveable saveObj) {
 		saveables.remove(saveObj);
 	}
 
-	public static void clearSaveState() {
+	public void clearSaveState() {
 		saveables.clear();
 	}
 
 
-	public static void notifyCurrentSaveablesOfSaveCompletion() {
+	public void notifyCurrentSaveablesOfSaveCompletion() {
 		ArrayList<Saveable> sarr = new ArrayList<>(saveables.keySet());
 		for(Saveable s : sarr) {
-			s.notifyOfSaveCompletion();
+			s.notifyOfSaveCompletion(this);
 		}
+		clearSaveState();
 	}
 
-	public static JSONObject getSaveObject() {	
+	public JSONObject getSaveObject() {	
 
 		JSONArray axesJSON = new JSONArray();	  
 		JSONArray armaturesJSON = new JSONArray();
@@ -87,19 +86,31 @@ public final class EWBIKSaver {
 		JSONObject saveObject = new JSONObject();
 
 		for(Saveable s: sk) {
-			JSONObject jsonObj = s.getSaveJSON(); 
+			JSONObject jsonObj = s.getSaveJSON(this); 
 			if(jsonObj != null) {
-				if(AbstractAxes.class.isAssignableFrom(s.getClass())) 
+				if(sceneGraph.math.doubleV.AbstractAxes.class.isAssignableFrom(s.getClass())) 
 					axesJSON.append(jsonObj);
-				if(AbstractArmature.class.isAssignableFrom(s.getClass())) 
+				if(IK.doubleIK.AbstractArmature.class.isAssignableFrom(s.getClass())) 
 					armaturesJSON.append(jsonObj); 
-				if(AbstractBone.class.isAssignableFrom(s.getClass())) 
+				if(IK.doubleIK.AbstractBone.class.isAssignableFrom(s.getClass())) 
 					bonesJSON.append(jsonObj);
-				if(AbstractKusudama.class.isAssignableFrom(s.getClass())) 
+				if(IK.doubleIK.AbstractKusudama.class.isAssignableFrom(s.getClass())) 
 					kusudamaJSON.append(jsonObj);
-				if(AbstractLimitCone.class.isAssignableFrom(s.getClass()))
+				if(IK.doubleIK.AbstractLimitCone.class.isAssignableFrom(s.getClass()))
 					limitConeJSON.append(jsonObj);
-				if(AbstractIKPin.class.isAssignableFrom(s.getClass())) 
+				if(IK.doubleIK.AbstractIKPin.class.isAssignableFrom(s.getClass())) 
+					IKPinsJSON.append(jsonObj);
+				if(sceneGraph.math.floatV.AbstractAxes.class.isAssignableFrom(s.getClass())) 
+					axesJSON.append(jsonObj);
+				if(IK.floatIK.AbstractArmature.class.isAssignableFrom(s.getClass())) 
+					armaturesJSON.append(jsonObj); 
+				if(IK.floatIK.AbstractBone.class.isAssignableFrom(s.getClass())) 
+					bonesJSON.append(jsonObj);
+				if(IK.floatIK.AbstractKusudama.class.isAssignableFrom(s.getClass())) 
+					kusudamaJSON.append(jsonObj);
+				if(IK.floatIK.AbstractLimitCone.class.isAssignableFrom(s.getClass()))
+					limitConeJSON.append(jsonObj);
+				if(IK.floatIK.AbstractIKPin.class.isAssignableFrom(s.getClass())) 
 					IKPinsJSON.append(jsonObj);
 			}
 		}
@@ -109,43 +120,25 @@ public final class EWBIKSaver {
 		saveObject.setJSONArray("bones", bonesJSON);
 		saveObject.setJSONArray("kusudamas", kusudamaJSON);
 		saveObject.setJSONArray("limitCones", limitConeJSON);
-		saveObject.setJSONArray("IKPins", IKPinsJSON);		
-
-		notifyCurrentSaveablesOfSaveCompletion();
+		saveObject.setJSONArray("IKPins", IKPinsJSON);				
 		return saveObject;
 	}
-	public String getSaveSring() {
+	public String getSaveString() {
 		String resultString = getSaveObject().toString();
 		return resultString;
 	}
 
-	public static void saveAs(String savePath) {
-		//File saveFile = p.saveFile("Save", currentFilePath, ".ga");//p.selectOutput("Save", "saveFileSelected");
-		currentFilePath = savePath;
-		//p.saveFileSelected(new File(currentFilePath));	
-		save();
+	private void saveAs(String savePath) {
+		save(savePath);
 	}
 
-	public static void save() {
-
+	public void save(String savePath) {
 		JSONObject fileContent = getSaveObject();
-		//p.println(fileContent.toString());
-		StringFuncs.saveJSONObject(fileContent, tempDir+File.separator+"structure"); 
-		try {
-			File cFile = new File(currentFilePath);
-			if(cFile != null) {
-				cFile.getParentFile().mkdirs();
-			}
-		} catch (Exception e) {
-			System.out.println("failed to save");
-		}
-
-		//p.saveJSONObject(fileContent, location);
+		StringFuncs.saveJSONObject(fileContent, savePath); 
 	}
 
 	
-	public static JSONObject hashMapToJSON(HashMap<?, ?> hm) {
-
+	public JSONObject hashMapToJSON(HashMap<?, ?> hm) {
 		Collection<?> keys = hm.keySet();
 		Iterator<?> keyI = keys.iterator();
 		JSONObject result = new JSONObject();
@@ -217,18 +210,13 @@ public final class EWBIKSaver {
 			}catch(Exception e) {
 				e.printStackTrace(System.out);
 				int debug =0; 
-
 			}
-
-
 		}
-
 		return result;
-
 	}
 
 
-	public static JSONArray arrayListToJSONArray(ArrayList<?> al) {
+	public JSONArray arrayListToJSONArray(ArrayList<?> al) {
 		JSONArray result = new JSONArray(); 
 
 		for(int i = 0; i<al.size(); i++) {
@@ -266,7 +254,7 @@ public final class EWBIKSaver {
 		return result;
 	}
 
-	public static JSONArray primitiveArrayToJSONArray(Object a) {
+	public JSONArray primitiveArrayToJSONArray(Object a) {
 		JSONArray result = null; 
 
 		if(a instanceof int[] || a instanceof Integer[]) 

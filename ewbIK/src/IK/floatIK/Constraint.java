@@ -1,10 +1,11 @@
 package IK.floatIK;
 
+import data.Saveable;
 import sceneGraph.math.Vec;
 import sceneGraph.math.floatV.AbstractAxes;
 import sceneGraph.math.floatV.SGVec_3f;
 
-public interface Constraint {
+public interface Constraint extends Saveable{
 	
 	public void snapToLimits();
 	public void disable(); 

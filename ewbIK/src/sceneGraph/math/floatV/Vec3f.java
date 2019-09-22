@@ -56,10 +56,10 @@ public interface Vec3f<T extends Vec3f<T>> extends Vecf<T> {
 	 * vector implementation requires more than that. 
 	 * @param v
 	 */
-	public default void adoptValuesOf(Vec3d v) {
-		setX_((float)v.getX());
-		setY_((float)v.getY());
-		setZ_((float)v.getZ());
+	public default void adoptValuesOf(Vec3f v) {
+		setX_(v.getX());
+		setY_(v.getY());
+		setZ_(v.getZ());
 	}
 	
 	/**
@@ -69,10 +69,10 @@ public interface Vec3f<T extends Vec3f<T>> extends Vecf<T> {
 	 * vector implementation requires more than that. 
 	 * @param v
 	 */
-	public default void adoptValuesOf(Vec3f v) {
-		setX_(v.getX());
-		setY_(v.getY());
-		setZ_(v.getZ());
+	public default void adoptValuesOf(Vec3d v) {
+		setX_((float)v.getX());
+		setY_((float)v.getY());
+		setZ_((float)v.getZ());
 	}
 	
 	

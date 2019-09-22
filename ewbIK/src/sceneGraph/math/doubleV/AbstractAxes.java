@@ -23,6 +23,10 @@ package sceneGraph.math.doubleV;
 import java.util.ArrayList;
 
 import IK.doubleIK.G;
+import data.EWBIKLoader;
+import data.JSONObject;
+import data.LoadManager;
+import data.SaveManager;
 import data.Saveable;
 
 /**
@@ -1113,7 +1117,7 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 
 		this.updateGlobal();		
 		if(parent != null) {
-			Rot newRot = this.parent.globalMBasis.getLocalOfRotation(apply);;
+			Rot newRot = this.parent.globalMBasis.getLocalOfRotation(apply);
 			this.localMBasis.rotateBy(newRot);
 		} else {
 			this.localMBasis.rotateBy(apply);
@@ -1481,4 +1485,80 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 		String local = "Local: " + localMBasis.toString();
 		return global + "\n" + local;
 	}
+	
+	
+	@Override
+	public JSONObject getSaveJSON(SaveManager saveManager) {
+		this.updateGlobal();
+		JSONObject thisAxes = new JSONObject(); 
+		JSONObject shearScale = new JSONObject();
+		SGVec_3d xShear = new SGVec_3d(); 
+		SGVec_3d yShear = new SGVec_3d(); 
+		SGVec_3d zShear = new SGVec_3d(); 
+
+		this.localMBasis.setToShearXBase(xShear);
+		this.localMBasis.setToShearYBase(yShear);
+		this.localMBasis.setToShearZBase(zShear);
+
+		shearScale.setJSONArray("x", xShear.toJSONArray());
+		shearScale.setJSONArray("y", yShear.toJSONArray());
+		shearScale.setJSONArray("z", zShear.toJSONArray());
+
+		thisAxes.setJSONArray("translation", localMBasis.translate.toJSONArray());
+		thisAxes.setJSONArray("rotation", localMBasis.rotation.toJsonArray());
+		thisAxes.setJSONObject("bases", shearScale);
+
+		//thisAxes.setJSONArray("flippedAxes", saveManager.primitiveArrayToJSONArray(this.localMBasis.flippedAxes));
+		String parentHash = "-1"; 
+		if(parent != null) parentHash = ((AbstractAxes) parent).getIdentityHash();
+		thisAxes.setString("parent",  parentHash);
+		thisAxes.setInt("slipType", this.getSlipType());
+		thisAxes.setString("identityHash",  this.getIdentityHash());
+		thisAxes.setBoolean("forceOrthoNormality", this.forceOrthoNormality);
+
+		return thisAxes;
+	}
+
+	@Override
+	public void loadFromJSONObject(JSONObject j, LoadManager l) {
+		SGVec_3d origin = new SGVec_3d(j.getJSONArray("translation"));
+		SGVec_3d x = new SGVec_3d(j.getJSONObject("bases").getJSONArray("x"));
+		SGVec_3d y = new SGVec_3d(j.getJSONObject("bases").getJSONArray("y"));
+		SGVec_3d z =  new SGVec_3d(j.getJSONObject("bases").getJSONArray("z"));
+		Rot rotation = new Rot(j.getJSONArray("rotation"));
+		this.forceOrthoNormality = j.getBoolean("forceOrthoNormality");
+		this.localMBasis.setShearXBaseTo(x, false);
+		this.localMBasis.setShearYBaseTo(y, false);
+		this.localMBasis.setShearZBaseTo(z, false);
+		this.localMBasis.translate = origin;
+		this.localMBasis.rotation = rotation;
+		this.localMBasis.refreshMatrices();
+		AbstractAxes par = (AbstractAxes) l.getObjectFor(AbstractAxes.class, j, "parent");
+		if(par != null)
+			this.setRelativeToParent(par);
+		this.setSlipType(j.getInt("slipType"));
+	}
+
+	@Override
+	public void notifyOfSaveIntent(SaveManager saveManager) {}	
+
+	boolean isLoading = false;
+	@Override
+	public void setLoading(boolean loading) {isLoading = loading;}
+	@Override
+	public boolean isLoading() {return isLoading;}
+	@Override
+	public void notifyOfSaveCompletion(SaveManager saveManager) {}
+	
+	@Override
+	public void notifyOfLoadCompletion() {
+		this.markDirty();
+	}
+	
+	public void makeSaveable(SaveManager saveManager) {
+		if(this.parent != null) 
+			((AbstractAxes)parent).makeSaveable(saveManager);
+		saveManager.addToSaveState(this);
+	}
+	
 }

@@ -1,10 +1,11 @@
 package IK.doubleIK;
 
+import data.Saveable;
 import sceneGraph.math.Vec;
 import sceneGraph.math.doubleV.AbstractAxes;
 import sceneGraph.math.doubleV.SGVec_3d;
 
-public interface Constraint {
+public interface Constraint extends Saveable{
 	
 	public void snapToLimits();
 	public void disable(); 

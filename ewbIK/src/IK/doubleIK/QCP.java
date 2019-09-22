@@ -92,8 +92,9 @@ public class QCP {
 
 	private double evec_prec = 1E-6;
 	private double eval_prec = 1E-11;
+	private int max_iterations = 5; 
 
-	private SGVec_3d[] target;
+	public SGVec_3d[] target;
 	private SGVec_3d[] moved;
 
 	private double[] weight;
@@ -131,6 +132,17 @@ public class QCP {
 		this.eval_prec = eval_prec;
 	}
 
+	/** 
+	 * Sets the maximum number of iterations QCP should run before giving up. 
+	 * In most situations QCP converges in 3 or 4 iterations, but in some situations convergence
+	 * occurs slowly or not at all, and so an exit condition is used. The default value is 20. 
+	 * Increase it for more stability.
+	 * @param max
+	 */
+	public void setMaxIterations(int max) {
+		max_iterations = max;
+	}
+
 	/**
 	 * Sets the two input coordinate arrays. These input arrays must be of equal
 	 * length. Input coordinates are not modified.
@@ -158,12 +170,35 @@ public class QCP {
 	 * @param weight
 	 *            a weight in the inclusive range [0,1] for each point
 	 */
-	private void set(SGVec_3d[] moved, SGVec_3d[] target, double[] weight) {
-		this.target = target;
-		this.moved = moved;		
+	public void set(SGVec_3d[] moved, SGVec_3d[] target, double[] weight, boolean translate) {
+		this.target = target;		
+		this.moved = moved;
+		/*this.target =new SGVec_3d[target.length];		
+		this.moved = new SGVec_3d[moved.length];
+		for(int i=0; i< target.length; i++) {
+			this.target[i] = target[i].copy();
+			this.moved[i] = moved[i].copy();
+		}*/
 		this.weight = weight;
 		rmsdCalculated = false;
 		transformationCalculated = false;
+
+		if(translate) {
+			getWeightedCenter(this.moved, weight, movedCenter);
+			wsum = 0.0; //set wsum to 0 so we don't double up. 
+			getWeightedCenter(this.target, weight, targetCenter);
+			translate(movedCenter.multCopy(-1d), this.moved);
+			translate(targetCenter.multCopy(-1d), this.target);
+		} else {
+			if(weight != null) {
+				for (int i = 0; i < weight.length; i++)  {
+					wsum += weight[i];
+				}
+			} else {
+				wsum = moved.length;
+			}
+		}
+
 	}
 
 	/**
@@ -174,7 +209,7 @@ public class QCP {
 	 *
 	 * @return root mean square deviation for superposition of y onto x
 	 */
-	private double getRmsd() {
+	public double getRmsd() {
 		if (!rmsdCalculated) {
 			calcRmsd(moved, target);
 			rmsdCalculated = true;
@@ -192,23 +227,7 @@ public class QCP {
 	 * @return
 	 */
 	public Rot weightedSuperpose( SGVec_3d[] moved, SGVec_3d[] target, double[] weight, boolean translate) {
-		set(moved, target, weight);
-
-		if(translate) {
-			getWeightedCenter(moved, weight, movedCenter);
-			wsum = 0.0; //set wsum to 0 so we don't double up. 
-			getWeightedCenter(target, weight, targetCenter);
-			translate(movedCenter.multCopy(-1d), moved);
-			translate(targetCenter.multCopy(-1d), target);
-		} else {
-			if(weight != null) {
-				for (int i = 0; i < weight.length; i++)  {
-					wsum += weight[i];
-				}
-			} else {
-				wsum = moved.length;
-			}
-		}
+		set(moved, target, weight, translate);
 		Rot result = getRotation();
 		//transformation.set(rotmat);
 		return result;//transformation;
@@ -234,8 +253,16 @@ public class QCP {
 	 *            3d points of coordinate set for superposition
 	 */
 	private void calcRmsd(SGVec_3d[] x, SGVec_3d[] y) {
-		innerProduct(y, x);
-		calcRmsd(wsum);
+		//QCP doesn't handle alignment of single values, so if we only have one point 
+		//we just compute regular distance.
+		if(x.length == 1) {
+			rmsd = x[0].dist(y[0]);
+			rmsdCalculated = true;
+		} 
+		else {
+			innerProduct(y, x);
+			calcRmsd(wsum);
+		}
 	}
 
 
@@ -364,7 +391,7 @@ public class QCP {
 
 
 		int i;
-		for (i = 1; i < 51; ++i) {
+		for (i = 1; i < (max_iterations+1); ++i) {
 			double oldg = mxEigenV;
 			double x2 = mxEigenV * mxEigenV;
 			double b = (x2 + c2) * mxEigenV;
@@ -376,11 +403,11 @@ public class QCP {
 				break;
 		}
 
-		if (i == 50) {
+		/*if (i == max_iterations) {
 			System.out.println(String.format("More than %d iterations needed!", i));
 		} else {
 			System.out.println(String.format("%d iterations needed!", i));
-		}
+		}*/
 
 		/*
 		 * the fabs() is to guard against extremely small, but *negative*
@@ -392,80 +419,83 @@ public class QCP {
 	}
 
 	private Rot calcRotation() {
-		double a11 = SxxpSyy + Szz - mxEigenV;
-		double a12 = SyzmSzy;
-		double a13 = -SxzmSzx;
-		double a14 = SxymSyx;
-		double a21 = SyzmSzy;
-		double a22 = SxxmSyy - Szz - mxEigenV;
-		double a23 = SxypSyx;
-		double a24 = SxzpSzx;
-		double a31 = a13;
-		double a32 = a23;
-		double a33 = Syy - Sxx - Szz - mxEigenV;
-		double a34 = SyzpSzy;
-		double a41 = a14;
-		double a42 = a24;
-		double a43 = a34;
-		double a44 = Szz - SxxpSyy - mxEigenV;
-		double a3344_4334 = a33 * a44 - a43 * a34;
-		double a3244_4234 = a32 * a44 - a42 * a34;
-		double a3243_4233 = a32 * a43 - a42 * a33;
-		double a3143_4133 = a31 * a43 - a41 * a33;
-		double a3144_4134 = a31 * a44 - a41 * a34;
-		double a3142_4132 = a31 * a42 - a41 * a32;
-		double q1 = a22 * a3344_4334 - a23 * a3244_4234 + a24 * a3243_4233;
-		double q2 = -a21 * a3344_4334 + a23 * a3144_4134 - a24 * a3143_4133;
-		double q3 = a21 * a3244_4234 - a22 * a3144_4134 + a24 * a3142_4132;
-		double q4 = -a21 * a3243_4233 + a22 * a3143_4133 - a23 * a3142_4132;
 
-		double qsqr = q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4;
+		//QCP doesn't handle single targets, so if we only have one point and one target, we just rotate by the angular distance between them 
+		if(moved.length == 1) {
+			return new Rot(moved[0], target[0]);
+		} else {
 
-		/*
-		 * The following code tries to calculate another column in the adjoint
-		 * matrix when the norm of the current column is too small. Usually this
-		 * commented block will never be activated. To be absolutely safe this
-		 * should be uncommented, but it is most likely unnecessary.
-		 */
-		if (qsqr < evec_prec) {
-			q1 = a12 * a3344_4334 - a13 * a3244_4234 + a14 * a3243_4233;
-			q2 = -a11 * a3344_4334 + a13 * a3144_4134 - a14 * a3143_4133;
-			q3 = a11 * a3244_4234 - a12 * a3144_4134 + a14 * a3142_4132;
-			q4 = -a11 * a3243_4233 + a12 * a3143_4133 - a13 * a3142_4132;
-			qsqr = q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4;
+			double a11 = SxxpSyy + Szz - mxEigenV;
+			double a12 = SyzmSzy;
+			double a13 = -SxzmSzx;
+			double a14 = SxymSyx;
+			double a21 = SyzmSzy;
+			double a22 = SxxmSyy - Szz - mxEigenV;
+			double a23 = SxypSyx;
+			double a24 = SxzpSzx;
+			double a31 = a13;
+			double a32 = a23;
+			double a33 = Syy - Sxx - Szz - mxEigenV;
+			double a34 = SyzpSzy;
+			double a41 = a14;
+			double a42 = a24;
+			double a43 = a34;
+			double a44 = Szz - SxxpSyy - mxEigenV;
+			double a3344_4334 = a33 * a44 - a43 * a34;
+			double a3244_4234 = a32 * a44 - a42 * a34;
+			double a3243_4233 = a32 * a43 - a42 * a33;
+			double a3143_4133 = a31 * a43 - a41 * a33;
+			double a3144_4134 = a31 * a44 - a41 * a34;
+			double a3142_4132 = a31 * a42 - a41 * a32;
+			double q1 = a22 * a3344_4334 - a23 * a3244_4234 + a24 * a3243_4233;
+			double q2 = -a21 * a3344_4334 + a23 * a3144_4134 - a24 * a3143_4133;
+			double q3 = a21 * a3244_4234 - a22 * a3144_4134 + a24 * a3142_4132;
+			double q4 = -a21 * a3243_4233 + a22 * a3143_4133 - a23 * a3142_4132;
 
+			double qsqr = q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4;
+
+			/*
+			 * The following code tries to calculate another column in the adjoint
+			 * matrix when the norm of the current column is too small. Usually this
+			 * commented block will never be activated. To be absolutely safe this
+			 * should be uncommented, but it is most likely unnecessary.
+			 */
 			if (qsqr < evec_prec) {
-				double a1324_1423 = a13 * a24 - a14 * a23, a1224_1422 = a12 * a24 - a14 * a22;
-				double a1223_1322 = a12 * a23 - a13 * a22, a1124_1421 = a11 * a24 - a14 * a21;
-				double a1123_1321 = a11 * a23 - a13 * a21, a1122_1221 = a11 * a22 - a12 * a21;
-
-				q1 = a42 * a1324_1423 - a43 * a1224_1422 + a44 * a1223_1322;
-				q2 = -a41 * a1324_1423 + a43 * a1124_1421 - a44 * a1123_1321;
-				q3 = a41 * a1224_1422 - a42 * a1124_1421 + a44 * a1122_1221;
-				q4 = -a41 * a1223_1322 + a42 * a1123_1321 - a43 * a1122_1221;
+				q1 = a12 * a3344_4334 - a13 * a3244_4234 + a14 * a3243_4233;
+				q2 = -a11 * a3344_4334 + a13 * a3144_4134 - a14 * a3143_4133;
+				q3 = a11 * a3244_4234 - a12 * a3144_4134 + a14 * a3142_4132;
+				q4 = -a11 * a3243_4233 + a12 * a3143_4133 - a13 * a3142_4132;
 				qsqr = q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4;
 
 				if (qsqr < evec_prec) {
-					q1 = a32 * a1324_1423 - a33 * a1224_1422 + a34 * a1223_1322;
-					q2 = -a31 * a1324_1423 + a33 * a1124_1421 - a34 * a1123_1321;
-					q3 = a31 * a1224_1422 - a32 * a1124_1421 + a34 * a1122_1221;
-					q4 = -a31 * a1223_1322 + a32 * a1123_1321 - a33 * a1122_1221;
+					double a1324_1423 = a13 * a24 - a14 * a23, a1224_1422 = a12 * a24 - a14 * a22;
+					double a1223_1322 = a12 * a23 - a13 * a22, a1124_1421 = a11 * a24 - a14 * a21;
+					double a1123_1321 = a11 * a23 - a13 * a21, a1122_1221 = a11 * a22 - a12 * a21;
+
+					q1 = a42 * a1324_1423 - a43 * a1224_1422 + a44 * a1223_1322;
+					q2 = -a41 * a1324_1423 + a43 * a1124_1421 - a44 * a1123_1321;
+					q3 = a41 * a1224_1422 - a42 * a1124_1421 + a44 * a1122_1221;
+					q4 = -a41 * a1223_1322 + a42 * a1123_1321 - a43 * a1122_1221;
 					qsqr = q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4;
 
 					if (qsqr < evec_prec) {
-						/*
-						 * if qsqr is still too small, return the identity
-						 * matrix.
-						 */
-						//rotmat.idt();
+						q1 = a32 * a1324_1423 - a33 * a1224_1422 + a34 * a1223_1322;
+						q2 = -a31 * a1324_1423 + a33 * a1124_1421 - a34 * a1123_1321;
+						q3 = a31 * a1224_1422 - a32 * a1124_1421 + a34 * a1122_1221;
+						q4 = -a31 * a1223_1322 + a32 * a1123_1321 - a33 * a1122_1221;
+						qsqr = q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4;
 
-						return new Rot();
+						if (qsqr < evec_prec) {
+							/*
+							 * if qsqr is still too small, return the identity rotation
+							 */
+							return new Rot();
+						}
 					}
 				}
 			}
+			return new Rot(q1, q2, q3, q4, true);
 		}
-
-		return new Rot(q1, q2, q3, q4, true);
 	}
 
 
@@ -477,37 +507,11 @@ public class QCP {
 	}
 
 
-	public Rot superpose(SGVec_3d[] fixed, SGVec_3d[] moved) {
-		set(moved, fixed);
-		//getRotationMatrix();
-		//transformation.set(rotmat);
-		/*Matrix3d rMat = getRotationMatrix();
-		double[][] resultArr = new double[3][3];
-		resultArr[0][0] = rMat.val[Matrix3d.M00]; 
-		resultArr[0][1] = rMat.val[Matrix3d.M01];
-		resultArr[0][2] = rMat.val[Matrix3d.M02];
-
-		resultArr[1][0] = rMat.val[Matrix3d.M10]; 
-		resultArr[1][1] = rMat.val[Matrix3d.M11];
-		resultArr[1][2] = rMat.val[Matrix3d.M12];
-
-		resultArr[2][0] = rMat.val[Matrix3d.M20]; 
-		resultArr[2][1] = rMat.val[Matrix3d.M21];
-		resultArr[2][2] = rMat.val[Matrix3d.M22];
-
-		return new Rot(new MRotation(resultArr, MathUtils.DOUBLE_ROUNDING_ERROR));*/
-		return getRotation();
-	}
-
-
-
-
 	public static void translate(SGVec_3d trans, SGVec_3d[] x) {
 		for (SGVec_3d p : x) {
 			p.add(trans);
 		}
 	}
-
 
 	public SGVec_3d getWeightedCenter(SGVec_3d[] toCenter, double[] weight, SGVec_3d center)	{	    	    
 
@@ -534,32 +538,6 @@ public class QCP {
 
 	public SGVec_3d getTranslation() {
 		return targetCenter.subCopy(movedCenter);		
-	}
-
-
-	/**
-	 * The QCP method can be used as a two-step calculation: first compute the
-	 * RMSD (fast) and then compute the superposition.
-	 *
-	 * This method assumes that the RMSD of two arrays of points has been
-	 * already calculated using {@link #getRmsd(SGVec_3d[], SGVec_3d[])} method
-	 * and calculates the transformation of the same two point arrays.
-	 *
-	 * @param fixed
-	 * @param target
-	 * @return transformation matrix as a Matrix4d to superpose moved onto fixed
-	 *         point arraysW
-	 */
-	public Matrix4d superposeAfterRmsd() {
-
-		if (!rmsdCalculated) {
-			throw new IllegalStateException("The RMSD was not yet calculated. Use the superpose() method instead.");
-		}
-
-		//getRotationMatrix();
-		//transformation.set(rotmat);
-
-		return null;
 	}
 
 }

@@ -23,5 +23,3 @@ outFile=$2
 -e 's/Math\./MathUtils\./g' \
 -e 's/Quaternion/Quaternionf/g' $inFile > $outFile
 
- 
-done

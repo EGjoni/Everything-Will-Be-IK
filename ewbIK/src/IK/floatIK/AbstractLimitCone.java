@@ -21,6 +21,8 @@ package IK.floatIK;
 import data.EWBIKLoader;
 import data.EWBIKSaver;
 import data.JSONObject;
+import data.LoadManager;
+import data.SaveManager;
 import data.Saveable;
 import sceneGraph.*;
 import sceneGraph.math.floatV.MathUtils;
@@ -32,7 +34,9 @@ public abstract class AbstractLimitCone implements Saveable {
 
 	SGVec_3f controlPoint; 
 	SGVec_3f radialPoint; 
-	protected float radius;
+	
+	//TODO: store this  internally as  cosine to save on the acos call necessary for angleBetween. 
+	protected float radius; 
 
 	public AbstractKusudama parentKusudama;
 
@@ -68,7 +72,7 @@ public abstract class AbstractLimitCone implements Saveable {
 		tangentCircleCenterNext1 = location.getOrthogonal();
 		tangentCircleCenterNext2 = SGVec_3f.mult(tangentCircleCenterNext1, -1);
 
-		this.radius = Math.max(Float.MIN_VALUE, rad);
+		this.radius = MathUtils.max(Float.MIN_VALUE, rad);
 		parentKusudama = attachedTo;
 	}
 
@@ -164,10 +168,11 @@ public abstract class AbstractLimitCone implements Saveable {
 	}
 
 	public boolean determineIfInBounds(AbstractLimitCone next, SGVec_3f input) {
-		boolean[] inBounds = {false};
 		/**
 		 * Procedure : Check if input is contained in this cone, or the next cone 
-		 * if it is, then we're finished and in bounds. otherwise, check if the point  is contained 
+		 * 	if it is, then we're finished and in bounds. otherwise, 
+		 * check if the point  is contained within the tangent radii, 
+		 * 	if it is, then we're out of bounds and finished, otherwise  
 		 * in the tangent triangles while still remaining outside of the tangent radii 
 		 * if it is, then we're finished and in bounds. otherwise, we're out of bounds. 
 		 */
@@ -175,7 +180,43 @@ public abstract class AbstractLimitCone implements Saveable {
 		if(SGVec_3f.angleBetween(controlPoint, input) <=radius || SGVec_3f.angleBetween(next.controlPoint, input) <= next.radius ) {
 			return true; 
 		} else {
-			float[] onTriangle1 = new float[3];
+			boolean inTan1Rad = SGVec_3f.angleBetween(tangentCircleCenterNext1, input)	 < tangentCircleRadiusNext; 
+			if(inTan1Rad)
+				return false; 
+			boolean inTan2Rad = SGVec_3f.angleBetween(tangentCircleCenterNext2, input)	< tangentCircleRadiusNext;
+			if(inTan2Rad) 
+				return false; 
+			
+			/*if we reach this point in the code, we are either on the path between two limitCones, or on the path extending out from between them
+			 * but outside of their radii. 
+			 * 	To determine which , we take the cross product of each control point with each tangent center. 
+			 * 		The direction of each of the resultant vectors will represent the normal of a plane. 
+			 * 		Each of these four planes define part of a boundary which determines if our point is in bounds. 
+			 * 		If the dot product of our point with the normal of any of these planes is negative, we must be out 
+			 * 		of bounds. 
+			 *
+			 *	Older version of this code relied on a triangle intersection algorithm here, which I think is slightly less efficient on average
+			 *	ass it didn't allow for early termination. . 
+			 */
+			
+			SGVec_3f planeNormal = controlPoint.crossCopy(tangentCircleCenterNext1);
+				if(input.dot(planeNormal) < 0)
+					return false; 			
+			planeNormal = SGVec_3f.cross(tangentCircleCenterNext2, controlPoint, planeNormal);
+			if(input.dot(planeNormal) < 0)
+				return false; 
+			planeNormal = SGVec_3f.cross(next.controlPoint, tangentCircleCenterNext2, planeNormal);
+			if(input.dot(planeNormal) < 0)
+				return false; 
+			planeNormal = SGVec_3f.cross(tangentCircleCenterNext1, next.controlPoint, planeNormal);
+			if(input.dot(planeNormal) < 0)
+				return false; 
+			
+			
+			return true;
+		}
+			
+			/*float[] onTriangle1 = new float[3];
 			SGVec_3f tri1Intersect = G.intersectTest(input, this.getControlPoint(), this.tangentCircleCenterNext1, next.getControlPoint(), onTriangle1);
 			float[] onTriangle2 = new float[3];
 			SGVec_3f tri2Intersect = G.intersectTest(input, this.getControlPoint(), this.tangentCircleCenterNext2, next.getControlPoint(), onTriangle2);
@@ -189,8 +230,7 @@ public abstract class AbstractLimitCone implements Saveable {
 								if(!onTri1 && !onTri2) return true;
 								else return false;
 							}
-		}
-		return false;
+		}*/
 	}
 	
 	/**
@@ -236,15 +276,15 @@ public abstract class AbstractLimitCone implements Saveable {
 		float arcDistTocone2 = SGVec_3f.angleBetween(point, next.controlPoint);
 		boolean incone2 = arcDistTocone2 < next.radius;	
 		boolean inCone1 = arcDistToCone1 < radius; 
-		float cone1Height =  (float)Math.max(0, 1 - (arcDistToCone1 / radius)); 
-		float cone2Height = (float)Math.max(0, 1 -(arcDistTocone2 / next.radius)); 
+		float cone1Height =  MathUtils.max(0.0f, 1.0f - (arcDistToCone1 / radius)); 
+		float cone2Height = MathUtils.max(0.0f, 1.0f -(arcDistTocone2 / next.radius)); 
 			
 		boolean inLeftTan = arcDistToLeft < leftTanRadius; 	
 		boolean inRightTan = arcDistToRight < rightTanRadius;	
 		
-		SGVec_3f cone1PenaltyAxis = new SGVec_3f(0,0,0);
-		SGVec_3f pathPenaltyAxis = new SGVec_3f(0,0,0);
-		SGVec_3f cone2PenaltyAxis = new SGVec_3f(0,0,0);
+		SGVec_3f cone1PenaltyAxis = new SGVec_3f(0.0f,0.0f,0.0f);
+		SGVec_3f pathPenaltyAxis = new SGVec_3f(0.0f,0.0f,0.0f);
+		SGVec_3f cone2PenaltyAxis = new SGVec_3f(0.0f,0.0f,0.0f);
 		
 				
 		float[] onTriangle1 = new float[3];
@@ -258,8 +298,8 @@ public abstract class AbstractLimitCone implements Saveable {
 		
 		onTri1 = onTri1 && !inLeftTan; 
 		onTri2 = onTri2 && !inRightTan;
-		float distToPath = 0; 
-		float lrRatio = 6; 
+		float distToPath = 0.0f; 
+		float lrRatio = 6.0f; 
 		
 		if( (onTri1 || onTri2)) { 
 			
@@ -274,7 +314,7 @@ public abstract class AbstractLimitCone implements Saveable {
 				pathPenaltyAxis = rightTan.crossCopy(point);  
 				type += 4;
 			}
-			distToPath = 1-lrRatio;
+			distToPath = 1.0f-lrRatio;
 		}		
 		
 		if(inCone1) {
@@ -320,7 +360,7 @@ public abstract class AbstractLimitCone implements Saveable {
 	}
 	
 	float distFromPathCenterTowardTanCone(SGVec_3f pos, SGVec_3f tanCone, SGVec_3f cone1, SGVec_3f cone2) {
-		SGVec_3f ro = new SGVec_3f(0, 0, 0);
+		SGVec_3f ro = new SGVec_3f(0.0f, 0.0f, 0.0f);
 		sgRayf tanToPos = new sgRayf(tanCone, pos);
 		SGVec_3f intersectsGreatArcAt = tanToPos.intersectsPlane(ro, cone2, cone1);
 		intersectsGreatArcAt = intersectsGreatArcAt.normalize(); 
@@ -413,16 +453,6 @@ public abstract class AbstractLimitCone implements Saveable {
 	}
 
 
-	private boolean onTangentRadii(SGVec_3f input) {
-		if(MathUtils.abs(SGVec_3f.angleBetween(input, tangentCircleCenterNext1)) < tangentCircleRadiusNext) {
-			return true; 
-		} else if(MathUtils.abs(SGVec_3f.angleBetween(input, tangentCircleCenterNext2)) < tangentCircleRadiusNext) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-
 	/**
 	 * 
 	 * @param next
@@ -475,7 +505,7 @@ public abstract class AbstractLimitCone implements Saveable {
 
 			/**
 			 * There are an infinite number of circles co-tangent with A and B, every other
-			 * one of which had a unique radius.  
+			 * one of which has a unique radius.  
 			 * 
 			 * However, we want the radius of our tangent circles to obey the following properties: 
 			 *   1) When the radius of A + B == 0, our tangent circle's radius should = 90.
@@ -508,11 +538,11 @@ public abstract class AbstractLimitCone implements Saveable {
 			//the point on the radius of this cone + half the arcdistance to the circumference of the next cone, rotated 90 degrees along the axis of this cone
 			SGVec_3f minorAppoloniusP2A = new Rot(minorAppoloniusAxisA, MathUtils.PI/2f).applyToCopy(minorAppoloniusP1A);
 			//the axis of this cone, scaled to minimize its distance to the previous two points. 
-			SGVec_3f minorAppoloniusP3A =  SGVec_3f.mult(minorAppoloniusAxisA, G.cos(minorAppoloniusRadiusA));
+			SGVec_3f minorAppoloniusP3A =  SGVec_3f.mult(minorAppoloniusAxisA, MathUtils.cos(minorAppoloniusRadiusA));
 			
 			SGVec_3f minorAppoloniusP1B = new Rot(arcNormal, minorAppoloniusRadiusB).applyToCopy(minorAppoloniusAxisB);
 			SGVec_3f minorAppoloniusP2B = new Rot(minorAppoloniusAxisB, MathUtils.PI/2f).applyToCopy(minorAppoloniusP1B);      
-			SGVec_3f minorAppoloniusP3B = SGVec_3f.mult(minorAppoloniusAxisB, G.cos(minorAppoloniusRadiusB));
+			SGVec_3f minorAppoloniusP3B = SGVec_3f.mult(minorAppoloniusAxisB, MathUtils.cos(minorAppoloniusRadiusB));
 
 			// ray from scaled center of next cone to half way point between the circumference of this cone and the next cone. 
 			sgRayf r1B = new sgRayf(minorAppoloniusP1B, minorAppoloniusP3B); r1B.elongate();
@@ -528,7 +558,6 @@ public abstract class AbstractLimitCone implements Saveable {
 			SGVec_3f sphereIntersect2 = new SGVec_3f();
 			G.raySphereIntersection(intersectionRay, 1f, sphereIntersect1, sphereIntersect2);  
 
-
 			this.tangentCircleCenterNext1 = sphereIntersect1; 
 			this.tangentCircleCenterNext2 = sphereIntersect2; 
 			this.tangentCircleRadiusNext = tRadius;
@@ -538,67 +567,24 @@ public abstract class AbstractLimitCone implements Saveable {
 			next.tangentCircleCenterPrevious2 = sphereIntersect2;
 			next.tangentCircleRadiusPrevious = tRadius;
 
-
-			/*if(SGVec_3f.angleBetween(this.tangentCircleCenterNext1, this.getControlPoint()) < this.getRadius()) tRadius = 0f; 
-			if(SGVec_3f.angleBetween(this.tangentCircleCenterNext2, this.getControlPoint()) < this.getRadius()) tRadius = 0f; 
-			if(SGVec_3f.angleBetween(this.tangentCircleCenterNext1, next.getControlPoint()) < next.getRadius()) tRadius = 0f; 
-			if(SGVec_3f.angleBetween(this.tangentCircleCenterNext2, next.getControlPoint()) < next.getRadius()) tRadius = 0f; 
-			if(SGVec_3f.angleBetween(next.tangentCircleCenterPrevious1, this.getControlPoint()) < this.getRadius()) tRadius = 0f; 
-			if(SGVec_3f.angleBetween(next.tangentCircleCenterPrevious2, this.getControlPoint()) < this.getRadius()) tRadius = 0f; 
-			if(SGVec_3f.angleBetween(next.tangentCircleCenterPrevious1, next.getControlPoint()) < next.getRadius()) tRadius = 0f; 
-			if(SGVec_3f.angleBetween(next.tangentCircleCenterPrevious2, next.getControlPoint()) < next.getRadius()) tRadius = 0f; */
 		}
-		/*if(this.tangentCircleCenterNext1.mag() == 0 && this.tangentCircleCenterNext2.mag() == 0) {
-			AbstractLimitCone encompassingCone = coneEncompassmentCheck(next);
-
-			//if(encompassingCone == this) {
-				Rot radialCreation = new Rot(this.controlPoint.getOrthogonal(), this.radius); 
-				SGVec_3f radialPoint = radialCreation.applyTo(this.controlPoint);
-				this.tangentCircleCenterNext1 =  radialPoint; 
-				this.tangentCircleCenterNext2 = radialPoint.copy();
-				this.tangentCircleRadiusNext = this.radius;
-				next.tangentCircleCenterPrevious1 =  radialPoint.copy(); 
-				next.tangentCircleCenterPrevious2 = radialPoint.copy();
-				next.tangentCircleRadiusPrevious = this.radius;
-
-		}*/
 
 		if(tangentCircleCenterNext1 == null) 
-			tangentCircleCenterNext1 = controlPoint.getOrthogonal();
+			tangentCircleCenterNext1 = controlPoint.getOrthogonal().normalize();
 		if(tangentCircleCenterNext2 == null)
-			tangentCircleCenterNext2 = SGVec_3f.mult(tangentCircleCenterNext1, -1);
+			tangentCircleCenterNext2 = SGVec_3f.mult(tangentCircleCenterNext1, -1).normalize();
 		if(next != null)
 			computeTriangles(next); 
 	}
 
 	private void computeTriangles(AbstractLimitCone next) {
-		firstTriangleNext[1] = this.tangentCircleCenterNext1;		
-		firstTriangleNext[0] = this.getControlPoint(); 
-		firstTriangleNext[2] = next.getControlPoint();
+		firstTriangleNext[1] = this.tangentCircleCenterNext1.normalize();		
+		firstTriangleNext[0] = this.getControlPoint().normalize(); 
+		firstTriangleNext[2] = next.getControlPoint().normalize();
 
-		secondTriangleNext[1] = this.tangentCircleCenterNext2;		
-		secondTriangleNext[0] = this.getControlPoint(); 
-		secondTriangleNext[2] = next.getControlPoint();
-
-
-		/*firstTriangleNext[1] = this.tangentCircleCenterNext1;	
-		Rot tangentNext1ToThisLimitConeCenter = new Rot(tangentCircleCenterNext1, this.getControlPoint());
-		Rot tangentNext1ToThisLimitConeBoundary = new Rot(tangentNext1ToThisLimitConeCenter.getAxis(), tangentCircleRadiusNext);
-		firstTriangleNext[0] = tangentNext1ToThisLimitConeBoundary.applyTo(tangentCircleCenterNext1);
-
-		Rot tangentNext1ToNextLimitConeCenter = new Rot(tangentCircleCenterNext1, next.getControlPoint());
-		Rot tangentNext1ToNextLimitConeBoundary = new Rot(tangentNext1ToNextLimitConeCenter.getAxis(), tangentCircleRadiusNext);
-		firstTriangleNext[2] = tangentNext1ToNextLimitConeBoundary.applyTo(tangentCircleCenterNext1);
-
-		secondTriangleNext[1] = this.tangentCircleCenterNext2;
-
-		Rot tangentNext2ToThisLimitConeCenter = new Rot(tangentCircleCenterNext2, this.getControlPoint());
-		Rot tangentNext2ToThisLimitConeBoundary = new Rot(tangentNext2ToThisLimitConeCenter.getAxis(), tangentCircleRadiusNext);
-		secondTriangleNext[0] = tangentNext2ToThisLimitConeBoundary.applyTo(tangentCircleCenterNext2);
-
-		Rot tangentNext2ToNextLimitConeCenter = new Rot(tangentCircleCenterNext2, next.getControlPoint());
-		Rot tangentNext2ToNextLimitConeBoundary = new Rot(tangentNext2ToNextLimitConeCenter.getAxis(), tangentCircleRadiusNext);
-		secondTriangleNext[2] = tangentNext2ToNextLimitConeBoundary.applyTo(tangentCircleCenterNext2);*/		
+		secondTriangleNext[1] = this.tangentCircleCenterNext2.normalize();		
+		secondTriangleNext[0] = this.getControlPoint().normalize(); 
+		secondTriangleNext[2] = next.getControlPoint().normalize();
 	}
 
 
@@ -642,11 +628,11 @@ public abstract class AbstractLimitCone implements Saveable {
 	}
 	
 	@Override
-	public void makeSaveable() {
+	public void makeSaveable(SaveManager saveManager) {
 	}
 	
 	@Override
-	public JSONObject getSaveJSON() {
+	public JSONObject getSaveJSON(SaveManager saveManager) {
 		JSONObject saveJSON = new JSONObject(); 
 		saveJSON.setString("identityHash", this.getIdentityHash());
 		saveJSON.setString("parentKusudama", this.getParentKusudama().getIdentityHash()); 
@@ -656,22 +642,22 @@ public abstract class AbstractLimitCone implements Saveable {
 	}
 	
 	
-	public void loadFromJSONObject(JSONObject j) {
-		this.parentKusudama = (AbstractKusudama) EWBIKLoader.getObjectFromClassMaps(getParentKusudama().getClass(), j.getString("parentKusudama")); 
-		SGVec_3f controlPointJ = new SGVec_3f(j.getJSONObject("controlPoint"));
+	public void loadFromJSONObject(JSONObject j, LoadManager l) {
+		this.parentKusudama = (AbstractKusudama) l.getObjectFromClassMaps(AbstractKusudama.class, j.getString("parentKusudama")); 
+		SGVec_3f controlPointJ = new SGVec_3f(j.getJSONArray("controlPoint"));
 		this.setControlPoint(controlPointJ);
 		this.radius = j.getFloat("radius");
 	}
 	
 	
 	@Override
-	public void notifyOfSaveIntent() {
+	public void notifyOfSaveIntent(SaveManager saveManager) {
 		// TODO Auto-generated method stub
 		
 	}
 
 	@Override
-	public void notifyOfSaveCompletion() {
+	public void notifyOfSaveCompletion(SaveManager saveManager) {
 		// TODO Auto-generated method stub
 		
 	}

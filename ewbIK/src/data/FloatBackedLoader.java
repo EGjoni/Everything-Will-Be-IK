@@ -11,6 +11,7 @@ import IK.floatIK.AbstractBone;
 import IK.floatIK.AbstractIKPin;
 import IK.floatIK.AbstractKusudama;
 import IK.floatIK.AbstractLimitCone;
+import IK.floatIK.Constraint;
 import sceneGraph.math.floatV.AbstractAxes;
 import sceneGraph.math.floatV.MRotation;
 import sceneGraph.math.floatV.Rot;
@@ -19,12 +20,12 @@ import sceneGraph.math.floatV.sgRayf;
 import sceneGraph.math.doubleV.SGVec_3d;
 import sceneGraph.math.doubleV.sgRayd;
 
-public class FloatBackedLoader {
+public final class FloatBackedLoader {
 		
-	public static File currentFilePath; 
+	public static  File currentFilePath; 
 
 	public static HashMap<String, JSONObject> 	    	axesJSONObjects 		= new HashMap<>();
-	public static HashMap<String, AbstractAxes>			axesLoadObjects 		= new HashMap<>();  
+	public static  HashMap<String, AbstractAxes>			axesLoadObjects 		= new HashMap<>();  
 
 	public static HashMap<String, JSONObject> 	    	armatureJSONObjects 	= new HashMap<>();
 	public static HashMap<String, AbstractArmature>		armatureLoadObjects 	= new HashMap<>();  
@@ -32,7 +33,7 @@ public class FloatBackedLoader {
 	public static HashMap<String, JSONObject> 	    	boneJSONObjects 		= new HashMap<>(); 
 	public static HashMap<String, AbstractBone> 		boneLoadObjects 		= new HashMap<>(); 
 
-	public static HashMap<String, AbstractKusudama>		kusudamaLoadObjects 	= new HashMap<>();
+	public static HashMap<String, Constraint>		kusudamaLoadObjects 	= new HashMap<>();
 	public static HashMap<String, JSONObject>	    	kusudamaJSONObjects 	= new HashMap<>(); 
 	
 	public static HashMap<String, AbstractLimitCone>	limitConeLoadObjects 	= new HashMap<>(); 
@@ -48,35 +49,64 @@ public class FloatBackedLoader {
 
 	private String tempLoadDirectory;	
 	
-	private static boolean Load = false;
+	private  boolean Load = false;
 	
 	public FloatBackedLoader() {
 		
 	}
 
-	public static void importFile(File selection) {
+	public Collection<? extends AbstractArmature> importFile(File selection,
+			Class<? extends AbstractAxes> AxesClass, 
+			Class<? extends AbstractBone> BoneClass, 
+			Class<? extends AbstractArmature> ArmatureClass, 
+			Class<? extends Constraint> KusudamaClass, 
+			Class<? extends AbstractLimitCone>  LimitConeClass, 
+			Class<? extends AbstractIKPin> IKPinClass,
+			EWBIKLoader loader) {
 		JSONObject loadFile = StringFuncs.loadJSONObject(selection);
 		clearCurrentLoadObjects();
-		loadJSON(loadFile);
+		return loadJSON(loadFile,
+				AxesClass, 
+				BoneClass, 
+				ArmatureClass, 
+				KusudamaClass, 
+				LimitConeClass, 
+				IKPinClass,
+				loader);
 	}
 
 	
 
-	public static void loadJSON(JSONObject loadFile) {
+	public static Collection<? extends AbstractArmature> loadJSON(JSONObject loadFile,
+					Class<? extends AbstractAxes> AxesClass, 
+					Class<? extends AbstractBone> BoneClass, 
+					Class<? extends AbstractArmature> ArmatureClass, 
+					Class<? extends Constraint> KusudamaClass, 
+					Class<? extends AbstractLimitCone>  LimitConeClass, 
+					Class<? extends AbstractIKPin> IKPinClass,
+					EWBIKLoader loader) {
 		clearCurrentLoadObjects();		
-		createEmptyLoadMaps(axesJSONObjects, axesLoadObjects, loadFile.getJSONArray("axes"), AbstractAxes.class);		
-		createEmptyLoadMaps(boneJSONObjects, boneLoadObjects, loadFile.getJSONArray("bones"), AbstractBone.class);		
-		createEmptyLoadMaps(armatureJSONObjects, armatureLoadObjects, loadFile.getJSONArray("armatures"), AbstractArmature.class);
-		createEmptyLoadMaps(kusudamaJSONObjects, kusudamaLoadObjects, loadFile.getJSONArray("kusudamas"), AbstractKusudama.class);
-		createEmptyLoadMaps(limitConeJSONObjects, limitConeLoadObjects, loadFile.getJSONArray("limitCones"), AbstractLimitCone.class);
-		createEmptyLoadMaps(IKPinJSONObjects, IKPinLoadObjects, loadFile.getJSONArray("KeyableIKPins"), AbstractIKPin.class);
+		
+		AxesClass = AxesClass == null? AbstractAxes.class : AxesClass;
+		BoneClass = BoneClass == null? AbstractBone.class : BoneClass;
+		ArmatureClass = ArmatureClass == null? AbstractArmature.class : ArmatureClass;
+		KusudamaClass = KusudamaClass == null? Constraint.class : KusudamaClass;
+		LimitConeClass = LimitConeClass == null? AbstractLimitCone.class : LimitConeClass;
+		IKPinClass = IKPinClass == null? AbstractIKPin.class : IKPinClass;
+		
+		createEmptyLoadMaps(axesJSONObjects, axesLoadObjects, loadFile.getJSONArray("axes"), AxesClass);		
+		createEmptyLoadMaps(boneJSONObjects, boneLoadObjects, loadFile.getJSONArray("bones"),  BoneClass);		
+		createEmptyLoadMaps(armatureJSONObjects, armatureLoadObjects, loadFile.getJSONArray("armatures"), ArmatureClass);
+		createEmptyLoadMaps(kusudamaJSONObjects, kusudamaLoadObjects, loadFile.getJSONArray("kusudamas"), KusudamaClass);
+		createEmptyLoadMaps(limitConeJSONObjects, limitConeLoadObjects, loadFile.getJSONArray("limitCones"),  LimitConeClass);
+		createEmptyLoadMaps(IKPinJSONObjects, IKPinLoadObjects, loadFile.getJSONArray("IKPins"),  IKPinClass);
 
-		loadGenerally(axesJSONObjects, axesLoadObjects);
-		loadGenerally(IKPinJSONObjects, IKPinLoadObjects);
-		loadGenerally(limitConeJSONObjects, limitConeLoadObjects);
-		loadGenerally(kusudamaJSONObjects, kusudamaLoadObjects);
-		loadGenerally(boneJSONObjects, boneLoadObjects);
-		loadGenerally(armatureJSONObjects, armatureLoadObjects);
+		loadGenerally(axesJSONObjects, axesLoadObjects, loader);
+		loadGenerally(IKPinJSONObjects, IKPinLoadObjects, loader);
+		loadGenerally(limitConeJSONObjects, limitConeLoadObjects, loader);
+		loadGenerally(kusudamaJSONObjects, kusudamaLoadObjects, loader);
+		loadGenerally(boneJSONObjects, boneLoadObjects, loader);
+		loadGenerally(armatureJSONObjects, armatureLoadObjects, loader);
 
 
 		
@@ -84,14 +114,14 @@ public class FloatBackedLoader {
 			s.notifyOfLoadCompletion();
 		
 		updateArmatureSegments();
-		clearCurrentLoadObjects();
+		
+		for(Saveable s: allLoadedObjects) 
+			s.notifyOfLoadCompletion();
+		
 
 		System.gc();
-	}
-
-	 static void clearCurrentSceneObjects() {
-		// TODO Auto-generated method stub
-
+		
+		return armatureLoadObjects.values();
 	}
 
 	public static void updateArmatureSegments() {
@@ -151,17 +181,17 @@ public class FloatBackedLoader {
 	 * @param jsonForm
 	 * @param saveableForm
 	 */
-	public static void loadGenerally(HashMap<String, JSONObject> jsonForm, HashMap<String, ? extends Saveable> saveableForm) {
+	public static void loadGenerally(HashMap<String, JSONObject> jsonForm, HashMap<String, ? extends Saveable> saveableForm, EWBIKLoader loader) {
 		Collection<String> K =  jsonForm.keySet();
 		for(String k : K) {
 			JSONObject kj = jsonForm.get(k);
 			Saveable si = saveableForm.get(k);
-			si.loadFromJSONObject(kj);
+			si.loadFromJSONObject(kj, loader);
 		}
 	}
 	
 
-	public static String getCurrentFilePath() {
+	public static  String getCurrentFilePath() {
 		if(currentFilePath == null) {
 			return "";
 		} else {
@@ -178,7 +208,7 @@ public class FloatBackedLoader {
 	 * @param json
 	 * @param result
 	 */
-	public static <T extends Object, V extends Object> HashMap<T, V> hashMapFromJSON(JSONObject json, HashMap<T,V> result, TypeIdentifier ti) {
+	public static  <T extends Object, V extends Object> HashMap<T, V> hashMapFromJSON(JSONObject json, HashMap<T,V> result, TypeIdentifier ti) {
 		Class keyClass = null;
 		if(ti.key.getClass() == Class.class) {
 			keyClass = (Class)ti.key;
@@ -232,7 +262,7 @@ public class FloatBackedLoader {
 	 * @param json
 	 * @param result
 	 */
-	public static <T extends Object, V extends Object> HashMap<T, V> hashMapFromJSON(JSONObject json, TypeIdentifier ti) {
+	public static  <T extends Object, V extends Object> HashMap<T, V> hashMapFromJSON(JSONObject json, TypeIdentifier ti) {
 		Class keyClass = null;
 		if(ti.key.getClass() == Class.class) {
 			keyClass = (Class)ti.key;
@@ -274,7 +304,7 @@ public class FloatBackedLoader {
 
 
 
-	public static Object parsePrimitive(Class keyClass, String toParse) {
+	public static  Object parsePrimitive(Class keyClass, String toParse) {
 		if(keyClass == String.class) return toParse;
 		if(keyClass == Float.class) return Float.parseFloat(toParse);
 		if(keyClass == Double.class) return Double.parseDouble(toParse);
@@ -303,41 +333,36 @@ public class FloatBackedLoader {
 	 * @param identityHash
 	 * @return
 	 */
-
 	public static Saveable getObjectFromClassMaps(Class keyClass, String identityHash) {
 		Saveable result = null; 
 	
-			if(keyClass == AbstractAxes.class) 				result = axesLoadObjects.get(identityHash);
-			else if(keyClass == AbstractArmature.class)		result = armatureLoadObjects.get(identityHash);
-			else if(keyClass == AbstractBone.class)			result = boneLoadObjects.get(identityHash);
-			else if(keyClass == AbstractKusudama.class)		result = kusudamaLoadObjects.get(identityHash);
-			else if(keyClass == AbstractLimitCone.class)	result = limitConeLoadObjects.get(identityHash);
-			else if(keyClass == AbstractIKPin.class)		result = IKPinLoadObjects.get(identityHash);
+			if(AbstractAxes.class.isAssignableFrom(keyClass)) 				result = axesLoadObjects.get(identityHash);
+			else if(AbstractArmature.class.isAssignableFrom(keyClass))		result = armatureLoadObjects.get(identityHash);
+			else if(AbstractBone.class.isAssignableFrom(keyClass))			result = boneLoadObjects.get(identityHash);
+			else if(Constraint.class.isAssignableFrom(keyClass))		result = kusudamaLoadObjects.get(identityHash);
+			else if(AbstractLimitCone.class.isAssignableFrom(keyClass))	result = limitConeLoadObjects.get(identityHash);
+			else if(AbstractIKPin.class.isAssignableFrom(keyClass))		result = IKPinLoadObjects.get(identityHash);
 
 		return result;
 	}
 
 	
-	public static <T extends Saveable> T getObjectFor(Class objectClass, JSONObject j, String hash) {
+	public  <T extends Saveable> T getObjectFor(Class objectClass, JSONObject j, String hash) {
 		if(j.hasKey(hash)) {
 			return (T)getObjectFromClassMaps(objectClass, j.getString(hash));
 		} else return null;
 	}
-	
-	public TypeIdentifier getNewTypeIdentifier(Object k, Object v) {
-		return EWBIKLoader.getNewTypeIdentifier(k, v);
-	}
 
-	
 
-	public static void setTempLoadDirectory(String tempLoadDirectory) {
+
+	public  void setTempLoadDirectory(String tempLoadDirectory) {
 		tempLoadDirectory = tempLoadDirectory;
 	}
 
 
 
 
-	public static<T extends Object> void arrayListFromJSONArray(JSONArray jsonArray, ArrayList<T> list, Class c) {	
+	public <T extends Object> void arrayListFromJSONArray(JSONArray jsonArray, ArrayList<T> list, Class c) {	
 
 		for(int i =0 ; i< jsonArray.size(); i++ ) {
 			Object item = jsonArray.get(i);

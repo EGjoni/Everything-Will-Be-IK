@@ -854,7 +854,7 @@ public class sgRayd {
 			pt.set(p);
 		}
 		
-		m = new SGVec_3d(((SGVec_3d)bc.sub(ct)).crossCopy((SGVec_3d)ca.subCopy(at)));
+		m = new SGVec_3d(((SGVec_3d)bc.subCopy(ct)).crossCopy((SGVec_3d)ca.subCopy(at)));
 
 		double nu;
 		double nv;

@@ -350,12 +350,12 @@ public class sgRayf {
 
 
 /**
- * scale the ray outward in both directions by a large amount. (900000)
+ * scale the ray outward in both directions by a large amount. (900)
  */
 	public void elongate() {
 		sgRayf reverseRay = new sgRayf(this.p2.copy(), this.p1.copy()); 
-		sgRayf result = this.getRayScaledTo(900000); 
-		reverseRay = reverseRay.getRayScaledTo(900000);
+		sgRayf result = this.getRayScaledBy(900); 
+		reverseRay = reverseRay.getRayScaledBy(900);
 		result.p1 = reverseRay.p2.copy();
 		this.p1.set(result.p1); 
 		this.p2.set(result.p2);
@@ -522,7 +522,7 @@ public class sgRayf {
 
 		// compute the line parameters of the two closest points
 		if (D < Float.MIN_VALUE) {          // the lines are almost parallel
-			sc = 0;
+			sc = 0.0f;
 			//tc = (b>c ? d/b : e/c);    // use the largest denominator
 		}
 		else {
@@ -553,7 +553,7 @@ public class sgRayf {
 
 		// compute the line parameters of the two closest points
 		if (D < Float.MIN_VALUE) {          // the lines are almost parallel
-			sc = 0;
+			sc = 0f;
 			//tc = (b>c ? d/b : e/c);    // use the largest denominator
 		}
 		else {
@@ -594,7 +594,7 @@ public class sgRayf {
 
 		// compute the line parameters of the two closest points
 		if (D < Float.MIN_VALUE) {          // the lines are almost parallel
-			sc = 0;
+			sc = 0f;
 			//tc = (b>c ? d/b : e/c);    // use the largest denominator
 		}
 		else {
@@ -814,7 +814,7 @@ public class sgRayf {
 		float lf = e.dot(h);                      // lf=e.h
 		float s = MathUtils.pow(radius, 2)-h.dot(h)+MathUtils.pow(lf, 2);   // s=r^2-h^2+lf^2
 		if (s < 0.0) return 0;                    // no intersection points ?
-		s = (float)Math.sqrt(s);                              // s=sqrt(r^2-h^2+lf^2)
+		s = MathUtils.sqrt(s);                              // s=sqrt(r^2-h^2+lf^2)
 
 		int result = 0;
 		if (lf < s) {                               // S1 behind A ?
@@ -861,9 +861,9 @@ public class sgRayf {
 		float nv;
 		float ood;
 
-		float x = Math.abs(m.x);
-		float y = Math.abs(m.y);
-		float z = Math.abs(m.z);
+		float x = MathUtils.abs(m.x);
+		float y = MathUtils.abs(m.y);
+		float z = MathUtils.abs(m.z);
 
 		if (x >= y && x >= z) {
 			nu = triArea2D(pt.y, pt.z, bt.y, bt.z, ct.y, ct.z);

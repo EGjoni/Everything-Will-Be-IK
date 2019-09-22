@@ -18,14 +18,11 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 package IK.floatIK;
 import sceneGraph.*;
-import sceneGraph.math.doubleV.SGVec_3d;
-import sceneGraph.math.doubleV.sgRayd;
 import sceneGraph.math.floatV.MathUtils;
 import sceneGraph.math.floatV.Quaternionf;
 import sceneGraph.math.floatV.Rot;
 import sceneGraph.math.floatV.SGVec_3f;
 import sceneGraph.math.floatV.sgRayf;
-import sceneGraph.numerical.Precision.MathIllegalArgumentException;
 import sceneGraph.math.floatV.SGVec_3f;
 import sceneGraph.math.floatV.sgRayf;
 
@@ -38,7 +35,7 @@ import java.util.ArrayList;
  */
 public class G {
 	
-	public static float PI = (float)Math.PI;
+	public static float PI = MathUtils.PI;
 	public static float TAU = 2*PI;
 	
 	public static float lerp(float a, float b, float t) {
@@ -98,7 +95,7 @@ public class G {
 	}
 
 	public static float random(float a, float b) {
-		return a+((abs(a-b))*(float)Math.random()); 
+		return (float)(a+((abs(a-b))*Math.random())); 
 	}
 
 	public static float sq(float in) {
@@ -107,9 +104,8 @@ public class G {
 
 	public static SGVec_3f axisRotation(SGVec_3f point, SGVec_3f axis, float angle) {
 		//println("rotting");
-		Rot rotation;
-			rotation = new Rot(axis, angle);
-			rotation.applyTo(point, point);		
+		Rot rotation = new Rot(axis, angle);
+		rotation.applyTo(point, point);
 		return point;
 	}
 
@@ -180,16 +176,7 @@ public class G {
 		return intersectsAt;   
 
 	}
-
-	public static SGVec_3f intersectTest(sgRayd R, SGVec_3d ta, SGVec_3d tb, SGVec_3d tc) {
-		float[] uvw = new float[3];
-		return SGVec_3f.add(planeIntersectTest(
-				R.heading().toSGVec3f(),
-				SGVec_3f.sub(ta.toSGVec3f(), R.p1().toSGVec3f()), 
-				SGVec_3f.sub(tb.toSGVec3f(), R.p1().toSGVec3f()), SGVec_3f.sub(tc.toSGVec3f(), R.p1().toSGVec3f()), uvw), R.p1().toSGVec3f());
-		//println(uvw);
-		//return SGVec_3f.add(SGVec_3f.add(SGVec_3f.mult(ta, uvw[0]), SGVec_3f.mult(tb, uvw[1])), SGVec_3f.mult(tc, uvw[2]));
-	}
+	
 
 	public static SGVec_3f planeIntersectTestStrict(sgRayf R, SGVec_3f ta, SGVec_3f tb, SGVec_3f tc) {
 		//will return null if the ray is too short to intersect the plane;
@@ -203,6 +190,12 @@ public class G {
 		//return SGVec_3f.add(SGVec_3f.add(SGVec_3f.mult(ta, uvw[0]), SGVec_3f.mult(tb, uvw[1])), SGVec_3f.mult(tc, uvw[2]));
 	}
 
+	public static SGVec_3f intersectTest(sgRayf R, SGVec_3f ta, SGVec_3f tb, SGVec_3f tc) {
+		float[] uvw = new float[3];
+		return SGVec_3f.add(planeIntersectTest(R.heading(), SGVec_3f.sub(ta, R.p1()), SGVec_3f.sub(tb, R.p1()), SGVec_3f.sub(tc, R.p1()), uvw), R.p1());
+		
+	}
+	
 	public static SGVec_3f intersectTest(sgRayf R, SGVec_3f ta, SGVec_3f tb, SGVec_3f tc, float[] uvw) {
 		return SGVec_3f.add(planeIntersectTest(R.heading(), SGVec_3f.sub(ta, R.p1()), SGVec_3f.sub(tb, R.p1()), SGVec_3f.sub(tc, R.p1()), uvw), R.p1());
 		//println(uvw);
@@ -293,7 +286,7 @@ public class G {
 		a = -(new SGVec_3f(n.x, n.y, n.z).dot(w0));
 		b = new SGVec_3f(n.x, n.y, n.z).dot(dir);
 
-		if ((float)Math.abs(b) <  Float.MIN_VALUE) {
+		if ((float)MathUtils.abs(b) <  Float.MIN_VALUE) {
 			return null;
 		}
 
@@ -343,7 +336,7 @@ public class G {
 		a = -(new SGVec_3f(n.x, n.y, n.z).dot(w0));
 		b = new SGVec_3f(n.x, n.y, n.z).dot(dir);
 
-		if ((float)Math.abs(b) < Float.MIN_VALUE) {
+		if ((float)MathUtils.abs(b) < Float.MIN_VALUE) {
 			return null;
 		}
 
@@ -373,9 +366,9 @@ public class G {
 		float nv;
 		float ood;
 
-		float x = Math.abs(m.x);
-		float y = Math.abs(m.y);
-		float z = Math.abs(m.z);
+		float x = MathUtils.abs(m.x);
+		float y = MathUtils.abs(m.y);
+		float z = MathUtils.abs(m.z);
 
 		// compute areas of plane with largest projections
 		if (x >= y && x >= z) {
@@ -469,8 +462,7 @@ public class G {
 
 		for(int i = 0; i < rotList.size(); i ++) {
 			Rot rt = rotList.get(i);
-			Rot r;
-			r = new Rot(rt.getAxis(), rt.getAngle()*(rotWeight.get(i)/totalWeight));
+			Rot r = new Rot(rt.getAxis(), rt.getAngle()*(rotWeight.get(i)/totalWeight));
 			Quaternionf current = getSingleCoveredQuaternionf(
 					new Quaternionf(r.rotation.getQ0(), 
 									r.rotation.getQ1(),
@@ -481,7 +473,6 @@ public class G {
 			yT += current.getQ2();
 			zT += current.getQ3();
 			addedSoFar++;
-			
 		}
 
 		return new Rot(wT/addedSoFar, xT/addedSoFar, yT/addedSoFar, zT/addedSoFar, true);
@@ -541,13 +532,9 @@ public class G {
 	
 	public static float smoothstep(float edge0, float edge1, float x) {
 		float t = (float)Math.min(Math.max((x - edge0) / (edge1 - edge0), 0.0), 1.0);
-		return t * t * (3 - 2 * t);
+		return t * t * (3.0f - 2.0f * t);
 	}
 
-	public static SGVec_3f intersectTest(sgRayf r2b, SGVec_3f minorAppoloniusP3A, SGVec_3f minorAppoloniusP1A,
-			SGVec_3f minorAppoloniusP2A) {
-		// TODO Auto-generated method stub
-		return null;
-	}
+	
 
 }

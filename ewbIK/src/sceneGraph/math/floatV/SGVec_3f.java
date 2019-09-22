@@ -103,7 +103,13 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f>, CanLoad {
 		return this;
 	}
 	
-	public SGVec_3f set (double x, double y, double z) {
+	/** Sets the vector to the given components
+	 *
+	 * @param x The x-component
+	 * @param y The y-component
+	 * @param z The z-component
+	 * @return this vector for chaining */
+	public SGVec_3f set (double x, double  y, double z) {
 		this.x = (float)x;
 		this.y = (float)y;
 		this.z = (float)z;
@@ -557,7 +563,7 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f>, CanLoad {
 
 	@Override
 	public boolean isUnit (final float margin) {
-		return Math.abs(magSq() - 1f) < margin;
+		return MathUtils.abs(magSq() - 1f) < margin;
 	}
 
 	@Override
@@ -645,11 +651,11 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f>, CanLoad {
 		if (dot > 0.9995 || dot < -0.9995) return lerp(target, alpha);
 
 		// theta0 = angle between input vectors
-		final float theta0 = MathUtils.acos(dot);
+		final float theta0 = (float)MathUtils.acos(dot);
 		// theta = angle between this vector and result
 		final float theta = theta0 * alpha;
 
-		final float st = MathUtils.sin(theta);
+		final float st = (float)MathUtils.sin(theta);
 		final float tx = target.x - x * dot;
 		final float ty = target.y - y * dot;
 		final float tz = target.z - z * dot;
@@ -707,18 +713,18 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f>, CanLoad {
 	@Override
 	public boolean epsilonEquals (final SGVec_3f other, float epsilon) {
 		if (other == null) return false;
-		if (Math.abs(other.x - x) > epsilon) return false;
-		if (Math.abs(other.y - y) > epsilon) return false;
-		if (Math.abs(other.z - z) > epsilon) return false;
+		if (MathUtils.abs(other.x - x) > epsilon) return false;
+		if (MathUtils.abs(other.y - y) > epsilon) return false;
+		if (MathUtils.abs(other.z - z) > epsilon) return false;
 		return true;
 	}
 
 	/** Compares this vector with the other vector, using the supplied epsilon for fuzzy equality testing.
 	 * @return whether the vectors are the same. */
 	public boolean epsilonEquals (float x, float y, float z, float epsilon) {
-		if (Math.abs(x - this.x) > epsilon) return false;
-		if (Math.abs(y - this.y) > epsilon) return false;
-		if (Math.abs(z - this.z) > epsilon) return false;
+		if (MathUtils.abs(x - this.x) > epsilon) return false;
+		if (MathUtils.abs(y - this.y) > epsilon) return false;
+		if (MathUtils.abs(z - this.z) > epsilon) return false;
 		return true;
 	}
 
@@ -767,10 +773,10 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f>, CanLoad {
 		
 		float threshold = this.mag() * 0.6f;
 		if(threshold > 0) {
-			if (Math.abs(x) <= threshold) {
+			if (MathUtils.abs(x) <= threshold) {
 				float inverse  = 1 / MathUtils.sqrt(y * y + z * z);
 				return new SGVec_3f(0, inverse * z, -inverse * y);
-			} else if (Math.abs(y) <= threshold) {
+			} else if (MathUtils.abs(y) <= threshold) {
 				float inverse  = 1 / MathUtils.sqrt(x * x + z * z);
 				return new SGVec_3f(-inverse * z, 0, inverse * x);
 			}

@@ -4,6 +4,9 @@ package IK;
 import IK.doubleIK.AbstractBone;
 import IK.doubleIK.Constraint;
 import IK.doubleIK.G;
+import data.JSONObject;
+import data.LoadManager;
+import data.SaveManager;
 import sceneGraph.IKVector;
 import sceneGraph.math.Vec;
 import sceneGraph.math.doubleV.AbstractAxes;
@@ -45,18 +48,18 @@ public class EulerLimits implements Constraint {
 
 	@Override
 	public void snapToLimits() {
-		double[] angles = attachedTo.getXZYAngle();
+		double[] angles = attachedTo.getXYZAngle();
 		double x, y, z;
 		
 		x = Math.max(angles[0], minX);
 		x = Math.min(x, maxX);
 		
-		z = Math.max(angles[1], minZ);
+		y = Math.max(angles[1], minY);
+		y = Math.min(y, maxY);
+		
+		z = Math.max(angles[2], minZ);
 		z = Math.min(z, maxZ);
-		
-		y = Math.max(angles[2], minY);
-		y = Math.min(y, maxY);		
-		
+						
 		attachedTo.localAxes().alignLocalsTo(limitingAxes);
 		attachedTo.localAxes().rotateBy(new MRotation(RotationOrder.XZY, x, z, y));
 	}
@@ -147,6 +150,48 @@ public class EulerLimits implements Constraint {
 	public boolean isInLimits_(SGVec_3d globalPoint) {
 		// TODO Auto-generated method stub
 		return false;
+	}
+
+	@Override
+	public JSONObject getSaveJSON(SaveManager saveManager) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void loadFromJSONObject(JSONObject j, LoadManager l) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void notifyOfSaveIntent(SaveManager saveManager) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void notifyOfSaveCompletion(SaveManager saveManager) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public boolean isLoading() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public void setLoading(boolean loading) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void makeSaveable(SaveManager saveManager) {
+		// TODO Auto-generated method stub
+		
 	}
 
 	

@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import data.EWBIKLoader;
 import data.EWBIKSaver;
 import data.JSONObject;
+import data.LoadManager;
+import data.SaveManager;
 import data.Saveable;
 import sceneGraph.math.floatV.AbstractAxes;
 import sceneGraph.math.floatV.SGVec_3f;
@@ -17,6 +19,10 @@ public abstract class AbstractIKPin implements Saveable {
 	protected AbstractIKPin parentPin; 		
 	protected ArrayList<AbstractIKPin> childPins = new ArrayList<>();
 	float pinWeight  = 1;
+	short modeCode = 3; 
+	int subTargetCount = 3; 	
+	static final short XDir = 1, YDir = 2, ZDir = 4;
+	protected float xPriority =1f , yPriority =1f, zPriority = 0f;
 	
 	public AbstractIKPin() {
 		
@@ -26,12 +32,14 @@ public abstract class AbstractIKPin implements Saveable {
 		this.isEnabled = enabled; 
 		this.axes = inAxes;
 		this.forBone = bone;
+		setTargetPriorities(xPriority, yPriority, zPriority);
 	}
 	
 	public AbstractIKPin(AbstractAxes inAxes, AbstractBone bone) {
 		this.axes = inAxes;
 		this.forBone = bone;
 		this.isEnabled = false;
+		setTargetPriorities(xPriority, yPriority, zPriority);
 	}
 	
 	public boolean isEnabled() {
@@ -51,7 +59,68 @@ public abstract class AbstractIKPin implements Saveable {
 		this.isEnabled = false;
 	}
 	
+	/**
+	 * Sets  the priority of the orientation bases which effectors reaching for this target will and won't align with. 
+	 * If all are set to 0, then the target is treated as a simple position target. 
+	 * It's usually better to set at least on of these three values to 0, as giving a nonzero value to all three is most often redundant. 
+	 * 
+	 *  This values this function sets are only considered by the orientation aware solver. 
+	 *  
+	 * @param position
+	 * @param xPriority set to a positive value (recommended between 0 and 1) if you want the bone's x basis to point in the same direction as this target's x basis (by this library's convention the x basis corresponds to a limb's twist) 
+	 * @param yPriority set to a positive value (recommended between 0 and 1)  if you want the bone's y basis to point in the same direction as this target's y basis (by this library's convention the y basis corresponds to a limb's direction) 
+	 * @param zPriority set to a positive value (recommended between 0 and 1)  if you want the bone's z basis to point in the same direction as this target's z basis (by this library's convention the z basis corresponds to a limb's twist) 
+	 */
+	public void setTargetPriorities(float xPriority, float yPriority, float zPriority) {
+		boolean xDir = xPriority > 0 ? true : false;
+		boolean yDir = yPriority > 0 ? true : false;
+		boolean zDir = zPriority > 0 ? true : false;
+		modeCode =0; 
+		if(xDir) modeCode += XDir; 
+		if(yDir) modeCode += YDir; 
+		if(zDir) modeCode += ZDir;
+		
+		subTargetCount = 1;
+		if((modeCode &1) != 0) subTargetCount++;   
+		if((modeCode &2) != 0) subTargetCount++;   
+		if((modeCode &4) != 0) subTargetCount++; 
+		
+		this.xPriority = xPriority;
+		this.yPriority = yPriority;
+		this.zPriority = zPriority;
+	}
 	
+	/**
+	 * @return the number of bases an effector to this target will attempt to align on.
+	 */
+	public int getSubtargetCount() {
+		return subTargetCount;
+	}
+	
+	public short getModeCode() {
+		return modeCode;
+	}
+	
+	/**
+	 * @return the priority of this pin's x axis; 
+	 */
+	public float getXPriority() {
+		return this.xPriority;
+	}
+	
+	/**
+	 * @return the priority of this pin's y axis; 
+	 */
+	public float getYPriority() {
+		return this.yPriority;
+	}
+	
+	/**
+	 * @return the priority of this pin's z axis; 
+	 */
+	public float getZPriority() {
+		return this.zPriority;
+	}
 	
 	public AbstractAxes getAxes() {
 		return axes; 
@@ -187,17 +256,17 @@ public abstract class AbstractIKPin implements Saveable {
 	 * 
 	 */
 	public void setPinWeight(float weight) {
-		
+		this.pinWeight = weight;
 	}
 	
 	@Override
-	public void makeSaveable() {
-		EWBIKSaver.addToSaveState(this);
-		getAxes().makeSaveable();
+	public void makeSaveable(SaveManager saveManager) {
+		saveManager.addToSaveState(this);
+		getAxes().makeSaveable(saveManager);
 	}
 	
 	@Override
-	public JSONObject getSaveJSON() {
+	public JSONObject getSaveJSON(SaveManager saveManager) {
 		JSONObject saveJSON = new JSONObject(); 
 		saveJSON.setString("identityHash", this.getIdentityHash());
 		saveJSON.setString("axes", getAxes().getIdentityHash()); 
@@ -208,23 +277,23 @@ public abstract class AbstractIKPin implements Saveable {
 	}
 	
 	
-	public void loadFromJSONObject(JSONObject j) {
-		this.axes = (AbstractAxes) EWBIKLoader.getObjectFromClassMaps(this.getAxes().getClass(), j.getString("axes"));
+	public void loadFromJSONObject(JSONObject j, LoadManager l) {
+		this.axes = (AbstractAxes) l.getObjectFromClassMaps(AbstractAxes.class, j.getString("axes"));
 		this.isEnabled = j.getBoolean("isEnabled"); 
 		this.pinWeight = j.getFloat("pinWeight");
-		this.forBone = (AbstractBone) EWBIKLoader.getObjectFromClassMaps(this.forBone().getClass(), j.getString("forBone")); 
+		this.forBone = (AbstractBone) l.getObjectFromClassMaps(AbstractBone.class, j.getString("forBone")); 
 		
 	}
 
 	
 	@Override
-	public void notifyOfSaveIntent() {
+	public void notifyOfSaveIntent(SaveManager saveManager) {
 		// TODO Auto-generated method stub
 		
 	}
 
 	@Override
-	public void notifyOfSaveCompletion() {
+	public void notifyOfSaveCompletion(SaveManager saveManager) {
 		// TODO Auto-generated method stub
 		
 	}

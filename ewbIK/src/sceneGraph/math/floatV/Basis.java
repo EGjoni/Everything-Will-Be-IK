@@ -3,8 +3,6 @@ package sceneGraph.math.floatV;
 
 
 import sceneGraph.math.floatV.Vec3f;
-import sceneGraph.numerical.Precision.MathIllegalArgumentException;
-import sceneGraph.numerical.Precision.ZeroException;
 
 public class Basis {
 
@@ -108,12 +106,7 @@ public class Basis {
 		SGVec_3f yDirNew =new SGVec_3f(y.heading()); 
 		SGVec_3f zDirNew = new SGVec_3f(z.heading());   		
 
-		try {
-			this.rotation = createPrioritzedRotation(xDirNew, yDirNew, zDirNew);
-		} catch (MathIllegalArgumentException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		this.rotation = createPrioritzedRotation(xDirNew, yDirNew, zDirNew);
 
 		//if(shearScaleMatrix.determinant() < 0) {		
 		//this.rotation = createIdealRotation(xDirNew, yDirNew, zDirNew);
@@ -140,7 +133,7 @@ public class Basis {
 		this.refreshMatrices();
 	}
 
-	private Rot createPrioritzedRotation(SGVec_3f xHeading, SGVec_3f yHeading, SGVec_3f zHeading) throws MathIllegalArgumentException {
+	private Rot createPrioritzedRotation(SGVec_3f xHeading, SGVec_3f yHeading, SGVec_3f zHeading) {
 		SGVec_3f tempV = new SGVec_3f();
 		Rot toYX = new Rot(yBase, xBase, yHeading, xHeading); 
 		toYX.applyTo(yBase, tempV);
@@ -204,7 +197,7 @@ public class Basis {
 			SGVec_3f col1 = R.col(1).crs(A.col(1));
 			SGVec_3f col2 =R.col(2).crs(A.col(2)); 
 			SGVec_3f sum = col0.addCopy(col1).add(col2);
-			float mag = 	Math.abs(
+			float mag = 	MathUtils.abs(
 					R.col(0).dot(A.col(0)) 
 				+ R.col(1).dot(A.col(1)) 
 				+ R.col(2).dot(A.col(2)));
@@ -213,18 +206,8 @@ public class Basis {
 			if (w < 1.0e-9)
 				break;
 			
-			try {
-				q = new MRotation(omega.div(w), w).multiply(q);
-			} catch (MathIllegalArgumentException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}					
-			try {
-				q= q.normalize();
-			} catch (ZeroException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			q = new MRotation(omega.div(w), w).multiply(q);					
+			q= q.normalize();
 		}
 		return q;
 	}
@@ -279,10 +262,9 @@ public class Basis {
 	 * this.getGlobalOf(local_output) == global_input.  
 	 *  
 	 * @param input
-	 * @throws MathIllegalArgumentException 
 	 */
 
-	public void setToLocalOf(Basis global_input, Basis local_output) throws MathIllegalArgumentException {
+	public void setToLocalOf(Basis global_input, Basis local_output) {
 
 		///if a matrix is inverted, reflection should be computed by Reflection *Matrix. 
 		//if a matrix is NOT inverted, reflection should be computed by Matrix * Reflection.	
@@ -337,9 +319,8 @@ public class Basis {
 	 * 
 	 * @param localInput
 	 * @param globalOutput
-	 * @throws MathIllegalArgumentException 
 	 */
-	public void setToGlobalOf(Basis localInput, Basis globalOutput) throws MathIllegalArgumentException {		
+	public void setToGlobalOf(Basis localInput, Basis globalOutput) {		
 
 
 		/**
@@ -454,10 +435,9 @@ public class Basis {
 	 * to the target bases, you are likely using this library in ways you might be better off
 	 * avoiding. Alternatively, this library might be badly designed. I don't know, it's the first time
 	 * I've done this. 
-	 * @throws MathIllegalArgumentException 
 	 */
 	public static Rot getRectifiedRotation(Matrix4f sourceMatrix, Matrix4f targetMatrix,
-			boolean[] flippedAxes) throws MathIllegalArgumentException {
+			boolean[] flippedAxes) {
 		float [] arrVec1 = new float[4];
 		Rot result; 
 
@@ -520,7 +500,7 @@ public class Basis {
 		return oddBasisOut;
 	}
 
-	public Rot getLocalOfRotation(Rot inRot) throws MathIllegalArgumentException {
+	public Rot getLocalOfRotation(Rot inRot) {
 		SGVec_3f tempV = new SGVec_3f();
 		inRot.getAxis(tempV);
 		//this.getInverseComposedTransform().transform(tempVec);
@@ -535,7 +515,7 @@ public class Basis {
 	//private Transform3D composedOrthonormalTransform = new Transform3D(); 
 	//private Transform3D inverseComposedOrthonormalTransform = new Transform3D(); 
 
-	private Rot getChrialityModifiedRotationOf(Rot localRot) throws MathIllegalArgumentException {
+	private Rot getChrialityModifiedRotationOf(Rot localRot) {
 		SGVec_3f tempV = new SGVec_3f();
 		localRot.getAxis(tempV);
 		//this.shearScaleTransform.transform(workingPoint);
@@ -545,7 +525,7 @@ public class Basis {
 		return new Rot(tempV, angle);
 	}
 
-	private void setToChiralityModifiedRotationOf(Rot localRot, Rot outputRot) throws MathIllegalArgumentException {
+	private void setToChiralityModifiedRotationOf(Rot localRot, Rot outputRot) {
 		SGVec_3f tempV = new SGVec_3f();
 		localRot.getAxis(tempV);
 		//localRot.this.setTupleFromDVec(workingVector, workingPoint);
@@ -904,9 +884,9 @@ public class Basis {
 
 	protected float clamp(float val) {
 		if(val>= 0)
-			return Math.max(val, 0.0000000000001f);
+			return Math.max(val, 0.0000001f);
 		else 
-			return Math.min(val, -0.0000000000001f);
+			return Math.min(val, -0.0000001f);
 	}
 
 	private sgRayf xRay = new sgRayf(new SGVec_3f(0,0,0), new SGVec_3f(1,0,0)); 

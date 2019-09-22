@@ -304,19 +304,6 @@ public class SGVec_2d implements Serializable, Vec2d<SGVec_2d> {
 		return this.x * y - this.y * x;
 	}
 
-	/** @return the angle in degrees of this vector (point) relative to the x-axis. Angles are towards the positive y-axis (typically
-	 *         counter-clockwise) and between 0 and 360. */
-	public double angle () {
-		double angle = (double)Math.atan2(y, x) * MathUtils.radiansToDegrees;
-		if (angle < 0) angle += 360;
-		return angle;
-	}
-
-	/** @return the angle in degrees of this vector (point) relative to the given vector. Angles are towards the positive y-axis
-	 *         (typically counter-clockwise.) between -180 and +180 */
-	public double angle (SGVec_2d reference) {
-		return (double)Math.atan2(crs(reference), dot(reference)) * MathUtils.radiansToDegrees;
-	}
 
 	/** @return the angle in radians of this vector (point) relative to the x-axis. Angles are towards the positive y-axis.
 	 *         (typically counter-clockwise) */
@@ -330,12 +317,7 @@ public class SGVec_2d implements Serializable, Vec2d<SGVec_2d> {
 		return (double)Math.atan2(crs(reference), dot(reference));
 	}
 
-	/** Sets the angle of the vector in degrees relative to the x-axis, towards the positive y-axis (typically counter-clockwise).
-	 * @param degrees The angle in degrees to set. */
-	public SGVec_2d setAngle (double degrees) {
-		return setAngleRad(degrees * MathUtils.degreesToRadians);
-	}
-
+	
 	/** Sets the angle of the vector in radians relative to the x-axis, towards the positive y-axis (typically counter-clockwise).
 	 * @param radians The angle in radians to set. */
 	public SGVec_2d setAngleRad (double radians) {
@@ -345,12 +327,7 @@ public class SGVec_2d implements Serializable, Vec2d<SGVec_2d> {
 		return this;
 	}
 
-	/** Rotates the Vector2 by the given angle, counter-clockwise assuming the y-axis points up.
-	 * @param degrees the angle in degrees */
-	public SGVec_2d rotate (double degrees) {
-		return rotateRad(degrees * MathUtils.degreesToRadians);
-	}
-
+	
 	/** Rotates the Vector2 by the given angle, counter-clockwise assuming the y-axis points up.
 	 * @param radians the angle in radians */
 	public SGVec_2d rotateRad (double radians) {

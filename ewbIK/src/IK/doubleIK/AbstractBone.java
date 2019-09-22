@@ -21,11 +21,16 @@ import java.util.ArrayList;
 
 import IK.IKExceptions;
 import IK.IKExceptions.NullParentForBoneException;
+import IK.doubleIK.AbstractBone;
+import IK.doubleIK.AbstractIKPin;
+import IK.doubleIK.Constraint;
 import data.CanLoad;
 import data.EWBIKLoader;
 import data.EWBIKSaver;
 import data.JSONArray;
 import data.JSONObject;
+import data.LoadManager;
+import data.SaveManager;
 import data.Saveable;
 import sceneGraph.*;
 import sceneGraph.math.doubleV.AbstractAxes;
@@ -64,7 +69,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	public Constraint constraints;
 	protected AbstractIKPin pin = null;
 	protected boolean orientationLock = false;
-	protected double stiffnessScalar = 1f;
+	protected double stiffnessScalar = 0f;
 	public int ancestorCount = 0;
 	
 	/**
@@ -470,16 +475,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	public void solveIKFromHere() {
 		this.parentArmature.IKSolver(this);
 	}
-	
-	
-
-	public void ambitiouslySolveIKFromHere(double dampening, int iterations) {
-		this.parentArmature.ambitiousIKSolver(this, dampening, iterations);
-	}
-	
-	public void tranquillySolveIKFromHere(double dampening, int iterations) {
-		this.parentArmature.tranquilIKSolver(this, dampening, iterations);
-	}
+		
 
 	public void snapToConstraints() {
 		if(constraints != null) {		
@@ -493,10 +489,6 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	 * Called whenever this bone's orientation has changed due to an Inverse Kinematics computation. 
 	 * This function is called only once per IK solve, not per iteration. Meaning one call to Solve IK **SHOULD NOT** 
 	 * results in  more than one call to each affected bone. 
-	 * 
-	 * However, the code that calls this function has not been thoroughly tested against edge cases, and you may wish
-	 * to verify that it is working as intended. In particular, the concern is that a bone might under some circumstances be notified multiple times, 
-	 * but you can safely assume it will be called at least once. 
 	 */
 	public void IKUpdateNotification() {
 		
@@ -558,17 +550,18 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 
 	/** 
 	 * @return an array where each element indicated how much this bone is rotated on the X,Y,Z (in that order)
-	 * axes relative to its parent bone. If the bone has no parent, this method 
-	 * throws an exception.
+	 * axes relative to its constraint Axes. 
+	 * If there are no constraint Axes, the result is relative to the parent bone. 
+	 * If the bone has no parent, this method throws an exception.
 	 * @throws NullParentForBoneException
 	 */
-	public double[] getXZYAngle() throws NullParentForBoneException {
+	public double[] getXYZAngle() throws NullParentForBoneException {
 		if(this.parent != null) {
-			Rot boneOffset = new Rot(this.majorRotationAxes.x_().heading(), 
-					this.majorRotationAxes.y_().heading(), 
-					this.localAxes().x_().heading(), 
-					this.localAxes().y_().heading());
-			return boneOffset.rotation.getAngles(RotationOrder.XZY);
+			this.localAxes().markDirty(); this.localAxes().updateGlobal();
+			AbstractAxes result =this.localAxes().getGlobalCopy();
+			this.getMajorRotationAxes().updateGlobal();
+			this.getMajorRotationAxes().globalMBasis.setToOrthoNormalLocalOf(result.globalMBasis, result.globalMBasis);
+			return result.globalMBasis.rotation.rotation.getAngles(RotationOrder.XYZ);
 		} else {
 			return null;
 		}
@@ -844,7 +837,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	}
 	
 	
-	public ArrayList<AbstractBone> getMostImmediatelyPinnedDescendants() {
+	public ArrayList<? extends AbstractBone> getMostImmediatelyPinnedDescendants() {
 		ArrayList<AbstractBone> mostImmediatePinnedDescendants = new ArrayList<AbstractBone>();
 		this.addSelfIfPinned(mostImmediatePinnedDescendants);
 		return mostImmediatePinnedDescendants;
@@ -1024,7 +1017,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 		if(this.getChildren().indexOf(bone) == -1) {
 			((ArrayList<AbstractBone>)getChildren()).add(bone);
 		}
-		parentArmature.updateArmatureSegments();
+		//parentArmature.updateArmatureSegments();
 	}
 		
 
@@ -1068,37 +1061,41 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	 * @return a value between 1 and 0. 
 	 */
 	public double getStiffness() {
-		return 1d-stiffnessScalar; 
+		return stiffnessScalar; 
 	}
 	
 	
 	public void setStiffness(double stiffness) {
-		stiffnessScalar = 1d-stiffness;
+		stiffnessScalar = stiffness;
 	}
 
 	@Override
-	public void loadFromJSONObject(JSONObject j) {
-		this.localAxes = (AbstractAxes) EWBIKLoader.getObjectFromClassMaps(AbstractAxes.class, j.getString("localAxes"));
-		this.majorRotationAxes = (AbstractAxes) EWBIKLoader.getObjectFromClassMaps(AbstractAxes.class, j.getString("majorRotationAxes"));
-		EWBIKLoader.arrayListFromJSONArray(j.getJSONArray("children"), this.children, this.getClass()); 
-		this.setBoneHeight(j.getDouble("boneHeight"));
-		this.setStiffness(j.getDouble("stiffness"));
-		
+	public void loadFromJSONObject(JSONObject j, LoadManager l) {
+		this.localAxes = (AbstractAxes) l.getObjectFromClassMaps(AbstractAxes.class, j.getString("localAxes"));
+		this.majorRotationAxes = (AbstractAxes) l.getObjectFromClassMaps(AbstractAxes.class, j.getString("majorRotationAxes"));
+		this.parentArmature = (AbstractArmature) l.getObjectFromClassMaps(AbstractArmature.class, j.getString("parentArmature")); 
+		l.arrayListFromJSONArray(j.getJSONArray("children"), this.children, this.getClass()); 
+		this.boneHeight = j.getDouble("boneHeight");
+		if(j.hasKey("stiffness")) 
+			this.setStiffness(j.getDouble("stiffness"));			
 		if(j.hasKey("constraints")) 
-			this.constraints = (AbstractKusudama) EWBIKLoader.getObjectFromClassMaps(this.getConstraint().getClass(), j.getString("constraints"));
+			this.constraints = (Constraint) l.getObjectFromClassMaps(Constraint.class, j.getString("constraints"));
 		if(j.hasKey("IKPin")) 
-			this.pin = (AbstractIKPin) EWBIKLoader.getObjectFromClassMaps(this.getIKPin().getClass(), j.getString("constraints"));
+			this.pin = (AbstractIKPin) l.getObjectFromClassMaps(AbstractIKPin.class, j.getString("IKPin"));
+		this.tag = j.getString("tag");
 	}
 	
 	@Override
-	public JSONObject getSaveJSON() {
+	public JSONObject getSaveJSON(SaveManager saveManager) {
 		JSONObject thisBone = new JSONObject();
+		thisBone.setString("identityHash", this.getIdentityHash());
 		thisBone.setString("localAxes", this.localAxes.getIdentityHash());
 		thisBone.setString("majorRotationAxes", majorRotationAxes.getIdentityHash());
-		JSONArray children = EWBIKSaver.arrayListToJSONArray(getChildren());
+		thisBone.setString("parentArmature",  ((Saveable) parentArmature).getIdentityHash());
+		JSONArray children = saveManager.arrayListToJSONArray(getChildren());
 		thisBone.setJSONArray("children", children);
 		if(constraints != null) {
-			thisBone.setString("constraints", ((AbstractKusudama)constraints).getIdentityHash());
+			thisBone.setString("constraints", constraints.getIdentityHash());
 		}
 		if(pin != null) 
 			thisBone.setString("IKPin", pin.getIdentityHash());
@@ -1112,23 +1109,37 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	
 	
 	@Override
-	public void makeSaveable() {
-		EWBIKSaver.addToSaveState(this);
+	public void makeSaveable(SaveManager saveManager) {
+		saveManager.addToSaveState(this);
+		if(this.getIKPin() != null) {
+			this.getIKPin().makeSaveable(saveManager);
+		}
+		for(AbstractBone b : this.children) {
+			b.makeSaveable(saveManager);
+		}
 	}
 
 	
 	@Override
-	public void notifyOfSaveIntent() {
+	public void notifyOfSaveIntent(SaveManager saveManager) {
 		// TODO Auto-generated method stub
 		
 	}
 
 	@Override
-	public void notifyOfSaveCompletion() {
+	public void notifyOfSaveCompletion(SaveManager saveManager) {
 		// TODO Auto-generated method stub
 		
 	}
 
+	@Override
+	public void notifyOfLoadCompletion() {
+		this.setBoneHeight(boneHeight);
+		for(AbstractBone b : this.children) {
+			b.attachToParent(this);
+		}
+	}
+	
 	@Override
 	public boolean isLoading() {
 		// TODO Auto-generated method stub

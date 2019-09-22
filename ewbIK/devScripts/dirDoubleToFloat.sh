@@ -3,7 +3,7 @@
 inDir=$1
 outDir=$2
 
-for file in $inDir/*
+for file in $inDir*
 do
 
 
@@ -16,7 +16,8 @@ do
     echo $outFile
     #note, theis script is brittle, as it just assumes any thing ending  in d.java should be renamed to f.java in the output directory
     #make sure to manually cleanup any failed instances
-   bash fileDoubleToFloat $file $outDir/$outFile
+    #echo $file
+   bash fileDoubleToFloat.sh $file $outDir/$outFile
 
   fi
  
