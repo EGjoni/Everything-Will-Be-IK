@@ -150,8 +150,8 @@ public class Matrix3f implements Serializable {
 	 * @param radians the angle in radians.
 	 * @return This matrix for the purpose of chaining operations. */
 	public Matrix3f setToRotationRad (float radians) {
-		float cos = (float)Math.cos(radians);
-		float sin = (float)Math.sin(radians);
+		float cos = (float)MathUtils.cos(radians);
+		float sin = (float)MathUtils.sin(radians);
 		float[] val = this.val;
 
 		val[M00] = cos;
@@ -169,9 +169,6 @@ public class Matrix3f implements Serializable {
 		return this;
 	}
 
-	public Matrix3f setToRotation (SGVec_3f axis, float degrees) {
-		return setToRotation(axis, MathUtils.cosDeg(degrees), MathUtils.sinDeg(degrees));
-	}
 
 	public Matrix3f setToRotation (SGVec_3f axis, float cos, float sin) {
 		float[] val = this.val;
@@ -454,8 +451,8 @@ public class Matrix3f implements Serializable {
 	 * @return This matrix for the purpose of chaining. */
 	public Matrix3f rotateRad (float radians) {
 		if (radians == 0) return this;
-		float cos = (float)Math.cos(radians);
-		float sin = (float)Math.sin(radians);
+		float cos = (float)MathUtils.cos(radians);
+		float sin = (float)MathUtils.sin(radians);
 		float[] tmp = this.tmp;
 
 		tmp[M00] = cos;
@@ -588,17 +585,17 @@ public class Matrix3f implements Serializable {
 
 	public SGVec_2f getScale (SGVec_2f scale) {
 		float[] val = this.val;
-		scale.x = (float)Math.sqrt(val[M00] * val[M00] + val[M01] * val[M01]);
-		scale.y = (float)Math.sqrt(val[M10] * val[M10] + val[M11] * val[M11]);
+		scale.x = (float)MathUtils.sqrt(val[M00] * val[M00] + val[M01] * val[M01]);
+		scale.y = (float)MathUtils.sqrt(val[M10] * val[M10] + val[M11] * val[M11]);
 		return scale;
 	}
 
 	public float getRotation () {
-		return MathUtils.radiansToDegrees * (float)Math.atan2(val[M10], val[M00]);
+		return MathUtils.radiansToDegrees * (float)MathUtils.atan2(val[M10], val[M00]);
 	}
 
 	public float getRotationRad () {
-		return (float)Math.atan2(val[M10], val[M00]);
+		return (float)MathUtils.atan2(val[M10], val[M00]);
 	}
 
 	/** Scale the matrix in the both the x and y components by the scalar value.

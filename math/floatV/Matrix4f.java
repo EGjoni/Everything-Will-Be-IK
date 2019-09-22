@@ -400,6 +400,11 @@ public class Matrix4f implements Serializable {
 		return this;
 	}
 	
+	public Matrix4f mul (float [] matrixVal) {
+		mul(val, matrixVal);
+		return this;
+	}
+	
 
 
 
@@ -412,6 +417,12 @@ public class Matrix4f implements Serializable {
 	 * @param matrix The other matrix to multiply by.
 	 * @return This matrix for the purpose of chaining operations together. */
 	public Matrix4f mulLeft (Matrix4f matrix) {
+		tmpMat.set(matrix);
+		mul(tmpMat.val, this.val);
+		return set(tmpMat);
+	}
+	
+	public Matrix4f mulLeft (float[] matrix) {
 		tmpMat.set(matrix);
 		mul(tmpMat.val, this.val);
 		return set(tmpMat);
@@ -568,7 +579,7 @@ public class Matrix4f implements Serializable {
 	 * @return This matrix for the purpose of chaining methods together. */
 	public Matrix4f setToProjection (float near, float far, float fovy, float aspectRatio) {
 		idt();
-		float l_fd = (float)(1.0 / Math.tan((fovy * (Math.PI / 180)) / 2.0));
+		float l_fd = (float)(1.0 / Math.tan((fovy * (MathUtils.PI / 180f)) / 2.0f));
 		float l_a1 = (far + near) / (near - far);
 		float l_a2 = (2 * far * near) / (near - far);
 		val[M00] = l_fd / aspectRatio;
@@ -1146,20 +1157,20 @@ public class Matrix4f implements Serializable {
 
 	/** @return the scale factor on the X axis (non-negative) */
 	public float getScaleX () {
-		return (MathUtils.isZero(val[Matrix4f.M01]) && MathUtils.isZero(val[Matrix4f.M02])) ? Math.abs(val[Matrix4f.M00])
-				: (float)Math.sqrt(getScaleXSquared());
+		return (MathUtils.isZero(val[Matrix4f.M01]) && MathUtils.isZero(val[Matrix4f.M02])) ? MathUtils.abs(val[Matrix4f.M00])
+				: (float)MathUtils.sqrt(getScaleXSquared());
 	}
 
 	/** @return the scale factor on the Y axis (non-negative) */
 	public float getScaleY () {
-		return (MathUtils.isZero(val[Matrix4f.M10]) && MathUtils.isZero(val[Matrix4f.M12])) ? Math.abs(val[Matrix4f.M11])
-				: (float)Math.sqrt(getScaleYSquared());
+		return (MathUtils.isZero(val[Matrix4f.M10]) && MathUtils.isZero(val[Matrix4f.M12])) ? MathUtils.abs(val[Matrix4f.M11])
+				: (float)MathUtils.sqrt(getScaleYSquared());
 	}
 
 	/** @return the scale factor on the X axis (non-negative) */
 	public float getScaleZ () {
-		return (MathUtils.isZero(val[Matrix4f.M20]) && MathUtils.isZero(val[Matrix4f.M21])) ? Math.abs(val[Matrix4f.M22])
-				: (float)Math.sqrt(getScaleZSquared());
+		return (MathUtils.isZero(val[Matrix4f.M20]) && MathUtils.isZero(val[Matrix4f.M21])) ? MathUtils.abs(val[Matrix4f.M22])
+				: (float)MathUtils.sqrt(getScaleZSquared());
 	}
 
 	/** @param scale The vector which will receive the (non-negative) scale components on each axis.

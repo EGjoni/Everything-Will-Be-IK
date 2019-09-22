@@ -59,7 +59,7 @@ public class Quaternion implements Serializable {
 	/** Constructor, sets the quaternion from the given axis vector and the angle around that axis in degrees.
 	 * 
 	 * @param axis The axis
-	 * @param angle The angle in degrees. */
+	 * @param angle The angle in radians. */
 	public Quaternion (SGVec_3d axis, double angle) {
 		this.set(axis, angle);
 	}
@@ -91,7 +91,7 @@ public class Quaternion implements Serializable {
 	 * @param angle The angle in degrees
 	 * @return This quaternion for chaining. */
 	public Quaternion set (SGVec_3d axis, double angle) {
-		return setFromAxis(axis.x, axis.y, axis.z, angle);
+		return setFromAxisRad(axis.x, axis.y, axis.z, angle);
 	}
 
 	/** @return a copy of this quaternion */
@@ -114,16 +114,7 @@ public class Quaternion implements Serializable {
 		return "["+ q0 +" " + q1 + " " + q2 + " " + q3 +  "]";
 	}
 
-	/** Sets the quaternion to the given euler angles in degrees.
-	 * @param yaw the rotation around the y axis in degrees
-	 * @param pitch the rotation around the x axis in degrees
-	 * @param roll the rotation around the z axis degrees
-	 * @return this quaternion */
-	public Quaternion setEulerAngles (double yaw, double pitch, double roll) {
-		return setEulerAnglesRad(yaw * MathUtils.degreesToRadians, pitch * MathUtils.degreesToRadians, roll
-			* MathUtils.degreesToRadians);
-	}
-
+	
 	/** Sets the quaternion to the given euler angles in radians.
 	 * @param yaw the rotation around the y axis in radians
 	 * @param pitch the rotation around the x axis in radians
@@ -158,44 +149,7 @@ public class Quaternion implements Serializable {
 		return t > 0.499d ? 1 : (t < -0.499d ? -1 : 0);
 	}
 
-	/** Get the roll euler angle in radians, which is the rotation around the z axis. Requires that this quaternion is normalized.
-	 * @return the rotation around the z axis in radians (between -PI and +PI) */
-	public double getRollRad () {
-		final int pole = getGimbalPole();
-		return pole == 0 ? MathUtils.atan2(2d * (q0 * q3 + q2 * q1), 1d - 2d * (q1 * q1 + q3 * q3)) : (double)pole * 2d
-			* MathUtils.atan2(q2, q0);
-	}
-
-	/** Get the roll euler angle in degrees, which is the rotation around the z axis. Requires that this quaternion is normalized.
-	 * @return the rotation around the z axis in degrees (between -180 and +180) */
-	public double getRoll () {
-		return getRollRad() * MathUtils.radiansToDegrees;
-	}
-
-	/** Get the pitch euler angle in radians, which is the rotation around the x axis. Requires that this quaternion is normalized.
-	 * @return the rotation around the x axis in radians (between -(PI/2) and +(PI/2)) */
-	public double getPitchRad () {
-		final int pole = getGimbalPole();
-		return pole == 0 ? (double)Math.asin(MathUtils.clamp(2d * (q0 * q1 - q3 * q2), -1d, 1d)) : (double)pole * MathUtils.PI * 0.5d;
-	}
-
-	/** Get the pitch euler angle in degrees, which is the rotation around the x axis. Requires that this quaternion is normalized.
-	 * @return the rotation around the x axis in degrees (between -90 and +90) */
-	public double getPitch () {
-		return getPitchRad() * MathUtils.radiansToDegrees;
-	}
-
-	/** Get the yaw euler angle in radians, which is the rotation around the y axis. Requires that this quaternion is normalized.
-	 * @return the rotation around the y axis in radians (between -PI and +PI) */
-	public double getYawRad () {
-		return getGimbalPole() == 0 ? MathUtils.atan2(2d * (q2 * q0 + q1 * q3), 1d - 2d * (q2 * q2 + q1 * q1)) : 0d;
-	}
-
-	/** Get the yaw euler angle in degrees, which is the rotation around the y axis. Requires that this quaternion is normalized.
-	 * @return the rotation around the y axis in degrees (between -180 and +180) */
-	public double getYaw () {
-		return getYawRad() * MathUtils.radiansToDegrees;
-	}
+	
 
 	public final static double len2 (final double x, final double y, final double z, final double w) {
 		return x * x + y * y + z * z + w * w;
@@ -350,15 +304,7 @@ public class Quaternion implements Serializable {
 			&& MathUtils.isEqual(q0, 1d, tolerance);
 	}
 
-	// todo : the setFromAxis(v3,double) method should replace the set(v3,double) method
-	/** Sets the quaternion components from the given axis and angle around that axis.
-	 * 
-	 * @param axis The axis
-	 * @param degrees The angle in degrees
-	 * @return This quaternion for chaining. */
-	public Quaternion setFromAxis (final SGVec_3d axis, final double degrees) {
-		return setFromAxis(axis.x, axis.y, axis.z, degrees);
-	}
+
 
 	/** Sets the quaternion components from the given axis and angle around that axis.
 	 * 
@@ -369,15 +315,6 @@ public class Quaternion implements Serializable {
 		return setFromAxisRad(axis.x, axis.y, axis.z, radians);
 	}
 
-	/** Sets the quaternion components from the given axis and angle around that axis.
-	 * @param x X direction of the axis
-	 * @param y Y direction of the axis
-	 * @param z Z direction of the axis
-	 * @param degrees The angle in degrees
-	 * @return This quaternion for chaining. */
-	public Quaternion setFromAxis (final double x, final double y, final double z, final double degrees) {
-		return setFromAxisRad(x, y, z, degrees * MathUtils.degreesToRadians);
-	}
 
 	/** Sets the quaternion components from the given axis and angle around that axis.
 	 * @param x X direction of the axis
@@ -698,19 +635,6 @@ public class Quaternion implements Serializable {
 		return this.copy().mul(scalar);
 	}
 
-	/** Get the axis angle representation of the rotation in degrees. The supplied vector will receive the axis (x, y and z values)
-	 * of the rotation and the value returned is the angle in degrees around that axis. Note that this method will alter the
-	 * supplied vector, the existing value of the vector is ignored. </p> This will normalize this quaternion if needed. The
-	 * received axis is a unit vector. However, if this is an identity quaternion (no rotation), then the length of the axis may be
-	 * zero.
-	 * 
-	 * @param axis vector which will receive the axis
-	 * @return the angle in degrees
-	 * @see <a href="http://en.wikipedia.org/wiki/Axis%E2%80%93angle_representation">wikipedia</a>
-	 * @see <a href="http://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToAngle">calculation</a> */
-	public double getAxisAngle (SGVec_3d axis) {
-		return getAxisAngleRad(axis) * MathUtils.radiansToDegrees;
-	}
 
 	/** Get the axis-angle representation of the rotation in radians. The supplied vector will receive the axis (x, y and z values)
 	 * of the rotation and the value returned is the angle in radians around that axis. Note that this method will alter the
@@ -752,7 +676,7 @@ public class Quaternion implements Serializable {
 	 * and the angle of this rotation. Use {@link #getAngleAround(SGVec_3d)} to get the angle around a specific axis.
 	 * @return the angle in degrees of the rotation */
 	public double getAngle () {
-		return getAngleRad() * MathUtils.radiansToDegrees;
+		return getAngleRad();
 	}
 
 	/** Get the swing rotation and twist rotation for the specified axis. The twist rotation represents the rotation around the
@@ -812,7 +736,7 @@ public class Quaternion implements Serializable {
 	 * @param axisZ the z component of the normalized axis for which to get the angle
 	 * @return the angle in degrees of the rotation around the specified axis */
 	public double getAngleAround (final double axisX, final double axisY, final double axisZ) {
-		return getAngleAroundRad(axisX, axisY, axisZ) * MathUtils.radiansToDegrees;
+		return getAngleAroundRad(axisX, axisY, axisZ);
 	}
 
 	/** Get the angle in degrees of the rotation around the specified axis. The axis must be normalized.

@@ -204,8 +204,7 @@ public class Basis {
 			SGVec_3d omega = sum.multCopy(1d/(mag+1.0e-9));					
 			double w = omega.mag();
 			if (w < 1.0e-9)
-				break;
-			
+				break;			
 			q = new MRotation(omega.div(w), w).multiply(q);					
 			q= q.normalize();
 		}

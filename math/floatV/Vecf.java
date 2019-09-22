@@ -17,7 +17,6 @@
 package sceneGraph.math.floatV;
 
 import sceneGraph.math.Vec;
-import sceneGraph.math.floatV.Interpolation;
 
 /** Encapsulates a general vector. Allows chaining operations by returning a reference to itself in all modification methods. See
  * {@link SGVec_2f} and {@link SGVec_3f} for specific implementations.

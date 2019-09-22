@@ -400,6 +400,11 @@ public class Matrix4d implements Serializable {
 		return this;
 	}
 	
+	public Matrix4d mul (double [] matrixVal) {
+		mul(val, matrixVal);
+		return this;
+	}
+	
 
 
 
@@ -412,6 +417,12 @@ public class Matrix4d implements Serializable {
 	 * @param matrix The other matrix to multiply by.
 	 * @return This matrix for the purpose of chaining operations together. */
 	public Matrix4d mulLeft (Matrix4d matrix) {
+		tmpMat.set(matrix);
+		mul(tmpMat.val, this.val);
+		return set(tmpMat);
+	}
+	
+	public Matrix4d mulLeft (double[] matrix) {
 		tmpMat.set(matrix);
 		mul(tmpMat.val, this.val);
 		return set(tmpMat);
@@ -823,14 +834,14 @@ public class Matrix4d implements Serializable {
 	 * @param axisX The x-component of the axis
 	 * @param axisY The y-component of the axis
 	 * @param axisZ The z-component of the axis
-	 * @param degrees The angle in degrees
+	 * @param radians The angle in radians
 	 * @return This matrix for the purpose of chaining methods together. */
-	public Matrix4d setToRotation (double axisX, double axisY, double axisZ, double degrees) {
-		if (degrees == 0) {
+	public Matrix4d setToRotation (double axisX, double axisY, double axisZ, double radians) {
+		if (radians == 0) {
 			idt();
 			return this;
 		}
-		return set(quat.setFromAxis(axisX, axisY, axisZ, degrees));
+		return set(quat.setFromAxisRad(axisX, axisY, axisZ, radians));
 	}
 
 	/** Sets the matrix to a rotation matrix around the given axis.
@@ -868,15 +879,6 @@ public class Matrix4d implements Serializable {
 		return set(quat.setFromCross(x1, y1, z1, x2, y2, z2));
 	}
 
-	/** Sets this matrix to a rotation matrix from the given euler angles.
-	 * @param yaw the yaw in degrees
-	 * @param pitch the pitch in degrees
-	 * @param roll the roll in degrees
-	 * @return This matrix */
-	public Matrix4d setFromEulerAngles (double yaw, double pitch, double roll) {
-		quat.setEulerAngles(yaw, pitch, roll);
-		return set(quat);
-	}
 
 	/** Sets this matrix to a rotation matrix from the given euler angles.
 	 * @param yaw the yaw in radians
@@ -1746,7 +1748,7 @@ public class Matrix4d implements Serializable {
 	 * @return This matrix for the purpose of chaining methods together. */
 	public Matrix4d rotate (double axisX, double axisY, double axisZ, double degrees) {
 		if (degrees == 0) return this;
-		quat.setFromAxis(axisX, axisY, axisZ, degrees);
+		quat.setFromAxisRad(axisX, axisY, axisZ, degrees);
 		return rotate(quat);
 	}
 

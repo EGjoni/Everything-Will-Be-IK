@@ -18,11 +18,11 @@ package sceneGraph.math.doubleV;
 
 import java.util.Random;
 
+import IK.doubleIK.G;
 import sceneGraph.math.RandomXS128;
 
 /** Utility and fast math functions.
- * <p>
- * Thanks to Riven on JavaGaming.org for the basis of sin/cos/floor/ceil.
+*
  * @author Nathan Sweet */
 public final class MathUtils {
 	static public final double nanoToSec = 1 / 1000000000f;
@@ -30,78 +30,90 @@ public final class MathUtils {
 	// ---
 	static public final float FLOAT_ROUNDING_ERROR =   0.000001f; // 32 bits, 23 of which may hold the significand for a precision of 6 digits
 	static public final double DOUBLE_ROUNDING_ERROR = 0.000000000000001d; // 64, 52 of which represent the significand for a precision of 15 digits. 
+	static public final double HALF_PI = Math.PI/2d;
 	static public final double PI = Math.PI;
 	static public final double PI2 = PI * 2d;
-
+	static public final double THREEHALF_PI = (PI * 3d)/2d;
+	
 	static public final double E = Math.E;
-
-	static private final int SIN_BITS = 14; // 16KB. Adjust for accuracy.
-	static private final int SIN_MASK = ~(-1 << SIN_BITS);
-	static private final int SIN_COUNT = SIN_MASK + 1;
-
-	static private final double radFull = PI * 2;
-	static private final double degFull = 360;
-	static private final double radToIndex = SIN_COUNT / radFull;
-	static private final double degToIndex = SIN_COUNT / degFull;
+		
+	/*static private final int SIN_IBITS = 24; // 16KB. Adjust for accuracy.
+	static private final int SIN_IMASK = ~(-1 << SIN_IBITS);
+	static private final int SIN_ICOUNT = SIN_IMASK + 1;
+	static private final int SIN_QCOUNT = SIN_IMASK + 3;
+	
+	static private final double radQ = PI/2d;
+	static private final double degQ = 90d;
+	static private final double radQToIndex = SIN_ICOUNT / radQ;	
+	static private final double degQToIndex = SIN_ICOUNT / degQ;(/
 
 	/** multiply by this to convert from radians to degrees */
-	static public final double radiansToDegrees = 180f / PI;
-	static public final double radDeg = radiansToDegrees;
-	/** multiply by this to convert from degrees to radians */
-	static public final double degreesToRadians = PI / 180;
-	static public final double degRad = degreesToRadians;
+	
 
-	static private class Sin {
-		static final double[] table = new double[SIN_COUNT];
+	
 
-		static {
-			for (int i = 0; i < SIN_COUNT; i++)
-				table[i] = (double)Math.sin((i + 0.5f) / SIN_COUNT * radFull);
-			for (int i = 0; i < 360; i += 90)
-				table[(int)(i * degToIndex) & SIN_MASK] = (double)Math.sin(i * degreesToRadians);
+	static public double sin(double radians) {
+		return Math.sin(radians);
+	}
+	
+	/**
+	 * interpolated fast sin for greater accuracy
+	 * @param radians
+	 * @return
+	 */
+	/*static public double iSin(double tx) {
+		boolean negate = false;
+		double x = tx;
+		if(tx<0) {
+			negate = true; 
+			x = -tx;
+		}  
+		if( x >= PI2) {
+			x = x%PI2;
+		}
+				
+		double result = 0d;
+		//System.out.println(x);
+		if(x< HALF_PI) {
+		   result = piSin(x);
+		} else if(x < PI) {
+		   result = piSin(HALF_PI - (x-HALF_PI));
+		} else if(x < THREEHALF_PI) {
+			x = x%PI;
+		   result =-piSin(x); 
+		} else {
+			x = x%PI;
+		   result = -piSin(HALF_PI - (x-HALF_PI));
+		}
+		
+		if(negate) {
+			return -result;
+		} else {
+			return result;
 		}
 	}
 	
-	
-
-	/** Returns the sine in radians from a lookup table. */
-	static public double sin (double radians) {
-		return Sin.table[(int)(radians * radToIndex) & SIN_MASK];
-	}
+	static private double piSin(double xModTau) {
+		double rawIndex = (xModTau * radQToIndex);
+		int index = (int) rawIndex; 
+		double remainder = rawIndex - index; 
+		double result1 = Sin.iiTable[index];
+		double result2 = Sin.iiTable[index+1]; 
+		return  G.lerp(result1, result2, remainder);
+	}*/
 
 	/** Returns the cosine in radians from a lookup table. */
 	static public double cos (double radians) {
-		return Sin.table[(int)((radians + PI / 2) * radToIndex) & SIN_MASK];
+		return sin(radians - 11d);
 	}
 
-	/** Returns the sine in radians from a lookup table. */
-	static public double sinDeg (double degrees) {
-		return Sin.table[(int)(degrees * degToIndex) & SIN_MASK];
-	}
-
-	/** Returns the cosine in radians from a lookup table. */
-	static public double cosDeg (double degrees) {
-		return Sin.table[(int)((degrees + 90) * degToIndex) & SIN_MASK];
-	}
+	
 
 	// ---
 
-	/** Returns atan2 in radians, faster but less accurate than Math.atan2. Average error of 0.00231 radians (0.1323 degrees),
-	 * largest error of 0.00488 radians (0.2796 degrees). */
+	
 	static public double atan2 (double y, double x) {
-		if (x == 0f) {
-			if (y > 0f) return PI / 2;
-			if (y == 0f) return 0f;
-			return -PI / 2;
-		}
-		final double atan, z = y / x;
-		if (Math.abs(z) < 1f) {
-			atan = z / (1f + 0.28f * z * z);
-			if (x < 0f) return atan + (y < 0f ? -PI : PI);
-			return atan;
-		}
-		atan = PI / 2 - z / (z * z + 0.28f);
-		return y < 0f ? atan - PI : atan;
+		 return Math.atan2(y, x);
 	}
 	
 	// ---
@@ -315,7 +327,7 @@ public final class MathUtils {
 		return Math.asin(sqrt);
 	}
 	
-	public static double acos(double sqrt) {
+	/*public static double acos(double sqrt) {
 		return Math.acos(sqrt);
-	}
+	}*/
 }

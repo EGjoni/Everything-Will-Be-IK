@@ -5,6 +5,7 @@
 
 package sceneGraph.math.doubleV;
 
+import org.apache.commons.math3.*;
 import org.apache.commons.math3.exception.MathArithmeticException;
 import org.apache.commons.math3.exception.MathIllegalArgumentException;
 import org.apache.commons.math3.exception.ZeroException;
@@ -12,10 +13,9 @@ import org.apache.commons.math3.exception.util.LocalizedFormats;
 import org.apache.commons.math3.geometry.euclidean.threed.CardanEulerSingularityException;
 import org.apache.commons.math3.geometry.euclidean.threed.NotARotationMatrixException;
 import org.apache.commons.math3.util.FastMath;
-import org.apache.commons.math3.util.MathArrays;
+import org.apache.commons.math3.util.Precision;
 
 import sceneGraph.math.floatV.SGVec_3f;
-import sceneGraph.numerical.Precision;
 
 
 
@@ -109,10 +109,13 @@ public class MRotation {
 			throw new MathIllegalArgumentException(LocalizedFormats.ZERO_NORM_FOR_ROTATION_AXIS);
 		}
 
-		double halfAngle = -0.5 * angle;
-		double coeff = FastMath.sin(halfAngle) / norm;
-
-		q0 = FastMath.cos (halfAngle);
+		double halfAngle = -0.5 * angle;					
+		double coeff = MathUtils.sin(halfAngle) / norm;
+		
+		
+		double atanTest = MathUtils.atan2(7, 9);
+		
+		q0 = MathUtils.cos (halfAngle);
 		q1 = coeff * axis.x;
 		q2 = coeff * axis.y;
 		q3 = coeff * axis.z;
@@ -130,13 +133,18 @@ public class MRotation {
 		double angle = this.getAngle();
 		double norm = newAxis.mag();
 		if (norm == 0) {
-			throw new MathIllegalArgumentException(LocalizedFormats.ZERO_NORM_FOR_ROTATION_AXIS);
+			try {
+				throw new MathIllegalArgumentException(LocalizedFormats.ZERO_NORM_FOR_ROTATION_AXIS);
+			} catch (MathIllegalArgumentException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 
 		double halfAngle = -0.5 * angle;
-		double coeff = FastMath.sin(halfAngle) / norm;
+		double coeff = Math.sin(halfAngle) / norm;
 
-		q0 = FastMath.cos (halfAngle);
+		q0 = Math.cos (halfAngle);
 		q1 = coeff * newAxis.x;
 		q2 = coeff * newAxis.y;
 		q3 = coeff * newAxis.z;
@@ -155,11 +163,12 @@ public class MRotation {
 		if (norm == 0) {
 			throw new MathIllegalArgumentException(LocalizedFormats.ZERO_NORM_FOR_ROTATION_AXIS);
 		}
-
+		
+		
 		double halfAngle = -0.5 * newAngle;
-		double coeff = FastMath.sin(halfAngle) / norm;
+		double coeff = Math.sin(halfAngle) / norm;
 
-		q0 = FastMath.cos (halfAngle);
+		q0 = Math.cos (halfAngle);
 		q1 = coeff * axis.x;
 		q2 = coeff * axis.y;
 		q3 = coeff * axis.z;
@@ -296,7 +305,7 @@ public class MRotation {
 		             k.y * (u1z * u2x - u1x * u2z) +
 		             k.z * (u1x * u2y - u1y * u2x);
 
-		  if (MathUtils.abs(c) <= MathUtils.DOUBLE_ROUNDING_ERROR) {
+		  if (Math.abs(c) <= MathUtils.DOUBLE_ROUNDING_ERROR) {
 		    // the (q1, q2, q3) vector is in the (u1, u2) plane
 		    // we try other vectors
 			 SGVec_3d u3 = u1.crossCopy(u2);
@@ -318,7 +327,7 @@ public class MRotation {
 		        k.y * (u1z * u3x - u1x * u3z) +
 		        k.z * (u1x * u3y - u1y * u3x);
 
-		    if (MathUtils.abs(c) <= MathUtils.DOUBLE_ROUNDING_ERROR) {
+		    if (Math.abs(c) <= MathUtils.DOUBLE_ROUNDING_ERROR) {
 		      // the (q1, q2, q3) vector is aligned with u1:
 		      // we try (u2, u3) and (v2, v3)
 		      k = new SGVec_3d(dy2 * dz3 - dz2 * dy3,
@@ -328,7 +337,7 @@ public class MRotation {
 		          k.y * (u2z * u3x - u2x * u3z) +
 		          k.z * (u2x * u3y - u2y * u3x);
 
-		      if (MathUtils.abs(c) <= MathUtils.DOUBLE_ROUNDING_ERROR) {
+		      if (Math.abs(c) <= MathUtils.DOUBLE_ROUNDING_ERROR) {
 		        // the (q1, q2, q3) vector is aligned with everything
 		        // this is really the identity rotation
 		        q0 = 1.0f;
@@ -430,7 +439,7 @@ public class MRotation {
 		} else {
 			// general case: (u, v) defines a plane, we select
 			// the shortest possible rotation: axis orthogonal to this plane
-			q0 = FastMath.sqrt(0.5 * (1.0 + dot / normProduct));
+			q0 = Math.sqrt(0.5 * (1.0 + dot / normProduct));
 			double coeff = 1.0 / (2.0 * q0 * normProduct);
 			SGVec_3d q = v.crossCopy(u);
 			q1 = coeff * q.x;
@@ -498,7 +507,7 @@ public class MRotation {
 		double s = ort[0][0] + ort[1][1] + ort[2][2];
 		if (s > -0.19) {
 			// compute q0 and deduce q1, q2 and q3
-			quat[0] = 0.5 * FastMath.sqrt(s + 1.0);
+			quat[0] = 0.5 * Math.sqrt(s + 1.0);
 			double inv = 0.25 / quat[0];
 			quat[1] = inv * (ort[1][2] - ort[2][1]);
 			quat[2] = inv * (ort[2][0] - ort[0][2]);
@@ -507,7 +516,7 @@ public class MRotation {
 			s = ort[0][0] - ort[1][1] - ort[2][2];
 			if (s > -0.19) {
 				// compute q1 and deduce q0, q2 and q3
-				quat[1] = 0.5 * FastMath.sqrt(s + 1.0);
+				quat[1] = 0.5 * Math.sqrt(s + 1.0);
 				double inv = 0.25 / quat[1];
 				quat[0] = inv * (ort[1][2] - ort[2][1]);
 				quat[2] = inv * (ort[0][1] + ort[1][0]);
@@ -516,7 +525,7 @@ public class MRotation {
 				s = ort[1][1] - ort[0][0] - ort[2][2];
 				if (s > -0.19) {
 					// compute q2 and deduce q0, q1 and q3
-					quat[2] = 0.5 * FastMath.sqrt(s + 1.0);
+					quat[2] = 0.5 * Math.sqrt(s + 1.0);
 					double inv = 0.25 / quat[2];
 					quat[0] = inv * (ort[2][0] - ort[0][2]);
 					quat[1] = inv * (ort[0][1] + ort[1][0]);
@@ -524,7 +533,7 @@ public class MRotation {
 				} else {
 					// compute q3 and deduce q0, q1 and q2
 					s = ort[2][2] - ort[0][0] - ort[1][1];
-					quat[3] = 0.5 * FastMath.sqrt(s + 1.0);
+					quat[3] = 0.5 * Math.sqrt(s + 1.0);
 					double inv = 0.25 / quat[3];
 					quat[0] = inv * (ort[0][1] - ort[1][0]);
 					quat[1] = inv * (ort[0][2] + ort[2][0]);
@@ -585,17 +594,17 @@ public class MRotation {
 		if (squaredSine == 0) {
 			return new SGVec_3d(1, 0, 0);
 		} else if (q0 < 0) {
-			double inverse = 1 / FastMath.sqrt(squaredSine);
+			double inverse = 1 / Math.sqrt(squaredSine);
 			return new SGVec_3d(q1 * inverse, q2 * inverse, q3 * inverse);
 		}
-		double inverse = -1 / FastMath.sqrt(squaredSine);
+		double inverse = -1 / Math.sqrt(squaredSine);
 		return new SGVec_3d(q1 * inverse, q2 * inverse, q3 * inverse);
 	}
 
 
 	public MRotation getInverse() {
 		final double squareNorm = q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3;
-		if (squareNorm < Precision.SAFE_MIN_DOUBLE) {
+		if (squareNorm < Precision.SAFE_MIN) {
 			throw new ZeroException(LocalizedFormats.NORM, squareNorm);
 		}
 
@@ -613,11 +622,11 @@ public class MRotation {
 	 */
 	public double getAngle() {
 		if ((q0 < -0.1) || (q0 > 0.1)) {
-			return 2 * FastMath.asin(FastMath.sqrt(q1 * q1 + q2 * q2 + q3 * q3));
+			return 2 * Math.asin(Math.sqrt(q1 * q1 + q2 * q2 + q3 * q3));
 		} else if (q0 < 0) {
-			return 2 * FastMath.acos(-q0);
+			return 2 * Math.acos(-q0);
 		}
-		return 2 * FastMath.acos(q0);
+		return 2 * Math.acos(q0);
 	}
 
 	/** Get the Cardan or Euler angles corresponding to the instance.
@@ -668,9 +677,9 @@ public class MRotation {
 				throw new CardanEulerSingularityException(true);
 			}
 			return new double[] {
-					FastMath.atan2(-(v1.y), v1.z),
-					FastMath.asin(v2.z),
-					FastMath.atan2(-(v2.y), v2.x)
+					Math.atan2(-(v1.y), v1.z),
+					Math.asin(v2.z),
+					Math.atan2(-(v2.y), v2.x)
 			};
 
 		} else if (order == RotationOrder.XZY) {
@@ -686,9 +695,9 @@ public class MRotation {
 				throw new CardanEulerSingularityException(true);
 			}
 			return new double[] {
-					FastMath.atan2(v1.z, v1.y),
-					-FastMath.asin(v2.y),
-					FastMath.atan2(v2.z, v2.x)
+					Math.atan2(v1.z, v1.y),
+					-Math.asin(v2.y),
+					Math.atan2(v2.z, v2.x)
 			};
 
 		} else if (order == RotationOrder.YXZ) {
@@ -704,9 +713,9 @@ public class MRotation {
 				throw new CardanEulerSingularityException(true);
 			}
 			return new double[] {
-					FastMath.atan2(v1.x, v1.z),
-					-FastMath.asin(v2.z),
-					FastMath.atan2(v2.x, v2.y)
+					Math.atan2(v1.x, v1.z),
+					-Math.asin(v2.z),
+					Math.atan2(v2.x, v2.y)
 			};
 
 		} else if (order == RotationOrder.YZX) {
@@ -722,9 +731,9 @@ public class MRotation {
 				throw new CardanEulerSingularityException(true);
 			}
 			return new double[] {
-					FastMath.atan2(-(v1.z), v1.x),
-					FastMath.asin(v2.x),
-					FastMath.atan2(-(v2.z), v2.y)
+					Math.atan2(-(v1.z), v1.x),
+					Math.asin(v2.x),
+					Math.atan2(-(v2.z), v2.y)
 			};
 
 		} else if (order == RotationOrder.ZXY) {
@@ -740,9 +749,9 @@ public class MRotation {
 				throw new CardanEulerSingularityException(true);
 			}
 			return new double[] {
-					FastMath.atan2(-(v1.x), v1.y),
-					FastMath.asin(v2.y),
-					FastMath.atan2(-(v2.x), v2.z)
+					Math.atan2(-(v1.x), v1.y),
+					Math.asin(v2.y),
+					Math.atan2(-(v2.x), v2.z)
 			};
 
 		} else if (order == RotationOrder.ZYX) {
@@ -758,9 +767,9 @@ public class MRotation {
 				throw new CardanEulerSingularityException(true);
 			}
 			return new double[] {
-					FastMath.atan2(v1.y, v1.x),
-					-FastMath.asin(v2.x),
-					FastMath.atan2(v2.y, v2.z)
+					Math.atan2(v1.y, v1.x),
+					-Math.asin(v2.x),
+					Math.atan2(v2.y, v2.z)
 			};
 
 		} else if (order == RotationOrder.XYX) {
@@ -776,9 +785,9 @@ public class MRotation {
 				throw new CardanEulerSingularityException(false);
 			}
 			return new double[] {
-					FastMath.atan2(v1.y, -v1.z),
-					FastMath.acos(v2.x),
-					FastMath.atan2(v2.y, v2.z)
+					Math.atan2(v1.y, -v1.z),
+					Math.acos(v2.x),
+					Math.atan2(v2.y, v2.z)
 			};
 
 		} else if (order == RotationOrder.XZX) {
@@ -794,9 +803,9 @@ public class MRotation {
 				throw new CardanEulerSingularityException(false);
 			}
 			return new double[] {
-					FastMath.atan2(v1.z, v1.y),
-					FastMath.acos(v2.x),
-					FastMath.atan2(v2.z, -v2.y)
+					Math.atan2(v1.z, v1.y),
+					Math.acos(v2.x),
+					Math.atan2(v2.z, -v2.y)
 			};
 
 		} else if (order == RotationOrder.YXY) {
@@ -812,9 +821,9 @@ public class MRotation {
 				throw new CardanEulerSingularityException(false);
 			}
 			return new double[] {
-					FastMath.atan2(v1.x, v1.z),
-					FastMath.acos(v2.y),
-					FastMath.atan2(v2.x, -v2.z)
+					Math.atan2(v1.x, v1.z),
+					Math.acos(v2.y),
+					Math.atan2(v2.x, -v2.z)
 			};
 
 		} else if (order == RotationOrder.YZY) {
@@ -830,9 +839,9 @@ public class MRotation {
 				throw new CardanEulerSingularityException(false);
 			}
 			return new double[] {
-					FastMath.atan2(v1.z, -v1.x),
-					FastMath.acos(v2.y),
-					FastMath.atan2(v2.z, v2.x)
+					Math.atan2(v1.z, -v1.x),
+					Math.acos(v2.y),
+					Math.atan2(v2.z, v2.x)
 			};
 
 		} else if (order == RotationOrder.ZXZ) {
@@ -848,9 +857,9 @@ public class MRotation {
 				throw new CardanEulerSingularityException(false);
 			}
 			return new double[] {
-					FastMath.atan2(v1.x, -v1.y),
-					FastMath.acos(v2.z),
-					FastMath.atan2(v2.x, v2.y)
+					Math.atan2(v1.x, -v1.y),
+					Math.acos(v2.z),
+					Math.atan2(v2.x, v2.y)
 			};
 
 		} else { // last possibility is ZYZ
@@ -866,9 +875,9 @@ public class MRotation {
 				throw new CardanEulerSingularityException(false);
 			}
 			return new double[] {
-					FastMath.atan2(v1.y, v1.x),
-					FastMath.acos(v2.z),
-					FastMath.atan2(v2.y, -v2.x)
+					Math.atan2(v1.y, v1.x),
+					Math.acos(v2.z),
+					Math.atan2(v2.y, -v2.x)
 			};
 
 		}
@@ -926,6 +935,40 @@ public class MRotation {
 		m [2][2] = 2.0 * (q0q0 + q3q3) - 1.0;*/
 
 		return result;
+	}
+	
+	public double[] toMatrix4Val() {
+		double[] result = new double[16]; 
+		return toMatrix4Val(result); 
+	}
+	
+	public double[] toMatrix4Val(double[] storeIn) {
+		double q0q0  = q0 * q0;
+		double q0q1  = q0 * q1;
+		double q0q2  = q0 * q2;
+		double q0q3  = q0 * q3;
+		double q1q1  = q1 * q1;
+		double q1q2  = q1 * q2;
+		double q1q3  = q1 * q3;
+		double q2q2  = q2 * q2;
+		double q2q3  = q2 * q3;
+		double q3q3  = q3 * q3;
+
+		// create the matrix
+		storeIn[Matrix4d.M00] = 2.0 * (q0q0 + q1q1) - 1.0;
+		storeIn[Matrix4d.M10] = 2.0 * (q1q2 - q0q3);
+		storeIn[Matrix4d.M20] = 2.0 * (q1q3 + q0q2);
+
+		storeIn[Matrix4d.M01] = 2.0 * (q1q2 + q0q3);
+		storeIn[Matrix4d.M11] = 2.0 * (q0q0 + q2q2) - 1.0;
+		storeIn[Matrix4d.M21] = 2.0 * (q2q3 - q0q1);
+
+		storeIn[Matrix4d.M02] = 2.0 * (q1q3 - q0q2);
+		storeIn[Matrix4d.M12] = 2.0 * (q2q3 + q0q1);
+		storeIn[Matrix4d.M22] = 2.0 * (q0q0 + q3q3) - 1.0;
+		storeIn[Matrix4d.M33] = 1.0;
+		
+		return storeIn;
 	}
 
 	/** Apply the rotation to a vector.
@@ -1163,7 +1206,7 @@ public class MRotation {
 	
 	public void setToNormalized() {
 			// normalization preprocessing
-			double inv = 1.0 / FastMath.sqrt(q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3);
+			double inv = 1.0 / Math.sqrt(q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3);
 			q0 *= inv;
 			q1 *= inv;
 			q2 *= inv;
@@ -1177,7 +1220,7 @@ public class MRotation {
 	 * @return the norm.
 	 */
 	public double len() {
-	    return FastMath.sqrt(q0 * q0 +
+	    return Math.sqrt(q0 * q0 +
 	                         q1 * q1 +
 	                         q2 * q2 +
 	                         q3 * q3);
@@ -1193,7 +1236,7 @@ public class MRotation {
 	  public MRotation normalize() {
 	      final double norm = len();
 	
-	      if (norm < Precision.SAFE_MIN_DOUBLE) {
+	      if (norm < Precision.SAFE_MIN) {
 	          throw new ZeroException(LocalizedFormats.NORM, norm);
 	      }
 	
@@ -1223,7 +1266,7 @@ public class MRotation {
 		} else {
 			// general case: (u, v) defines a plane, we select
 			// the shortest possible rotation: axis orthogonal to this plane
-			q0 = FastMath.sqrt(0.5 * (1.0 + dot / normProduct));
+			q0 = Math.sqrt(0.5 * (1.0 + dot / normProduct));
 			double coeff = 1.0 / (2.0 * q0 * normProduct);
 			SGVec_3d q = v.crossCopy(u);
 			q1 = coeff * q.x;
@@ -1241,9 +1284,9 @@ public class MRotation {
 		}
 
 		double halfAngle = -0.5 * angle;
-		double coeff = FastMath.sin(halfAngle) / norm;
+		double coeff = Math.sin(halfAngle) / norm;
 
-		q0 = FastMath.cos (halfAngle);
+		q0 = Math.cos (halfAngle);
 		q1 = coeff * axis.x;
 		q2 = coeff * axis.y;
 		q3 = coeff * axis.z;
@@ -1325,7 +1368,7 @@ public class MRotation {
 					corr20 * corr20 + corr21 * corr21 + corr22 * corr22;
 
 			// convergence test
-			if (FastMath.abs(fn1 - fn) <= threshold) {
+			if (Math.abs(fn1 - fn) <= threshold) {
 				return o;
 			}
 

@@ -5,7 +5,8 @@
 
 package sceneGraph.math.floatV;
 
-import sceneGraph.math.floatV.MathUtils;
+
+
 import sceneGraph.math.floatV.SGVec_3f;
 import sceneGraph.numerical.Precision;
 import sceneGraph.numerical.Precision.*;
@@ -15,7 +16,7 @@ import sceneGraph.numerical.Precision.*;
 
 
 public class MRotation {
-	public static final MRotation IDENTITY = new MRotation(1, 0, 0, 0, false);
+	public static final MRotation IDENTITY = new MRotation(1.0f, 0.0f, 0.0f, 0.0f, false);
 
 	/** Scalar coordinate of the quaternion. */
 	private float q0;
@@ -65,7 +66,7 @@ public class MRotation {
 	 * creates an identity rotation
 	 */
 	public MRotation() {
-		this(1, 0, 0, 0, false);
+		this(1.0f, 0.0f, 0.0f, 0.0f, false);
 	}
 
 	/**assumes no noralization required**/
@@ -95,17 +96,17 @@ public class MRotation {
 	 * @param angle rotation angle.
 	 * @exception MathIllegalArgumentException if the axis norm is zero
 	 */
-	public MRotation(SGVec_3f  axis, float angle) throws MathIllegalArgumentException {
+	public MRotation(SGVec_3f  axis, float angle) {
 
 		float norm = axis.mag();
-		if (norm == 0) {
+		/*if (norm == 0) {
 			throw new MathIllegalArgumentException(LocalizedFormats.ZERO_NORM_FOR_ROTATION_AXIS);
-		}
+		}*/
 
 		float halfAngle = -0.5f * angle;
-		float coeff = MathUtils.sin(halfAngle) / norm;
+		float coeff = (float)Math.sin(halfAngle) / norm;
 
-		q0 = MathUtils.cos (halfAngle);
+		q0 = (float)Math.cos (halfAngle);
 		q1 = coeff * axis.x;
 		q2 = coeff * axis.y;
 		q3 = coeff * axis.z;
@@ -117,20 +118,19 @@ public class MRotation {
 	 * without changing the angle.  
 	 *
 	 * @param angle
-	 * @throws MathIllegalArgumentException 
 	 */
-	public void setAxis(SGVec_3f  newAxis) throws MathIllegalArgumentException {
+	public void setAxis(SGVec_3f  newAxis) {
 		
 		float angle = this.getAngle();
 		float norm = newAxis.mag();
-		if (norm == 0) {
+		/*if (norm == 0) {
 			throw new MathIllegalArgumentException(LocalizedFormats.ZERO_NORM_FOR_ROTATION_AXIS);
-		}
+		}*/
 
 		float halfAngle = -0.5f * angle;
-		float coeff = MathUtils.sin(halfAngle) / norm;
+		float coeff = (float)Math.sin(halfAngle) / norm;
 
-		q0 = MathUtils.cos (halfAngle);
+		q0 = (float)Math.cos (halfAngle);
 		q1 = coeff * newAxis.x;
 		q2 = coeff * newAxis.y;
 		q3 = coeff * newAxis.z;
@@ -141,20 +141,19 @@ public class MRotation {
 	 * without changing the axis.  
 	 *
 	 * @param angle
-	 * @throws MathIllegalArgumentException 
 	 */
-	public void setAngle(float newAngle) throws MathIllegalArgumentException {
+	public void setAngle(float newAngle) {
 		
 		SGVec_3f  axis = getAxis();
 		float norm = axis.mag();
-		if (norm == 0) {
+		/*if (norm == 0) {
 			throw new MathIllegalArgumentException(LocalizedFormats.ZERO_NORM_FOR_ROTATION_AXIS);
-		}
+		}*/
 
 		float halfAngle = -0.5f * newAngle;
-		float coeff = MathUtils.sin(halfAngle) / norm;
+		float coeff = (float)Math.sin(halfAngle) / norm;
 
-		q0 = MathUtils.cos (halfAngle);
+		q0 = (float)Math.cos (halfAngle);
 		q1 = coeff * axis.x;
 		q2 = coeff * axis.y;
 		q3 = coeff * axis.z;
@@ -204,7 +203,7 @@ public class MRotation {
 		float det = ort[0][0] * (ort[1][1] * ort[2][2] - ort[2][1] * ort[1][2]) -
 				ort[1][0] * (ort[0][1] * ort[2][2] - ort[2][1] * ort[0][2]) +
 				ort[2][0] * (ort[0][1] * ort[1][2] - ort[1][1] * ort[0][2]);
-		if (det < 0) {
+		if (det < 0.0) {
 			throw new NotARotationMatrixException(
 					LocalizedFormats.CLOSEST_ORTHOGONAL_MATRIX_HAS_NEGATIVE_DETERMINANT,
 					det);
@@ -291,7 +290,7 @@ public class MRotation {
 		             k.y * (u1z * u2x - u1x * u2z) +
 		             k.z * (u1x * u2y - u1y * u2x);
 
-		  if (MathUtils.abs(c) <= MathUtils.DOUBLE_ROUNDING_ERROR) {
+		  if ((float)Math.abs(c) <=MathUtils.FLOAT_ROUNDING_ERROR) {
 		    // the (q1, q2, q3) vector is in the (u1, u2) plane
 		    // we try other vectors
 			 SGVec_3f u3 = u1.crossCopy(u2);
@@ -313,7 +312,7 @@ public class MRotation {
 		        k.y * (u1z * u3x - u1x * u3z) +
 		        k.z * (u1x * u3y - u1y * u3x);
 
-		    if (MathUtils.abs(c) <= MathUtils.DOUBLE_ROUNDING_ERROR) {
+		    if ((float)Math.abs(c) <= MathUtils.FLOAT_ROUNDING_ERROR) {
 		      // the (q1, q2, q3) vector is aligned with u1:
 		      // we try (u2, u3) and (v2, v3)
 		      k = new SGVec_3f(dy2 * dz3 - dz2 * dy3,
@@ -323,13 +322,13 @@ public class MRotation {
 		          k.y * (u2z * u3x - u2x * u3z) +
 		          k.z * (u2x * u3y - u2y * u3x);
 
-		      if (MathUtils.abs(c) <= MathUtils.DOUBLE_ROUNDING_ERROR) {
+		      if ((float)Math.abs(c) <= MathUtils.FLOAT_ROUNDING_ERROR) {
 		        // the (q1, q2, q3) vector is aligned with everything
 		        // this is really the identity rotation
-		        q0 = 1f;
-		        q1 = 0f;
-		        q2 = 0f;
-		        q3 = 0f;
+		        q0 = 1.0f;
+		        q1 = 0.0f;
+		        q2 = 0.0f;
+		        q3 = 0.0f;
 		        return;
 		      }
 
@@ -343,7 +342,7 @@ public class MRotation {
 
 		  // compute the vectorial part
 		  c = (float) Math.sqrt(c);
-		  float inv = (float)1 / (c + c);
+		  float inv = (float)1.0 / (c + c);
 		  q1 = inv * k.x;
 		  q2 = inv * k.y;
 		  q3 = inv * k.z;
@@ -414,19 +413,19 @@ public class MRotation {
 
 		float dot = u.dot(v);
 
-		if (dot < ((2e-15 - 1) * normProduct)) {
+		if (dot < ((2.0e-15 - 1.0) * normProduct)) {
 			// special case u = -v: we select a PI angle rotation around
 			// an arbitrary vector orthogonal to u
 			SGVec_3f w = u.getOrthogonal();
-			q0 = 0;
+			q0 = 0.0f;
 			q1 = -w.x;
 			q2 = -w.y;
 			q3 = -w.z;
 		} else {
 			// general case: (u, v) defines a plane, we select
 			// the shortest possible rotation: axis orthogonal to this plane
-			q0 = MathUtils.sqrt(0.5f * (1 + dot / normProduct));
-			float coeff = 1 / (2 * q0 * normProduct);
+			q0 = (float)Math.sqrt(0.5f * (1.0f + dot / normProduct));
+			float coeff = 1.0f / (2.0f * q0 * normProduct);
 			SGVec_3f q = v.crossCopy(u);
 			q1 = coeff * q.x;
 			q2 = coeff * q.y;
@@ -451,10 +450,9 @@ public class MRotation {
 	 * @param alpha1 angle of the first elementary rotation
 	 * @param alpha2 angle of the second elementary rotation
 	 * @param alpha3 angle of the third elementary rotation
-	 * @throws MathIllegalArgumentException 
 	 */
 	public MRotation(RotationOrder order,
-			float alpha1, float alpha2, float alpha3) throws MathIllegalArgumentException {
+			float alpha1, float alpha2, float alpha3) {
 		MRotation r1 = new MRotation((SGVec_3f ) order.getA1(), alpha1);
 		MRotation r2 = new MRotation((SGVec_3f ) order.getA2(), alpha2);
 		MRotation r3 = new MRotation((SGVec_3f ) order.getA3(), alpha3);
@@ -486,33 +484,33 @@ public class MRotation {
 		// using a formula involving a division by the first element,
 		// which unfortunately can be zero. Since the norm of the
 		// quaternion is 1, we know at least one element has an absolute
-		// value greater or equal to 0.5f, so it is always possible to
+		// value greater or equal to 0.5, so it is always possible to
 		// select the right formula and avoid division by zero and even
 		// numerical inaccuracy. Checking the elements in turn and using
-		// the first one greater than 0.45f is safe (this leads to a simple
-		// test since qi = 0.45f implies 4 qi^2 - 1 = -0.19f)
+		// the first one greater than 0.45 is safe (this leads to a simple
+		// test since qi = 0.45 implies 4 qi^2 - 1 = -0.19)
 		float s = ort[0][0] + ort[1][1] + ort[2][2];
-		if (s > -0.19f) {
+		if (s > -0.19) {
 			// compute q0 and deduce q1, q2 and q3
-			quat[0] = 0.5f * MathUtils.sqrt(s + 1);
+			quat[0] = (float)(0.5f * Math.sqrt(s + 1.0f));
 			float inv = 0.25f / quat[0];
 			quat[1] = inv * (ort[1][2] - ort[2][1]);
 			quat[2] = inv * (ort[2][0] - ort[0][2]);
 			quat[3] = inv * (ort[0][1] - ort[1][0]);
 		} else {
 			s = ort[0][0] - ort[1][1] - ort[2][2];
-			if (s > -0.19f) {
+			if (s > -0.19) {
 				// compute q1 and deduce q0, q2 and q3
-				quat[1] = 0.5f * MathUtils.sqrt(s + 1);
+				quat[1] =(float)(0.5f * Math.sqrt(s + 1.0));
 				float inv = 0.25f / quat[1];
 				quat[0] = inv * (ort[1][2] - ort[2][1]);
 				quat[2] = inv * (ort[0][1] + ort[1][0]);
 				quat[3] = inv * (ort[0][2] + ort[2][0]);
 			} else {
 				s = ort[1][1] - ort[0][0] - ort[2][2];
-				if (s > -0.19f) {
+				if (s > -0.19) {
 					// compute q2 and deduce q0, q1 and q3
-					quat[2] = 0.5f * MathUtils.sqrt(s + 1);
+					quat[2] = (float)(0.5f * Math.sqrt(s + 1.0));
 					float inv = 0.25f / quat[2];
 					quat[0] = inv * (ort[2][0] - ort[0][2]);
 					quat[1] = inv * (ort[0][1] + ort[1][0]);
@@ -520,7 +518,7 @@ public class MRotation {
 				} else {
 					// compute q3 and deduce q0, q1 and q2
 					s = ort[2][2] - ort[0][0] - ort[1][1];
-					quat[3] = 0.5f * MathUtils.sqrt(s + 1);
+					quat[3] = (float)(0.5f * Math.sqrt(s + 1.0));
 					float inv = 0.25f / quat[3];
 					quat[0] = inv * (ort[0][1] - ort[1][0]);
 					quat[1] = inv * (ort[0][2] + ort[2][0]);
@@ -581,19 +579,16 @@ public class MRotation {
 		if (squaredSine == 0) {
 			return new SGVec_3f(1, 0, 0);
 		} else if (q0 < 0) {
-			float inverse = 1 / MathUtils.sqrt(squaredSine);
+			float inverse = 1f / (float)Math.sqrt(squaredSine);
 			return new SGVec_3f(q1 * inverse, q2 * inverse, q3 * inverse);
 		}
-		float inverse = -1 / MathUtils.sqrt(squaredSine);
+		float inverse = -1 / (float)Math.sqrt(squaredSine);
 		return new SGVec_3f(q1 * inverse, q2 * inverse, q3 * inverse);
 	}
 
 
-	public MRotation getInverse() throws ZeroException {
-		final float squareNorm = q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3;
-		if (squareNorm < Precision.SAFE_MIN_DOUBLE) {
-			throw new ZeroException(LocalizedFormats.NORM, squareNorm);
-		}
+	public MRotation getInverse() {
+		final float squareNorm = q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3;	
 
 		return new MRotation(q0 / squareNorm,
 				-q1 / squareNorm,
@@ -608,12 +603,12 @@ public class MRotation {
 	 * @see #Rotation(SGVec_3f , float)
 	 */
 	public float getAngle() {
-		if ((q0 < -0.1f) || (q0 > 0.1f)) {
-			return 2 * MathUtils.asin(MathUtils.sqrt(q1 * q1 + q2 * q2 + q3 * q3));
+		if ((q0 < -0.1) || (q0 > 0.1)) {
+			return 2 * (float)Math.asin((float)Math.sqrt(q1 * q1 + q2 * q2 + q3 * q3));
 		} else if (q0 < 0) {
-			return 2 * MathUtils.acos(-q0);
+			return 2 * (float)Math.acos(-q0);
 		}
-		return 2 * MathUtils.acos(q0);
+		return 2 * (float)Math.acos(q0);
 	}
 
 	/** Get the Cardan or Euler angles corresponding to the instance.
@@ -648,7 +643,8 @@ public class MRotation {
 	 * @exception CardanEulerSingularityException if the rotation is
 	 * singular with respect to the angles set specified
 	 */
-	public float[] getAngles(RotationOrder order) {
+	public float[] getAngles(RotationOrder order)
+			throws CardanEulerSingularityException {
 
 		if (order == RotationOrder.XYZ) {
 
@@ -659,11 +655,13 @@ public class MRotation {
 			// and we can choose to have theta in the interval [-PI/2 ; +PI/2]
 			SGVec_3f v1 = applyTo(RotationOrder.Z);
 			SGVec_3f v2 = applyInverseTo(RotationOrder.X);
-			
+			if  ((v2.z < -0.9999999999) || (v2.z > 0.9999999999)) {
+				throw new CardanEulerSingularityException(true);
+			}
 			return new float[] {
-					MathUtils.atan2(-(v1.y), v1.z),
-					MathUtils.asin(v2.z),
-					MathUtils.atan2(-(v2.y), v2.x)
+					(float)Math.atan2(-(v1.y), v1.z),
+					(float)Math.asin(v2.z),
+					(float)Math.atan2(-(v2.y), v2.x)
 			};
 
 		} else if (order == RotationOrder.XZY) {
@@ -675,11 +673,13 @@ public class MRotation {
 			// and we can choose to have psi in the interval [-PI/2 ; +PI/2]
 			SGVec_3f v1 = applyTo(RotationOrder.X);
 			SGVec_3f v2 = applyInverseTo(RotationOrder.Y);
-			
+			if ((v2.y < -0.9999999999) || (v2.y > 0.9999999999)) {
+				throw new CardanEulerSingularityException(true);
+			}
 			return new float[] {
-					MathUtils.atan2(v1.z, v1.y),
-					-MathUtils.asin(v2.y),
-					MathUtils.atan2(v2.z, v2.x)
+					(float)Math.atan2(v1.z, v1.y),
+					-(float)Math.asin(v2.y),
+					(float)Math.atan2(v2.z, v2.x)
 			};
 
 		} else if (order == RotationOrder.YXZ) {
@@ -691,11 +691,13 @@ public class MRotation {
 			// and we can choose to have phi in the interval [-PI/2 ; +PI/2]
 			SGVec_3f v1 = applyTo(RotationOrder.Z);
 			SGVec_3f v2 = applyInverseTo(RotationOrder.Y);
-		
+			if ((v2.z < -0.9999999999) || (v2.z > 0.9999999999)) {
+				throw new CardanEulerSingularityException(true);
+			}
 			return new float[] {
-					MathUtils.atan2(v1.x, v1.z),
-					-MathUtils.asin(v2.z),
-					MathUtils.atan2(v2.x, v2.y)
+					(float)Math.atan2(v1.x, v1.z),
+					-(float)Math.asin(v2.z),
+					(float)Math.atan2(v2.x, v2.y)
 			};
 
 		} else if (order == RotationOrder.YZX) {
@@ -707,11 +709,13 @@ public class MRotation {
 			// and we can choose to have psi in the interval [-PI/2 ; +PI/2]
 			SGVec_3f v1 = applyTo(RotationOrder.X);
 			SGVec_3f v2 = applyInverseTo(RotationOrder.Y);
-		
+			if ((v2.x < -0.9999999999) || (v2.x > 0.9999999999)) {
+				throw new CardanEulerSingularityException(true);
+			}
 			return new float[] {
-					MathUtils.atan2(-(v1.z), v1.x),
-					MathUtils.asin(v2.x),
-					MathUtils.atan2(-(v2.z), v2.y)
+					(float)Math.atan2(-(v1.z), v1.x),
+					(float)Math.asin(v2.x),
+					(float)Math.atan2(-(v2.z), v2.y)
 			};
 
 		} else if (order == RotationOrder.ZXY) {
@@ -723,11 +727,13 @@ public class MRotation {
 			// and we can choose to have phi in the interval [-PI/2 ; +PI/2]
 			SGVec_3f v1 = applyTo(RotationOrder.Y);
 			SGVec_3f v2 = applyInverseTo(RotationOrder.Z);
-			
+			if ((v2.y < -0.9999999999) || (v2.y > 0.9999999999)) {
+				throw new CardanEulerSingularityException(true);
+			}
 			return new float[] {
-					MathUtils.atan2(-(v1.x), v1.y),
-					MathUtils.asin(v2.y),
-					MathUtils.atan2(-(v2.x), v2.z)
+					(float)Math.atan2(-(v1.x), v1.y),
+					(float)Math.asin(v2.y),
+					(float)Math.atan2(-(v2.x), v2.z)
 			};
 
 		} else if (order == RotationOrder.ZYX) {
@@ -739,11 +745,13 @@ public class MRotation {
 			// and we can choose to have theta in the interval [-PI/2 ; +PI/2]
 			SGVec_3f v1 = applyTo(RotationOrder.X);
 			SGVec_3f v2 = applyInverseTo(RotationOrder.Z);
-		
+			if ((v2.x < -0.9999999999) || (v2.x > 0.9999999999)) {
+				throw new CardanEulerSingularityException(true);
+			}
 			return new float[] {
-					MathUtils.atan2(v1.y, v1.x),
-					-MathUtils.asin(v2.x),
-					MathUtils.atan2(v2.y, v2.z)
+					(float)Math.atan2(v1.y, v1.x),
+					-(float)Math.asin(v2.x),
+					(float)Math.atan2(v2.y, v2.z)
 			};
 
 		} else if (order == RotationOrder.XYX) {
@@ -755,11 +763,13 @@ public class MRotation {
 			// and we can choose to have theta in the interval [0 ; PI]
 			SGVec_3f v1 = applyTo(RotationOrder.X);
 			SGVec_3f v2 = applyInverseTo(RotationOrder.X);
-			
+			if ((v2.x < -0.9999999999) || (v2.x > 0.9999999999)) {
+				throw new CardanEulerSingularityException(false);
+			}
 			return new float[] {
-					MathUtils.atan2(v1.y, -v1.z),
-					MathUtils.acos(v2.x),
-					MathUtils.atan2(v2.y, v2.z)
+					(float)Math.atan2(v1.y, -v1.z),
+					(float)Math.acos(v2.x),
+					(float)Math.atan2(v2.y, v2.z)
 			};
 
 		} else if (order == RotationOrder.XZX) {
@@ -771,11 +781,13 @@ public class MRotation {
 			// and we can choose to have psi in the interval [0 ; PI]
 			SGVec_3f v1 = applyTo(RotationOrder.X);
 			SGVec_3f v2 = applyInverseTo(RotationOrder.X);
-			
+			if ((v2.x < -0.9999999999) || (v2.x > 0.9999999999)) {
+				throw new CardanEulerSingularityException(false);
+			}
 			return new float[] {
-					MathUtils.atan2(v1.z, v1.y),
-					MathUtils.acos(v2.x),
-					MathUtils.atan2(v2.z, -v2.y)
+					(float)Math.atan2(v1.z, v1.y),
+					(float)Math.acos(v2.x),
+					(float)Math.atan2(v2.z, -v2.y)
 			};
 
 		} else if (order == RotationOrder.YXY) {
@@ -787,11 +799,13 @@ public class MRotation {
 			// and we can choose to have phi in the interval [0 ; PI]
 			SGVec_3f v1 = applyTo(RotationOrder.Y);
 			SGVec_3f v2 = applyInverseTo(RotationOrder.Y);
-	
+			if ((v2.y < -0.9999999999) || (v2.y > 0.9999999999)) {
+				throw new CardanEulerSingularityException(false);
+			}
 			return new float[] {
-					MathUtils.atan2(v1.x, v1.z),
-					MathUtils.acos(v2.y),
-					MathUtils.atan2(v2.x, -v2.z)
+					(float)Math.atan2(v1.x, v1.z),
+					(float)Math.acos(v2.y),
+					(float)Math.atan2(v2.x, -v2.z)
 			};
 
 		} else if (order == RotationOrder.YZY) {
@@ -803,11 +817,13 @@ public class MRotation {
 			// and we can choose to have psi in the interval [0 ; PI]
 			SGVec_3f v1 = applyTo(RotationOrder.Y);
 			SGVec_3f v2 = applyInverseTo(RotationOrder.Y);
-	
+			if ((v2.y < -0.9999999999) || (v2.y > 0.9999999999)) {
+				throw new CardanEulerSingularityException(false);
+			}
 			return new float[] {
-					MathUtils.atan2(v1.z, -v1.x),
-					MathUtils.acos(v2.y),
-					MathUtils.atan2(v2.z, v2.x)
+					(float)Math.atan2(v1.z, -v1.x),
+					(float)Math.acos(v2.y),
+					(float)Math.atan2(v2.z, v2.x)
 			};
 
 		} else if (order == RotationOrder.ZXZ) {
@@ -819,11 +835,13 @@ public class MRotation {
 			// and we can choose to have phi in the interval [0 ; PI]
 			SGVec_3f v1 = applyTo(RotationOrder.Z);
 			SGVec_3f v2 = applyInverseTo(RotationOrder.Z);
-		
+			if ((v2.z < -0.9999999999) || (v2.z > 0.9999999999)) {
+				throw new CardanEulerSingularityException(false);
+			}
 			return new float[] {
-					MathUtils.atan2(v1.x, -v1.y),
-					MathUtils.acos(v2.z),
-					MathUtils.atan2(v2.x, v2.y)
+					(float)Math.atan2(v1.x, -v1.y),
+					(float)Math.acos(v2.z),
+					(float)Math.atan2(v2.x, v2.y)
 			};
 
 		} else { // last possibility is ZYZ
@@ -835,11 +853,13 @@ public class MRotation {
 			// and we can choose to have theta in the interval [0 ; PI]
 			SGVec_3f v1 = applyTo(RotationOrder.Z);
 			SGVec_3f v2 = applyInverseTo(RotationOrder.Z);
-		
+			if ((v2.z < -0.9999999999) || (v2.z > 0.9999999999)) {
+				throw new CardanEulerSingularityException(false);
+			}
 			return new float[] {
-					MathUtils.atan2(v1.y, v1.x),
-					MathUtils.acos(v2.z),
-					MathUtils.atan2(v2.y, -v2.x)
+					(float)Math.atan2(v1.y, v1.x),
+					(float)Math.acos(v2.z),
+					(float)Math.atan2(v2.y, -v2.x)
 			};
 
 		}
@@ -865,17 +885,17 @@ public class MRotation {
 
 		// create the matrix
 		float[] values = new float[9];  
-		values[Matrix3f.M00] = 2 * (q0q0 + q1q1) - 1;
-		values[Matrix3f.M10] = 2 * (q1q2 - q0q3);
-		values[Matrix3f.M20] = 2 * (q1q3 + q0q2);
+		values[Matrix3f.M00] = 2.0f * (q0q0 + q1q1) - 1.0f;
+		values[Matrix3f.M10] = 2.0f * (q1q2 - q0q3);
+		values[Matrix3f.M20] = 2.0f * (q1q3 + q0q2);
 
-		values[Matrix3f.M01] = 2 * (q1q2 + q0q3);
-		values[Matrix3f.M11] = 2 * (q0q0 + q2q2) - 1;
-		values[Matrix3f.M21] = 2 * (q2q3 - q0q1);
+		values[Matrix3f.M01] = 2.0f * (q1q2 + q0q3);
+		values[Matrix3f.M11] = 2.0f * (q0q0 + q2q2) - 1.0f;
+		values[Matrix3f.M21] = 2.0f * (q2q3 - q0q1);
 
-		values[Matrix3f.M02] = 2 * (q1q3 - q0q2);
-		values[Matrix3f.M12] = 2 * (q2q3 + q0q1);
-		values[Matrix3f.M22] = 2 * (q0q0 + q3q3) - 1;
+		values[Matrix3f.M02] = 2.0f * (q1q3 - q0q2);
+		values[Matrix3f.M12] = 2.0f * (q2q3 + q0q1);
+		values[Matrix3f.M22] = 2.0f * (q0q0 + q3q3) - 1.0f;
 		
 				
 		Matrix3f result = new Matrix3f(values); 
@@ -884,19 +904,53 @@ public class MRotation {
 		m[1] = new float[3];
 		m[2] = new float[3];
 
-		m [0][0] = 2 * (q0q0 + q1q1) - 1;
-		m [1][0] = 2 * (q1q2 - q0q3);
-		m [2][0] = 2 * (q1q3 + q0q2);
+		m [0][0] = 2.0 * (q0q0 + q1q1) - 1.0;
+		m [1][0] = 2.0 * (q1q2 - q0q3);
+		m [2][0] = 2.0 * (q1q3 + q0q2);
 
-		m [0][1] = 2 * (q1q2 + q0q3);
-		m [1][1] = 2 * (q0q0 + q2q2) - 1;
-		m [2][1] = 2 * (q2q3 - q0q1);
+		m [0][1] = 2.0 * (q1q2 + q0q3);
+		m [1][1] = 2.0 * (q0q0 + q2q2) - 1.0;
+		m [2][1] = 2.0 * (q2q3 - q0q1);
 
-		m [0][2] = 2 * (q1q3 - q0q2);
-		m [1][2] = 2 * (q2q3 + q0q1);
-		m [2][2] = 2 * (q0q0 + q3q3) - 1;*/
+		m [0][2] = 2.0 * (q1q3 - q0q2);
+		m [1][2] = 2.0 * (q2q3 + q0q1);
+		m [2][2] = 2.0 * (q0q0 + q3q3) - 1.0;*/
 
 		return result;
+	}
+	
+	public float[] toMatrix4Val() {
+		float[] result = new float[16]; 
+		return toMatrix4Val(result); 
+	}
+	
+	public float[] toMatrix4Val(float[] storeIn) {
+		float q0q0  = q0 * q0;
+		float q0q1  = q0 * q1;
+		float q0q2  = q0 * q2;
+		float q0q3  = q0 * q3;
+		float q1q1  = q1 * q1;
+		float q1q2  = q1 * q2;
+		float q1q3  = q1 * q3;
+		float q2q2  = q2 * q2;
+		float q2q3  = q2 * q3;
+		float q3q3  = q3 * q3;
+
+		// create the matrix
+		storeIn[Matrix4f.M00] = 2.0f * (q0q0 + q1q1) - 1.0f;
+		storeIn[Matrix4f.M10] = 2.0f * (q1q2 - q0q3);
+		storeIn[Matrix4f.M20] = 2.0f * (q1q3 + q0q2);
+
+		storeIn[Matrix4f.M01] = 2.0f * (q1q2 + q0q3);
+		storeIn[Matrix4f.M11] = 2.0f * (q0q0 + q2q2) - 1.0f;
+		storeIn[Matrix4f.M21] = 2.0f * (q2q3 - q0q1);
+
+		storeIn[Matrix4f.M02] = 2.0f * (q1q3 - q0q2);
+		storeIn[Matrix4f.M12] = 2.0f * (q2q3 + q0q1);
+		storeIn[Matrix4f.M22] = 2.0f * (q0q0 + q3q3) - 1.0f;
+		storeIn[Matrix4f.M33] = 1.0f;
+		
+		return storeIn;
 	}
 
 	/** Apply the rotation to a vector.
@@ -1134,7 +1188,7 @@ public class MRotation {
 	
 	public void setToNormalized() {
 			// normalization preprocessing
-			float inv = 1 / MathUtils.sqrt(q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3);
+			float inv = 1.0f / (float)Math.sqrt(q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3);
 			q0 *= inv;
 			q1 *= inv;
 			q2 *= inv;
@@ -1148,7 +1202,7 @@ public class MRotation {
 	 * @return the norm.
 	 */
 	public float len() {
-	    return MathUtils.sqrt(q0 * q0 +
+	    return (float)Math.sqrt(q0 * q0 +
 	                         q1 * q1 +
 	                         q2 * q2 +
 	                         q3 * q3);
@@ -1161,12 +1215,8 @@ public class MRotation {
 	   * @return a normalized quaternion.
 	   * @throws ZeroException if the norm of the quaternion is zero.
 	   */
-	  public MRotation normalize() throws ZeroException {
-	      final float norm = len();
-	
-	      if (norm < Precision.SAFE_MIN_DOUBLE) {
-	          throw new ZeroException(LocalizedFormats.NORM, norm);
-	      }
+	  public MRotation normalize() {
+	      final float norm = len(); 
 	
 	      return new MRotation(q0 / norm,
 	                            q1 / norm,
@@ -1183,19 +1233,19 @@ public class MRotation {
 
 		float dot = u.dot(v);
 
-		if (dot < ((2e-15 - 1) * normProduct)) {
+		if (dot < ((2.0e-15 - 1.0) * normProduct)) {
 			// special case u = -v: we select a PI angle rotation around
 			// an arbitrary vector orthogonal to u
 			SGVec_3f w = u.getOrthogonal();
-			q0 = 0;
+			q0 = 0.0f;
 			q1 = -w.x;
 			q2 = -w.y;
 			q3 = -w.z;
 		} else {
 			// general case: (u, v) defines a plane, we select
 			// the shortest possible rotation: axis orthogonal to this plane
-			q0 = (float) MathUtils.sqrt(0.5f * (1 + dot / normProduct));
-			float coeff = 1 / (2 * q0 * normProduct);
+			q0 = (float)Math.sqrt(0.5f * (1.0 + dot / normProduct));
+			float coeff = 1.0f / (float)(2.0 * q0 * normProduct);
 			SGVec_3f q = v.crossCopy(u);
 			q1 = coeff * q.x;
 			q2 = coeff * q.y;
@@ -1212,9 +1262,9 @@ public class MRotation {
 		}
 
 		float halfAngle = -0.5f * angle;
-		float coeff = MathUtils.sin(halfAngle) / norm;
+		float coeff = (float)Math.sin(halfAngle) / norm;
 
-		q0 = MathUtils.cos (halfAngle);
+		q0 = (float)Math.cos (halfAngle);
 		q1 = coeff * axis.x;
 		q2 = coeff * axis.y;
 		q3 = coeff * axis.z;
@@ -1253,7 +1303,7 @@ public class MRotation {
 		float[] o1 = o[1];
 		float[] o2 = o[2];
 
-		// iterative correction: Xn+1 = Xn - 0.5f * (Xn.Mt.Xn - M)
+		// iterative correction: Xn+1 = Xn - 0.5 * (Xn.Mt.Xn - M)
 		int i = 0;
 		while (++i < 11) {
 
@@ -1296,7 +1346,7 @@ public class MRotation {
 					corr20 * corr20 + corr21 * corr21 + corr22 * corr22;
 
 			// convergence test
-			if (Math.abs(fn1 - fn) <= threshold) {
+			if ((float)Math.abs(fn1 - fn) <= threshold) {
 				return o;
 			}
 
@@ -1337,8 +1387,8 @@ public class MRotation {
 	 * <p>Comparing two rotations should always be done using this value rather
 	 * than for example comparing the components of the quaternions. It is much
 	 * more stable, and has a geometric meaning. Also comparing quaternions
-	 * components is error prone since for example quaternions (0.36f, 0.48f, -0.48f, -0.64f)
-	 * and (-0.36f, -0.48f, 0.48f, 0.64f) represent exactly the same rotation despite
+	 * components is error prone since for example quaternions (0.36, 0.48, -0.48, -0.64)
+	 * and (-0.36, -0.48, 0.48, 0.64) represent exactly the same rotation despite
 	 * their components are different (they are exact opposites).</p>
 	 * @param r1 first rotation
 	 * @param r2 second rotation

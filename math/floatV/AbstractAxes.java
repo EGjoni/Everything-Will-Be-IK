@@ -22,8 +22,14 @@ package sceneGraph.math.floatV;
 
 import java.util.ArrayList;
 
+import IK.floatIK.G;
+import data.JSONObject;
+import data.LoadManager;
+import data.SaveManager;
 import data.Saveable;
-import sceneGraph.numerical.Precision.MathIllegalArgumentException;
+import sceneGraph.math.floatV.AbstractAxes;
+import sceneGraph.math.floatV.Rot;
+import sceneGraph.math.floatV.SGVec_3f;
 
 /**
  * @author Eron Gjoni
@@ -111,13 +117,7 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 					//System.out.println("LOCAL rotation prior:  \n" + localMBasis.rotation);
 					//System.out.println("Global Rotation prior: \n" + globalMBasis.rotation);
 					//}
-				
-				try {
-					parent.globalMBasis.setToGlobalOf(this.localMBasis, this.globalMBasis);
-				} catch (MathIllegalArgumentException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+				parent.globalMBasis.setToGlobalOf(this.localMBasis, this.globalMBasis);
 				/*if(this.debug) {	
 					System.out.println("Global Rotation post: \n" + globalMBasis.rotation);
 				}*/
@@ -332,12 +332,7 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 		this.globalMBasis.translate = SGVec_3f.lerp(start.globalMBasis.translate, end.globalMBasis.translate, amount);
 		this.globalMBasis.refreshMatrices();
 
-		try {
-			this.parent.globalMBasis.setToLocalOf(this.globalMBasis, this.localMBasis);
-		} catch (MathIllegalArgumentException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		this.parent.globalMBasis.setToLocalOf(this.globalMBasis, this.localMBasis);
 		this.markDirty();
 	}
 
@@ -362,7 +357,7 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 		}
 		if(autoFlip >= 0) {
 			this.flipFlag = autoFlip;
-  try {
+
 			if(autoFlip == 0) {
 
 				Rot newRot = new Rot(this.parent.globalMBasis.getOrthonormalYHead(), this.parent.globalMBasis.getOrthonormalZHead(), yHeading, zHeading);//new Rot(this.globalMBasis.yBase, this.globalMBasis.zBase, localY, localZ);/
@@ -374,10 +369,6 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 				Rot newRot = new Rot(this.parent.globalMBasis.getOrthonormalXHead(), this.parent.globalMBasis.getOrthonormalYHead(), xHeading, yHeading);
 				this.localMBasis.rotation = this.parent.globalMBasis.getLocalOfRotation(newRot);
 			}
-  } catch (Exception e) { 
-	  e.printStackTrace();
-	  
-  }
 
 		}
 
@@ -651,11 +642,7 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 		}
 		if(intendedParent != null && intendedParent != this) {
 			intendedParent.updateGlobal(); 
-			try {
-				intendedParent.globalMBasis.setToLocalOf(globalMBasis, localMBasis);
-			} catch (MathIllegalArgumentException e) {
-				e.printStackTrace();
-			}			
+			intendedParent.globalMBasis.setToLocalOf(globalMBasis, localMBasis);			
 
 			if(this.parent != null) this.parent.disown(this);
 			this.parent = intendedParent;
@@ -897,12 +884,7 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 
 	public void setToRawLocalOf(Basis input, Basis output) {
 		this.updateGlobal();
-		try {
-			this.globalMBasis.setToLocalOf(input, output);
-		} catch (MathIllegalArgumentException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		this.globalMBasis.setToLocalOf(input, output);
 	}
 
 	public void setToOrthoNormalizedLocalOf(Basis input, Basis output) {
@@ -955,12 +937,7 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 	}
 
 	public void setToLocalOf(Basis input, Basis output) {
-		try {
-			this.globalMBasis.setToLocalOf(input, output);
-		} catch (MathIllegalArgumentException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		this.globalMBasis.setToLocalOf(input, output);
 	}
 
 	public sgRayf getLocalOf(sgRayf in) {
@@ -1090,29 +1067,25 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 		this.updateGlobal();
 	}
 
-	public void rotateAboutX(float angle, boolean orthonormalized)  {
+	public void rotateAboutX(float angle, boolean orthonormalized) {
 		this.updateGlobal();
-		Rot xRot;
-		xRot = new Rot(globalMBasis.getOrthonormalXHead(), angle);		
-		this.rotateBy(xRot);		
-		this.markDirty();
+		Rot xRot = new Rot(globalMBasis.getOrthonormalXHead(), angle);		
+		this.rotateBy(xRot);
+		//this.markDirty();
 	}
 
-	public void rotateAboutY(float angle, boolean orthonormalized)  {
+	public void rotateAboutY(float angle, boolean orthonormalized) {
 		this.updateGlobal();	
-		Rot yRot;
-		yRot = new Rot(globalMBasis.getOrthonormalYHead(), angle);		
-		this.rotateBy(yRot); 
-		this.markDirty();
+		Rot yRot = new Rot(globalMBasis.getOrthonormalYHead(), angle); 
+		this.rotateBy(yRot);
+		//this.markDirty();
 	}
 
 	public void rotateAboutZ(float angle, boolean orthonormalized) {
 		this.updateGlobal();
-		Rot zRot;
-		zRot = new Rot(globalMBasis.getOrthonormalZHead(), angle);
+		Rot zRot = new Rot(globalMBasis.getOrthonormalZHead(), angle);
 		this.rotateBy(zRot);
-		
-		this.markDirty();
+		//this.markDirty();
 	}
 
 
@@ -1129,14 +1102,8 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 	public void rotateBy(MRotation apply) {
 		this.updateGlobal();		
 		if(parent != null) {		
-			Rot newRot;
-			try {
-				newRot = this.parent.globalMBasis.getLocalOfRotation(new Rot(apply));
-				this.localMBasis.rotateBy(newRot);
-			} catch (MathIllegalArgumentException e) {
-				e.printStackTrace();
-			}
-			
+			Rot newRot = this.parent.globalMBasis.getLocalOfRotation(new Rot(apply));
+			this.localMBasis.rotateBy(newRot);
 		} else {
 			this.localMBasis.rotateBy(new Rot(apply));
 		}		
@@ -1152,14 +1119,8 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 
 		this.updateGlobal();		
 		if(parent != null) {
-			Rot newRot;
-			try {
-				newRot = this.parent.globalMBasis.getLocalOfRotation(apply);
-				this.localMBasis.rotateBy(newRot);
-			} catch (MathIllegalArgumentException e) {
-				e.printStackTrace();
-			};
-			
+			Rot newRot = this.parent.globalMBasis.getLocalOfRotation(apply);
+			this.localMBasis.rotateBy(newRot);
 		} else {
 			this.localMBasis.rotateBy(apply);
 		}
@@ -1290,11 +1251,7 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 		targetAxes.updateGlobal();
 		this.updateGlobal();
 		if(this.parent != null) {
-			try {
-				parent.globalMBasis.setToLocalOf(targetAxes.globalMBasis, localMBasis);
-			} catch (MathIllegalArgumentException e) {
-				e.printStackTrace();
-			}	
+			parent.globalMBasis.setToLocalOf(targetAxes.globalMBasis, localMBasis);	
 		} else {
 			this.localMBasis.adoptValues(targetAxes.globalMBasis);
 		}
@@ -1307,12 +1264,7 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 		this.updateGlobal();
 		if(this.parent != null) {
 			this.globalMBasis.rotateTo(targetAxes.globalMBasis.rotation);
-			try {
-				parent.globalMBasis.setToLocalOf(this.globalMBasis, this.localMBasis);
-			} catch (MathIllegalArgumentException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			parent.globalMBasis.setToLocalOf(this.globalMBasis, this.localMBasis);
 		} else {
 			this.localMBasis.rotateTo(targetAxes.globalMBasis.rotation);
 		}
@@ -1534,5 +1486,79 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 		String global = "Global: " + globalMBasis.toString();
 		String local = "Local: " + localMBasis.toString();
 		return global + "\n" + local;
+	}
+	
+	
+	@Override
+	public JSONObject getSaveJSON(SaveManager saveManager) {
+		this.updateGlobal();
+		JSONObject thisAxes = new JSONObject(); 
+		JSONObject shearScale = new JSONObject();
+		SGVec_3f xShear = new SGVec_3f(); 
+		SGVec_3f yShear = new SGVec_3f(); 
+		SGVec_3f zShear = new SGVec_3f(); 
+
+		this.localMBasis.setToShearXBase(xShear);
+		this.localMBasis.setToShearYBase(yShear);
+		this.localMBasis.setToShearZBase(zShear);
+
+		shearScale.setJSONArray("x", xShear.toJSONArray());
+		shearScale.setJSONArray("y", yShear.toJSONArray());
+		shearScale.setJSONArray("z", zShear.toJSONArray());
+
+		thisAxes.setJSONArray("translation", localMBasis.translate.toJSONArray());
+		thisAxes.setJSONArray("rotation", localMBasis.rotation.toJsonArray());
+		thisAxes.setJSONObject("bases", shearScale);
+
+		//thisAxes.setJSONArray("flippedAxes", saveManager.primitiveArrayToJSONArray(this.localMBasis.flippedAxes));
+		String parentHash = "-1"; 
+		if(parent != null) parentHash = ((AbstractAxes) parent).getIdentityHash();
+		thisAxes.setString("parent",  parentHash);
+		thisAxes.setInt("slipType", this.getSlipType());
+		thisAxes.setString("identityHash",  this.getIdentityHash());
+		thisAxes.setBoolean("forceOrthoNormality", this.forceOrthoNormality);
+
+		return thisAxes;
+	}
+
+	@Override
+	public void loadFromJSONObject(JSONObject j, LoadManager l) {
+		SGVec_3f origin = new SGVec_3f(j.getJSONArray("translation"));
+		SGVec_3f x = new SGVec_3f(j.getJSONObject("bases").getJSONArray("x"));
+		SGVec_3f y = new SGVec_3f(j.getJSONObject("bases").getJSONArray("y"));
+		SGVec_3f z =  new SGVec_3f(j.getJSONObject("bases").getJSONArray("z"));
+		Rot rotation = new Rot(j.getJSONArray("rotation"));
+		this.forceOrthoNormality = j.getBoolean("forceOrthoNormality");
+		this.localMBasis.setShearXBaseTo(x, false);
+		this.localMBasis.setShearYBaseTo(y, false);
+		this.localMBasis.setShearZBaseTo(z, false);
+		this.localMBasis.translate = origin;
+		this.localMBasis.rotation = rotation;
+		this.localMBasis.refreshMatrices();
+		AbstractAxes par = (AbstractAxes) l.getObjectFor(AbstractAxes.class, j, "parent");
+		if(par != null)
+			this.setRelativeToParent(par);
+		this.setSlipType(j.getInt("slipType"));
+	}
+	
+	@Override
+	public void notifyOfSaveIntent(SaveManager saveManager) {}	
+	
+	@Override
+	public void notifyOfLoadCompletion() {
+		this.markDirty();
+	}
+
+	boolean isLoading = false;
+	@Override
+	public void setLoading(boolean loading) {isLoading = loading;}
+	@Override
+	public boolean isLoading() {return isLoading;}
+	@Override
+	public void notifyOfSaveCompletion(SaveManager saveManager) {}
+	public void makeSaveable(SaveManager saveManager) {
+		if(this.parent != null) 
+			((AbstractAxes)parent).makeSaveable(saveManager);
+		saveManager.addToSaveState(this);
 	}
 }
