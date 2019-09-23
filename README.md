@@ -2,7 +2,7 @@
 'Everything Will Be IK' is a robust Inverse Kinematics library. 
 </br></br>
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/y_o34kOx_FA" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+See here for a demo: https://youtu.be/y_o34kOx_FA
 
 It is based on novel (I'm still writing an explainer) generalization of CCD (highly stable). 
 </br></br>
