@@ -4,7 +4,7 @@
 
 See here for a demo: https://youtu.be/y_o34kOx_FA
 
-It is based on novel (I'm still writing an explainer) generalization of CCD (highly stable). 
+It is based on a novel (I'm still writing an explainer) generalization of CCD (highly stable). 
 </br></br>
 <b>Features:</b>
 <ul>
