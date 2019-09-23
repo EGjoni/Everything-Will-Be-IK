@@ -8,7 +8,7 @@ It relies on a novel (I'm still writing an explainer) highly stable generalizati
 </br></br>
 <b>Features:</b>
 <ul>
-<li>Orientation AND position based targets (6-DOF).</li>
+<li>Position AND orientation targets (6-DOF).</li>
 <li>Highly stable.</li>
 <li>Multiple end-effector support</li>
 <li>Intermediary effector support.</li>
