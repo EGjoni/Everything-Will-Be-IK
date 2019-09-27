@@ -25,6 +25,7 @@ public class MRotation {
 	public static final MRotation IDENTITY = new MRotation(1.0, 0.0, 0.0, 0.0, false);
 
 	/** Scalar coordinate of the quaternion. */
+	
 	private double q0;
 
 	/** First coordinate of the vectorial part of the quaternion. */
@@ -86,7 +87,7 @@ public class MRotation {
 	 * the effect of the rotation on vectors around the axis. That means
 	 * that if (i, j, k) is a direct frame and if we first provide +k as
 	 * the axis and &pi;/2 as the angle to this constructor, and then
-	 * {@link #applyTo(SGVec_3d ) apply} the instance to +i, we will get
+	 * {@link #applyTo(T ) apply} the instance to +i, we will get
 	 * +j.</p>
 	 * <p>Another way to represent our convention is to say that a rotation
 	 * of angle &theta; about the unit vector (x, y, z) is the same as the
@@ -102,7 +103,7 @@ public class MRotation {
 	 * @param angle rotation angle.
 	 * @exception MathIllegalArgumentException if the axis norm is zero
 	 */
-	public MRotation(SGVec_3d  axis, double angle) throws MathIllegalArgumentException {
+	public <V extends Vec3d<?>> MRotation(V axis, double angle) throws MathIllegalArgumentException {
 
 		double norm = axis.mag();
 		if (norm == 0) {
@@ -110,12 +111,10 @@ public class MRotation {
 		}
 
 		double halfAngle = -0.5 * angle;					
-		double coeff = MathUtils.sin(halfAngle) / norm;
+		double coeff = Math.sin(halfAngle) / norm;
 		
-		
-		double atanTest = MathUtils.atan2(7, 9);
-		
-		q0 = MathUtils.cos (halfAngle);
+			
+		q0 = Math.cos (halfAngle);
 		q1 = coeff * axis.x;
 		q2 = coeff * axis.y;
 		q3 = coeff * axis.z;
@@ -128,7 +127,7 @@ public class MRotation {
 	 *
 	 * @param angle
 	 */
-	public void setAxis(SGVec_3d  newAxis) {
+	public <T extends SGVec_3d> void setAxis(T  newAxis) {
 		
 		double angle = this.getAngle();
 		double norm = newAxis.mag();
@@ -248,7 +247,7 @@ public class MRotation {
 	 * @exception MathArithmeticException if the norm of one of the vectors is zero,
 	 * or if one of the pair is degenerated (i.e. the vectors of the pair are colinear)
 	 */
-	public MRotation(SGVec_3d u1, SGVec_3d u2, SGVec_3d v1, SGVec_3d v2)
+	public <V extends Vec3d<?>> MRotation(V u1, V u2, V v1, V v2)
 			throws MathArithmeticException {
 
 		 // norms computation
@@ -273,25 +272,25 @@ public class MRotation {
 		  double v1x   = coeff * v1.x;
 		  double v1y   = coeff * v1.y;
 		  double v1z   = coeff * v1.z;
-		  v1 = new SGVec_3d(v1x, v1y, v1z);
+		  SGVec_3d va1 = new SGVec_3d(v1x, v1y, v1z);
 
 		  // adjust v2 in order to have (u1|u2) = (v1|v2) and (v2'|v2') = (u2|u2)
 		  double u1u2   = u1.dot(u2);
-		  double v1v2   = v1.dot(v2);
+		  double va1v2   = va1.dot(v2);
 		  double coeffU = u1u2 / u1u1;
-		  double coeffV = v1v2 / u1u1;
-		  double beta   = (double)Math.sqrt((u2u2 - u1u2 * coeffU) / (v2v2 - v1v2 * coeffV));
+		  double coeffV = va1v2 / u1u1;
+		  double beta   = (double)Math.sqrt((u2u2 - u1u2 * coeffU) / (v2v2 - va1v2 * coeffV));
 		  double alpha  = coeffU - beta * coeffV;
 		  double v2x    = alpha * v1x + beta * v2.x;
 		  double v2y    = alpha * v1y + beta * v2.y;
 		  double v2z    = alpha * v1z + beta * v2.z;
-		  v2 = new SGVec_3d(v2x, v2y, v2z);
+		  V va2 = (V) v2.copy(); va2.set(v2x, v2y, v2z);
 
 		  // preliminary computation (we use explicit formulation instead
 		  // of relying on the Vector3D class in order to avoid building lots
 		  // of temporary objects)
-		  SGVec_3d uRef = u1;
-		  SGVec_3d vRef = v1;
+		  V uRef = u1;
+		  V vRef = (V) va1;
 		  double dx1 = v1x - u1.x;
 		  double dy1 = v1y - u1.y;
 		  double dz1 = v1z - u1.z;
@@ -308,8 +307,8 @@ public class MRotation {
 		  if (Math.abs(c) <= MathUtils.DOUBLE_ROUNDING_ERROR) {
 		    // the (q1, q2, q3) vector is in the (u1, u2) plane
 		    // we try other vectors
-			 SGVec_3d u3 = u1.crossCopy(u2);
-			 SGVec_3d v3 = v1.crossCopy(v2);
+			 V u3 = (V) u1.crossCopy(u2);
+			 SGVec_3d v3 = va1.crossCopy(va2);
 		    double u3x  = u3.x;
 		    double u3y  = u3.y;
 		    double u3z  = u3.z;
@@ -349,7 +348,7 @@ public class MRotation {
 
 		      // we will have to use u2 and v2 to compute the scalar part
 		      uRef = u2;
-		      vRef = v2;
+		      vRef = va2;
 
 		    }
 
@@ -419,7 +418,7 @@ public class MRotation {
 	 * @param v desired image of u by the rotation
 	 * @exception MathArithmeticException if the norm of one of the vectors is zero
 	 */
-	public MRotation(SGVec_3d u, SGVec_3d v) throws MathArithmeticException {
+	public <V extends Vec3d<?>> MRotation(V u, V v) throws MathArithmeticException {
 
 		double normProduct = u.mag() * v.mag();
 		if (normProduct == 0) {
@@ -431,7 +430,7 @@ public class MRotation {
 		if (dot < ((2.0e-15 - 1.0) * normProduct)) {
 			// special case u = -v: we select a PI angle rotation around
 			// an arbitrary vector orthogonal to u
-			SGVec_3d w = u.getOrthogonal();
+			V w = (V) u.getOrthogonal();
 			q0 = 0.0;
 			q1 = -w.x;
 			q2 = -w.y;
@@ -441,7 +440,7 @@ public class MRotation {
 			// the shortest possible rotation: axis orthogonal to this plane
 			q0 = Math.sqrt(0.5 * (1.0 + dot / normProduct));
 			double coeff = 1.0 / (2.0 * q0 * normProduct);
-			SGVec_3d q = v.crossCopy(u);
+			V q = (V) v.crossCopy(u);
 			q1 = coeff * q.x;
 			q2 = coeff * q.y;
 			q3 = coeff * q.z;
@@ -466,11 +465,11 @@ public class MRotation {
 	 * @param alpha2 angle of the second elementary rotation
 	 * @param alpha3 angle of the third elementary rotation
 	 */
-	public MRotation(RotationOrder order,
+	public  MRotation(RotationOrder order,
 			double alpha1, double alpha2, double alpha3) {
-		MRotation r1 = new MRotation((SGVec_3d ) order.getA1(), alpha1);
-		MRotation r2 = new MRotation((SGVec_3d ) order.getA2(), alpha2);
-		MRotation r3 = new MRotation((SGVec_3d ) order.getA3(), alpha3);
+		MRotation r1 = new MRotation(order.getA1(), alpha1);
+		MRotation r2 = new MRotation(order.getA2(), alpha2);
+		MRotation r3 = new MRotation(order.getA3(), alpha3);
 		MRotation composed = r1.applyTo(r2.applyTo(r3));
 		q0 = composed.q0;
 		q1 = composed.q1;
@@ -556,6 +555,15 @@ public class MRotation {
 	public MRotation revert() {
 		return new MRotation(-q0, q1, q2, q3, false);
 	}
+	
+	
+	/** 
+	 * sets the values of the given rotation equal to the inverse of this rotation
+	 * @param storeIN
+	 */
+	public void revert(MRotation storeIn) {
+		storeIn.set(-q0, q1, q2, q3, true);
+	}
 
 	/** Get the scalar coordinate of the quaternion.
 	 * @return scalar coordinate of the quaternion
@@ -587,7 +595,7 @@ public class MRotation {
 
 	/** Get the normalized axis of the rotation.
 	 * @return normalized axis of the rotation
-	 * @see #Rotation(SGVec_3d , double)
+	 * @see #Rotation(T , double)
 	 */
 	public SGVec_3d getAxis() {
 		double squaredSine = q1 * q1 + q2 * q2 + q3 * q3;
@@ -599,6 +607,24 @@ public class MRotation {
 		}
 		double inverse = -1 / Math.sqrt(squaredSine);
 		return new SGVec_3d(q1 * inverse, q2 * inverse, q3 * inverse);
+	}
+	
+	/** Get the normalized axis of the rotation.
+	 * @return normalized axis of the rotation
+	 * @see #Rotation(T , double)
+	 */
+	public <T extends Vec3d<?>> void setToAxis(T v) {
+		double squaredSine = q1 * q1 + q2 * q2 + q3 * q3;
+		if (squaredSine == 0) {
+			v.set(1, 0, 0);
+			return;
+		} else if (q0 < 0) {
+			double inverse = 1 / Math.sqrt(squaredSine);
+			 v.set(q1 * inverse, q2 * inverse, q3 * inverse);
+			 return;
+		}
+		double inverse = -1 / Math.sqrt(squaredSine);
+		 v.set(q1 * inverse, q2 * inverse, q3 * inverse);
 	}
 
 
@@ -618,7 +644,7 @@ public class MRotation {
 
 	/** Get the angle of the rotation.
 	 * @return angle of the rotation (between 0 and &pi;)
-	 * @see #Rotation(SGVec_3d , double)
+	 * @see #Rotation(T , double)
 	 */
 	public double getAngle() {
 		if ((q0 < -0.1) || (q0 > 0.1)) {
@@ -666,9 +692,9 @@ public class MRotation {
 
 		if (order == RotationOrder.XYZ) {
 
-			// r (SGVec_3d .plusK) coordinates are :
+			// r (T .plusK) coordinates are :
 			//  sin (theta), -cos (theta) sin (phi), cos (theta) cos (phi)
-			// (-r) (SGVec_3d .plusI) coordinates are :
+			// (-r) (T .plusI) coordinates are :
 			// cos (psi) cos (theta), -sin (psi) cos (theta), sin (theta)
 			// and we can choose to have theta in the interval [-PI/2 ; +PI/2]
 			SGVec_3d v1 = applyTo(RotationOrder.Z);
@@ -684,9 +710,9 @@ public class MRotation {
 
 		} else if (order == RotationOrder.XZY) {
 
-			// r (SGVec_3d .plusJ) coordinates are :
+			// r (T .plusJ) coordinates are :
 			// -sin (psi), cos (psi) cos (phi), cos (psi) sin (phi)
-			// (-r) (SGVec_3d .plusI) coordinates are :
+			// (-r) (T .plusI) coordinates are :
 			// cos (theta) cos (psi), -sin (psi), sin (theta) cos (psi)
 			// and we can choose to have psi in the interval [-PI/2 ; +PI/2]
 			SGVec_3d v1 = applyTo(RotationOrder.X);
@@ -702,9 +728,9 @@ public class MRotation {
 
 		} else if (order == RotationOrder.YXZ) {
 
-			// r (SGVec_3d .plusK) coordinates are :
+			// r (T .plusK) coordinates are :
 			//  cos (phi) sin (theta), -sin (phi), cos (phi) cos (theta)
-			// (-r) (SGVec_3d .plusJ) coordinates are :
+			// (-r) (T .plusJ) coordinates are :
 			// sin (psi) cos (phi), cos (psi) cos (phi), -sin (phi)
 			// and we can choose to have phi in the interval [-PI/2 ; +PI/2]
 			SGVec_3d v1 = applyTo(RotationOrder.Z);
@@ -720,9 +746,9 @@ public class MRotation {
 
 		} else if (order == RotationOrder.YZX) {
 
-			// r (SGVec_3d .plusI) coordinates are :
+			// r (T .plusI) coordinates are :
 			// cos (psi) cos (theta), sin (psi), -cos (psi) sin (theta)
-			// (-r) (SGVec_3d .plusJ) coordinates are :
+			// (-r) (T .plusJ) coordinates are :
 			// sin (psi), cos (phi) cos (psi), -sin (phi) cos (psi)
 			// and we can choose to have psi in the interval [-PI/2 ; +PI/2]
 			SGVec_3d v1 = applyTo(RotationOrder.X);
@@ -738,9 +764,9 @@ public class MRotation {
 
 		} else if (order == RotationOrder.ZXY) {
 
-			// r (SGVec_3d .plusJ) coordinates are :
+			// r (T .plusJ) coordinates are :
 			// -cos (phi) sin (psi), cos (phi) cos (psi), sin (phi)
-			// (-r) (SGVec_3d .plusK) coordinates are :
+			// (-r) (T .plusK) coordinates are :
 			// -sin (theta) cos (phi), sin (phi), cos (theta) cos (phi)
 			// and we can choose to have phi in the interval [-PI/2 ; +PI/2]
 			SGVec_3d v1 = applyTo(RotationOrder.Y);
@@ -756,9 +782,9 @@ public class MRotation {
 
 		} else if (order == RotationOrder.ZYX) {
 
-			// r (SGVec_3d .plusI) coordinates are :
+			// r (T .plusI) coordinates are :
 			//  cos (theta) cos (psi), cos (theta) sin (psi), -sin (theta)
-			// (-r) (SGVec_3d .plusK) coordinates are :
+			// (-r) (T .plusK) coordinates are :
 			// -sin (theta), sin (phi) cos (theta), cos (phi) cos (theta)
 			// and we can choose to have theta in the interval [-PI/2 ; +PI/2]
 			SGVec_3d v1 = applyTo(RotationOrder.X);
@@ -774,9 +800,9 @@ public class MRotation {
 
 		} else if (order == RotationOrder.XYX) {
 
-			// r (SGVec_3d .plusI) coordinates are :
+			// r (T .plusI) coordinates are :
 			//  cos (theta), sin (phi1) sin (theta), -cos (phi1) sin (theta)
-			// (-r) (SGVec_3d .plusI) coordinates are :
+			// (-r) (T .plusI) coordinates are :
 			// cos (theta), sin (theta) sin (phi2), sin (theta) cos (phi2)
 			// and we can choose to have theta in the interval [0 ; PI]
 			SGVec_3d v1 = applyTo(RotationOrder.X);
@@ -792,9 +818,9 @@ public class MRotation {
 
 		} else if (order == RotationOrder.XZX) {
 
-			// r (SGVec_3d .plusI) coordinates are :
+			// r (T .plusI) coordinates are :
 			//  cos (psi), cos (phi1) sin (psi), sin (phi1) sin (psi)
-			// (-r) (SGVec_3d .plusI) coordinates are :
+			// (-r) (T .plusI) coordinates are :
 			// cos (psi), -sin (psi) cos (phi2), sin (psi) sin (phi2)
 			// and we can choose to have psi in the interval [0 ; PI]
 			SGVec_3d v1 = applyTo(RotationOrder.X);
@@ -810,9 +836,9 @@ public class MRotation {
 
 		} else if (order == RotationOrder.YXY) {
 
-			// r (SGVec_3d .plusJ) coordinates are :
+			// r (T .plusJ) coordinates are :
 			//  sin (theta1) sin (phi), cos (phi), cos (theta1) sin (phi)
-			// (-r) (SGVec_3d .plusJ) coordinates are :
+			// (-r) (T .plusJ) coordinates are :
 			// sin (phi) sin (theta2), cos (phi), -sin (phi) cos (theta2)
 			// and we can choose to have phi in the interval [0 ; PI]
 			SGVec_3d v1 = applyTo(RotationOrder.Y);
@@ -828,9 +854,9 @@ public class MRotation {
 
 		} else if (order == RotationOrder.YZY) {
 
-			// r (SGVec_3d .plusJ) coordinates are :
+			// r (T .plusJ) coordinates are :
 			//  -cos (theta1) sin (psi), cos (psi), sin (theta1) sin (psi)
-			// (-r) (SGVec_3d .plusJ) coordinates are :
+			// (-r) (T .plusJ) coordinates are :
 			// sin (psi) cos (theta2), cos (psi), sin (psi) sin (theta2)
 			// and we can choose to have psi in the interval [0 ; PI]
 			SGVec_3d v1 = applyTo(RotationOrder.Y);
@@ -846,9 +872,9 @@ public class MRotation {
 
 		} else if (order == RotationOrder.ZXZ) {
 
-			// r (SGVec_3d .plusK) coordinates are :
+			// r (T .plusK) coordinates are :
 			//  sin (psi1) sin (phi), -cos (psi1) sin (phi), cos (phi)
-			// (-r) (SGVec_3d .plusK) coordinates are :
+			// (-r) (T .plusK) coordinates are :
 			// sin (phi) sin (psi2), sin (phi) cos (psi2), cos (phi)
 			// and we can choose to have phi in the interval [0 ; PI]
 			SGVec_3d v1 = applyTo(RotationOrder.Z);
@@ -864,9 +890,9 @@ public class MRotation {
 
 		} else { // last possibility is ZYZ
 
-			// r (SGVec_3d .plusK) coordinates are :
+			// r (T .plusK) coordinates are :
 			//  cos (psi1) sin (theta), sin (psi1) sin (theta), cos (theta)
-			// (-r) (SGVec_3d .plusK) coordinates are :
+			// (-r) (T .plusK) coordinates are :
 			// -sin (theta) cos (psi2), sin (theta) sin (psi2), cos (theta)
 			// and we can choose to have theta in the interval [0 ; PI]
 			SGVec_3d v1 = applyTo(RotationOrder.Z);
@@ -975,18 +1001,18 @@ public class MRotation {
 	 * @param u vector to apply the rotation to
 	 * @return a new vector which is the image of u by the rotation
 	 */
-	public SGVec_3d applyTo(SGVec_3d u) {
+	public <T extends SGVec_3d> T applyTo(T u) {
 
 		double x = u.x;
 		double y = u.y;
 		double z = u.z;
 
 		double s = q1 * x + q2 * y + q3 * z;
-
-		return new SGVec_3d(2 * (q0 * (x * q0 - (q2 * z - q3 * y)) + s * q1) - x,
+		T result = (T) u.copy();
+		result.set(2 * (q0 * (x * q0 - (q2 * z - q3 * y)) + s * q1) - x,
 				2 * (q0 * (y * q0 - (q3 * x - q1 * z)) + s * q2) - y,
 				2 * (q0 * (z * q0 - (q1 * y - q2 * x)) + s * q3) - z);
-
+		return result;
 	}
 	
 	
@@ -1082,7 +1108,7 @@ public class MRotation {
 	 * @param u vector to apply the inverse of the rotation to
 	 * @return a new vector which such that u is its image by the rotation
 	 */
-	public SGVec_3d applyInverseTo(SGVec_3d u) {
+	public <T extends SGVec_3d> T applyInverseTo(T u) {
 
 		double x = u.x;
 		double y = u.y;
@@ -1090,10 +1116,12 @@ public class MRotation {
 
 		double s = q1 * x + q2 * y + q3 * z;
 		double m0 = -q0;
-
-		return new SGVec_3d(2 * (m0 * (x * m0 - (q2 * z - q3 * y)) + s * q1) - x,
+		
+		T result = (T) u.copy();
+		result.set(2 * (m0 * (x * m0 - (q2 * z - q3 * y)) + s * q1) - x,
 				2 * (m0 * (y * m0 - (q3 * x - q1 * z)) + s * q2) - y,
 				2 * (m0 * (z * m0 - (q1 * y - q2 * x)) + s * q3) - z);
+		return result;
 
 	}
 
@@ -1246,7 +1274,7 @@ public class MRotation {
 	                            q3 / norm);
 	  }
 
-	public void set(SGVec_3d u, SGVec_3d v) throws MathArithmeticException {
+	public <V extends Vec3d<?>> void set(V u, V v) throws MathArithmeticException {
 
 		double normProduct = u.mag() * v.mag();
 		if (normProduct == 0) {
@@ -1258,7 +1286,7 @@ public class MRotation {
 		if (dot < ((2.0e-15 - 1.0) * normProduct)) {
 			// special case u = -v: we select a PI angle rotation around
 			// an arbitrary vector orthogonal to u
-			SGVec_3d w = u.getOrthogonal();
+			V w = (V) u.getOrthogonal();
 			q0 = 0.0;
 			q1 = -w.x;
 			q2 = -w.y;
@@ -1268,7 +1296,7 @@ public class MRotation {
 			// the shortest possible rotation: axis orthogonal to this plane
 			q0 = Math.sqrt(0.5 * (1.0 + dot / normProduct));
 			double coeff = 1.0 / (2.0 * q0 * normProduct);
-			SGVec_3d q = v.crossCopy(u);
+			V q = (V) v.crossCopy(u);
 			q1 = coeff * q.x;
 			q2 = coeff * q.y;
 			q3 = coeff * q.z;
@@ -1276,7 +1304,7 @@ public class MRotation {
 
 	}
 
-	public void set(SGVec_3d  axis, double angle) throws MathIllegalArgumentException {
+	public <V extends Vec3d<?>> void set(V  axis, double angle) throws MathIllegalArgumentException {
 
 		double norm = axis.mag();
 		if (norm == 0) {
@@ -1422,11 +1450,11 @@ public class MRotation {
 
 	
 	public boolean equalTo(MRotation m) {
-		return (this.q0 == m.getQ0() && this.q1 == m.getQ1() && this.q2 == m.getQ2() && this.q3 == m.getQ3());
+		return distance(this, m) < MathUtils.DOUBLE_ROUNDING_ERROR;
 	}
 	
 	public String toString() {
-		String result = "axis: " + getAxis().toSGVec3f().toString();
+		String result = "axis: " + getAxis().toVec3f().toString();
 		result += "\n angle : " + (float)Math.toDegrees(getAngle()) + " degrees " ;
 		return result;
 	}

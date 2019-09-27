@@ -103,21 +103,7 @@ public interface Vecf<T extends Vecf<T>> extends Vec<T> {
 	 * @return the squared distance between this and the other vector */
 	float distSq (T v);
 
-	/** Linearly interpolates between this vector and the target vector by alpha which is in the range [0,1]. The result is stored
-	 * in this vector.
-	 * @param target The target vector
-	 * @param alpha The interpolation coefficient
-	 * @return This vector for chaining. */
-	T lerp (T target, float alpha);
-
-	/** Interpolates between this vector and the given target vector by alpha (within range [0,1]) using the given Interpolation
-	 * method. the result is stored in this vector.
-	 * @param target The target vector
-	 * @param alpha The interpolation coefficient
-	 * @param interpolator An Interpolation object describing the used interpolation method
-	 * @return This vector for chaining. */
-	T interpolate (T target, float alpha, Interpolation interpolator);
-
+	
 	/*/** Sets this vector to the unit vector with a random direction
 	 * @return This vector for chaining 
 	T setToRandomDirection ();*/

@@ -107,7 +107,7 @@ public class Matrix4d implements Serializable {
 	 * @param position The translation
 	 * @param rotation The rotation, must be normalized
 	 * @param scale The scale */
-	public Matrix4d (SGVec_3d position, Quaternion rotation, SGVec_3d scale) {
+	public <V extends Vec3d<?>> Matrix4d (V position, Quaternion rotation, V scale) {
 		set(position, rotation, scale);
 	}
 
@@ -229,7 +229,7 @@ public class Matrix4d implements Serializable {
 	 * @param position The translation
 	 * @param orientation The rotation, must be normalized
 	 * @return This matrix for chaining */
-	public Matrix4d set (SGVec_3d position, Quaternion orientation) {
+	public <V extends Vec3d<?>>  Matrix4d set (V position, Quaternion orientation) {
 		return set(position.x, position.y, position.z, 
 				orientation.getQ1(), orientation.getQ2(), orientation.getQ3(), orientation.getQ0());
 	}
@@ -278,7 +278,7 @@ public class Matrix4d implements Serializable {
 	 * @param orientation The rotation, must be normalized
 	 * @param scale The scale
 	 * @return This matrix for chaining */
-	public Matrix4d set (SGVec_3d position, Quaternion orientation, SGVec_3d scale) {
+	public <V extends Vec3d<?>>  Matrix4d set (V position, Quaternion orientation, V scale) {
 		return set(position.x, position.y, position.z, 
 				orientation.getQ1(), orientation.getQ2(), orientation.getQ3(), orientation.getQ0(), scale.x,
 				scale.y, scale.z);
@@ -333,7 +333,7 @@ public class Matrix4d implements Serializable {
 	 * @param yAxis The y-axis.
 	 * @param zAxis The z-axis.
 	 * @param pos The translation vector. */
-	public Matrix4d set (SGVec_3d xAxis, SGVec_3d yAxis, SGVec_3d zAxis, SGVec_3d pos) {
+	public <V extends Vec3d<?>>  Matrix4d set (V xAxis, V yAxis, V zAxis, V pos) {
 		val[M00] = xAxis.x;
 		val[M01] = xAxis.y;
 		val[M02] = xAxis.z;
@@ -362,7 +362,7 @@ public class Matrix4d implements Serializable {
 	 * 
 	 * @param vector The translation vector to add to the current matrix. (This vector is not modified)
 	 * @return This matrix for the purpose of chaining methods together. */
-	public Matrix4d trn (SGVec_3d vector) {
+	public <V extends Vec3d<?>>  Matrix4d trn (V vector) {
 		val[M03] += vector.x;
 		val[M13] += vector.y;
 		val[M23] += vector.z;
@@ -713,7 +713,7 @@ public class Matrix4d implements Serializable {
 	 * 
 	 * @param vector The translation vector
 	 * @return This matrix for the purpose of chaining methods together. */
-	public Matrix4d setTranslation (SGVec_3d vector) {
+	public <V extends Vec3d<?>> Matrix4d setTranslation (V vector) {
 		val[M03] = vector.x;
 		val[M13] = vector.y;
 		val[M23] = vector.z;
@@ -738,7 +738,7 @@ public class Matrix4d implements Serializable {
 	 * 
 	 * @param vector The translation vector
 	 * @return This matrix for the purpose of chaining methods together. */
-	public Matrix4d setToTranslation (SGVec_3d vector) {
+	public <V extends Vec3d<?>>  Matrix4d setToTranslation (V vector) {
 		idt();
 		val[M03] = vector.x;
 		val[M13] = vector.y;
@@ -767,7 +767,7 @@ public class Matrix4d implements Serializable {
 	 * @param translation The translation vector
 	 * @param scaling The scaling vector
 	 * @return This matrix for the purpose of chaining methods together. */
-	public Matrix4d setToTranslationAndScaling (SGVec_3d translation, SGVec_3d scaling) {
+	public <V extends Vec3d<?>>  Matrix4d setToTranslationAndScaling (V translation, V scaling) {
 		idt();
 		val[M03] = translation.x;
 		val[M13] = translation.y;
@@ -808,7 +808,7 @@ public class Matrix4d implements Serializable {
 	 * @param axis The axis
 	 * @param degrees The angle in degrees
 	 * @return This matrix for the purpose of chaining methods together. */
-	public Matrix4d setToRotation (SGVec_3d axis, double degrees) {
+	public <V extends Vec3d<?>> Matrix4d setToRotation (V axis, double degrees) {
 		if (degrees == 0) {
 			idt();
 			return this;
@@ -821,7 +821,7 @@ public class Matrix4d implements Serializable {
 	 * @param axis The axis
 	 * @param radians The angle in radians
 	 * @return This matrix for the purpose of chaining methods together. */
-	public Matrix4d setToRotationRad (SGVec_3d axis, double radians) {
+	public <V extends Vec3d<?>> Matrix4d setToRotationRad (V axis, double radians) {
 		if (radians == 0) {
 			idt();
 			return this;
@@ -863,7 +863,7 @@ public class Matrix4d implements Serializable {
 	 * @param v1 The base vector
 	 * @param v2 The target vector
 	 * @return This matrix for the purpose of chaining methods together */
-	public Matrix4d setToRotation (final SGVec_3d v1, final SGVec_3d v2) {
+	public <V extends Vec3d<?>>  Matrix4d setToRotation (final V v1, final V v2) {
 		return set(quat.setFromCross(v1, v2));
 	}
 
@@ -894,7 +894,7 @@ public class Matrix4d implements Serializable {
 	 * 
 	 * @param vector The scaling vector
 	 * @return This matrix for chaining. */
-	public Matrix4d setToScaling (SGVec_3d vector) {
+	public <V extends Vec3d<?>>  Matrix4d setToScaling (V vector) {
 		idt();
 		val[M00] = vector.x;
 		val[M11] = vector.y;
@@ -926,7 +926,7 @@ public class Matrix4d implements Serializable {
 	 * @param direction The direction vector
 	 * @param up The up vector
 	 * @return This matrix for the purpose of chaining methods together. */
-	public Matrix4d setToLookAt (SGVec_3d direction, SGVec_3d up) {
+	public <V extends Vec3d<?>>  Matrix4d setToLookAt (V direction, V up) {
 		l_vez.set(direction).normalize();
 		l_vex.set(direction).normalize();
 		l_vex.crs(up).normalize();
@@ -954,7 +954,7 @@ public class Matrix4d implements Serializable {
 	 * @param target the target
 	 * @param up the up vector
 	 * @return This matrix */
-	public Matrix4d setToLookAt (SGVec_3d position, SGVec_3d target, SGVec_3d up) {
+	public <V extends Vec3d<?>>Matrix4d setToLookAt (V position, V target, V up) {
 		tmpVec.set(target).sub(position);
 		setToLookAt(tmpVec, up);
 		this.mul(tmpMat.setToTranslation(-position.x, -position.y, -position.z));
@@ -966,7 +966,7 @@ public class Matrix4d implements Serializable {
 	static final SGVec_3d tmpForward = new SGVec_3d();
 	static final SGVec_3d tmpUp = new SGVec_3d();
 
-	public Matrix4d setToWorld (SGVec_3d position, SGVec_3d forward, SGVec_3d up) {
+	public <V extends Vec3d<?>>  Matrix4d setToWorld (V position, V forward, V up) {
 		tmpForward.set(forward).normalize();
 		right.set(tmpForward).crs(up).normalize();
 		tmpUp.set(right).crs(tmpForward).normalize();
@@ -1088,7 +1088,7 @@ public class Matrix4d implements Serializable {
 
 
 
-	public Matrix4d scl (SGVec_3d scale) {
+	public <V extends Vec3d<?>> Matrix4d scl (V scale) {
 		val[M00] *= scale.x;
 		val[M11] *= scale.y;
 		val[M22] *= scale.z;
@@ -1109,7 +1109,7 @@ public class Matrix4d implements Serializable {
 		return this;
 	}
 
-	public SGVec_3d getTranslation (SGVec_3d position) {
+	public <V extends Vec3d<?>> V getTranslation (V position) {
 		position.x = val[M03];
 		position.y = val[M13];
 		position.z = val[M23];
@@ -1166,8 +1166,8 @@ public class Matrix4d implements Serializable {
 
 	/** @param scale The vector which will receive the (non-negative) scale components on each axis.
 	 * @return The provided vector for chaining. */
-	public SGVec_3d getScale (SGVec_3d scale) {
-		return scale.set(getScaleX(), getScaleY(), getScaleZ());
+	public <V extends Vec3d<?>> V getScale (V scale) {
+		return (V) scale.set(getScaleX(), getScaleY(), getScaleZ());
 	}
 
 	/** removes the translational part and transposes the matrix. */
@@ -1402,7 +1402,7 @@ public class Matrix4d implements Serializable {
 	 * {@link SGVec_3d#mul(Matrix4d)}.
 	 * @param mat the matrix
 	 * @param vec the vector. */
-	public static  void mulVec (double[] mat, SGVec_3d vecIn, SGVec_3d vecOut) {
+	public static <V extends Vec3d<?>> void mulVec (double[] mat, V vecIn, V vecOut) {
 		double x = vecIn.x * mat[M00] + vecIn.y * mat[M01] + vecIn.z * mat[M02] + mat[M03];
 		double y = vecIn.x * mat[M10] + vecIn.y * mat[M11] + vecIn.z * mat[M12] + mat[M13];
 		double z = vecIn.x * mat[M20] + vecIn.y * mat[M21] + vecIn.z * mat[M22] + mat[M23];
@@ -1416,7 +1416,7 @@ public class Matrix4d implements Serializable {
 	 * {@link SGVec_3d#mul(Matrix4d)}.
 	 * @param mat the matrix
 	 * @param vec the vector. */
-	public  void transform (SGVec_3d input, SGVec_3d output) {
+	public <V extends Vec3d<?>> void transform (V input, V output) {
 		mulVec(this.val, input, output);
 	}
 	/*-{ }-*/; /*
@@ -1683,7 +1683,7 @@ public class Matrix4d implements Serializable {
 	 * glTranslate/glRotate/glScale
 	 * @param translation
 	 * @return This matrix for the purpose of chaining methods together. */
-	public Matrix4d translate (SGVec_3d translation) {
+	public <V extends Vec3d<?>> Matrix4d translate (V translation) {
 		return translate(translation.x, translation.y, translation.z);
 	}
 
@@ -1721,7 +1721,7 @@ public class Matrix4d implements Serializable {
 	 * @param axis The vector axis to rotate around.
 	 * @param degrees The angle in degrees.
 	 * @return This matrix for the purpose of chaining methods together. */
-	public Matrix4d rotate (SGVec_3d axis, double degrees) {
+	public <V extends Vec3d<?>> Matrix4d rotate (V axis, double degrees) {
 		if (degrees == 0) return this;
 		quat.set(axis, degrees);
 		return rotate(quat);
@@ -1733,7 +1733,7 @@ public class Matrix4d implements Serializable {
 	 * @param axis The vector axis to rotate around.
 	 * @param radians The angle in radians.
 	 * @return This matrix for the purpose of chaining methods together. */
-	public Matrix4d rotateRad (SGVec_3d axis, double radians) {
+	public <V extends Vec3d<?>> Matrix4d rotateRad (V axis, double radians) {
 		if (radians == 0) return this;
 		quat.setFromAxisRad(axis, radians);
 		return rotate(quat);
@@ -1780,7 +1780,7 @@ public class Matrix4d implements Serializable {
 	 * @param v1 The base vector
 	 * @param v2 The target vector
 	 * @return This matrix for the purpose of chaining methods together */
-	public Matrix4d rotate (final SGVec_3d v1, final SGVec_3d v2) {
+	public <V extends Vec3d<?>> Matrix4d rotate (final V v1, final V v2) {
 		return rotate(quat.setFromCross(v1, v2));
 	}
 

@@ -63,19 +63,15 @@ public class Rot {
 		this.rotation = new MRotation(r.getQ0(), r.getQ1(), r.getQ2(), r.getQ3());
 	}
 
-	public Rot( SGVec_3d v1, SGVec_3d v2, SGVec_3d u1, SGVec_3d u2) {
+	public <V extends Vec3d<?>> Rot( V v1, V v2, V u1, V u2) {
 		try {
-			rotation = new MRotation(
-					new SGVec_3d(v1), 
-					new SGVec_3d(v2), 
-					new SGVec_3d(u1), 
-					new SGVec_3d(u2));
+			rotation = new MRotation(v1,v2,u1,u2);
 		} catch(Exception e) {
 			rotation = new MRotation(v1, 0f);
 		}
 	}
 
-	public Rot( SGVec_3d  axis, double angle) {		
+	public <V extends Vec3d<?>> Rot( V  axis, double angle) {		
 		try {
 			rotation = new MRotation(axis, angle); 
 		} catch(Exception e) { 
@@ -87,7 +83,7 @@ public class Rot {
 		this.rotation = new MRotation(w, x, y, z, needsNormalization);  
 	}  
 	
-	public Rot( SGVec_3d begin, SGVec_3d end) {
+	public <V extends Vec3d<?>> Rot( V begin, V end) {
 		try{ 
 			rotation = new MRotation(begin, end);
 		} catch(Exception e) { 
@@ -130,7 +126,7 @@ public class Rot {
 	 * @param axis
 	 * @param angle
 	 */
-	public void set(SGVec_3d axis, double angle) {
+	public <V extends Vec3d<?>> void set(V axis, double angle) {
 		this.rotation.set(axis, angle);
 	}
 	
@@ -140,19 +136,19 @@ public class Rot {
 	 * @param axis
 	 * @param angle
 	 */
-	public void set(SGVec_3d startVec, SGVec_3d targetVec) {
+	public <V extends Vec3d<?>> void set(V startVec, V targetVec) {
 		this.rotation.set(startVec, targetVec);
 	}
 	
 
-	public void applyTo( SGVec_3d v, SGVec_3d output) {
+	public <V extends Vec3d<?>> void applyTo( V v, V output) {
 		workingInput[0] = v.x; workingInput[1] = v.y; workingInput[2]=v.z; 
 		rotation.applyTo(workingInput, workingOutput);
 		output.set(workingOutput);
 	}
 
 
-	public void applyInverseTo( SGVec_3d v, SGVec_3d output) {
+	public <V extends Vec3d<?>> void applyInverseTo( V v, V output) {
 		workingInput[0] = v.x; workingInput[1] = v.y; workingInput[2]=v.z; 
 		rotation.applyInverseTo(workingInput, workingOutput);
 		output.set(workingOutput);
@@ -165,19 +161,19 @@ public class Rot {
 	 * @return
 	 */
 	
-	public SGVec_3d applyToCopy( SGVec_3d v) {
+	public <T extends Vec3d<?>> T applyToCopy( T v) {
 		workingInput[0] = v.x; workingInput[1] = v.y; workingInput[2]=v.z; 
 		rotation.applyTo(workingInput, workingOutput);
-		 SGVec_3d copy =  v.copy();		
-		return copy.set(workingOutput[0], workingOutput[1], workingOutput[2]);
+		 T copy =  (T)v.copy();		
+		return (T) copy.set(workingOutput[0], workingOutput[1], workingOutput[2]);
 	}
 
 
-	public SGVec_3d  applyInverseToCopy( SGVec_3d v) {
+	public <T extends Vec3d<?>> T applyInverseToCopy( T v) {
 		workingInput[0] = v.x; workingInput[1] = v.y; workingInput[2]=v.z; 
 		rotation.applyInverseTo(workingInput, workingOutput);
-		 SGVec_3d copy =  v.copy();		
-		return copy.set(workingOutput[0], workingOutput[1], workingOutput[2]);
+		 T copy =  (T) v.copy();		
+		return (T) copy.set(workingOutput[0], workingOutput[1], workingOutput[2]);
 	}
 
 
@@ -272,16 +268,25 @@ public class Rot {
 	}
 
 	public SGVec_3d getAxis() {
-		return rotation.getAxis();
+		SGVec_3d result = new SGVec_3d();
+		getAxis(result);
+		return result;
 	}
 	
-	public void getAxis( SGVec_3d output) {
-		output.set(rotation.getAxis());
+	public <T extends Vec3d<?>> void getAxis( T output) {
+		rotation.setToAxis(output);
 	}
 
 
 	public Rot revert() {
 		return new Rot(this.rotation.revert());
+	}
+	/** 
+	 * sets the values of the given rotation equal to the inverse of this rotation
+	 * @param storeIN
+	 */
+	public void setToReversion(Rot r) {
+		rotation.revert(r.rotation);
 	}
 
 
@@ -516,7 +521,7 @@ public class Rot {
 	}
 
 	public String toString() {
-		return "\n axis: "+ this.getAxis().toSGVec3f() +", \n angle: "+((float)Math.toDegrees(this.getAngle()));
+		return "\n axis: "+ this.getAxis().toVec3f() +", \n angle: "+((float)Math.toDegrees(this.getAngle()));
 	}
 	
 	/**

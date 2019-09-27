@@ -109,9 +109,7 @@ public interface Vec2d<T extends Vec2d<T>> extends Vecd<T>{
 	default T multCopy (T v) {
 		T cv = v.copy();
 		return cv.mult(v);
-	};
-	
-	
+	};	
 	
 	/**
 	 * @return the X component of this vector. 
@@ -127,5 +125,10 @@ public interface Vec2d<T extends Vec2d<T>> extends Vecd<T>{
 	 */
 	public <V extends Vec2f> V toSGVec2f(); 
 	
-	
+	/**
+	 * @return the Y component of this vector. 
+	 */
+	public default double getZ_() {
+		return 0d;
+	}
 }

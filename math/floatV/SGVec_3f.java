@@ -626,17 +626,12 @@ public class SGVec_3f implements Serializable, Vec3f<SGVec_3f>, CanLoad {
 		return dot(vector) < 0;
 	}
 
-	@Override
+
 	public SGVec_3f lerp (final SGVec_3f target, float alpha) {
 		x += alpha * (target.x - x);
 		y += alpha * (target.y - y);
 		z += alpha * (target.z - z);
 		return this;
-	}
-
-	@Override
-	public SGVec_3f interpolate (SGVec_3f target, float alpha, Interpolation interpolator) {
-		return lerp(target, interpolator.apply(0f, 1f, alpha));
 	}
 
 	/** Spherically interpolates between this vector and the target vector by alpha which is in the range [0,1]. The result is

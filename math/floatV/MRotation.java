@@ -104,9 +104,9 @@ public class MRotation {
 		}*/
 
 		float halfAngle = -0.5f * angle;
-		float coeff = (float)Math.sin(halfAngle) / norm;
+		float coeff = MathUtils.sin(halfAngle) / norm;
 
-		q0 = (float)Math.cos (halfAngle);
+		q0 = MathUtils.cos (halfAngle);
 		q1 = coeff * axis.x;
 		q2 = coeff * axis.y;
 		q3 = coeff * axis.z;
@@ -128,9 +128,9 @@ public class MRotation {
 		}*/
 
 		float halfAngle = -0.5f * angle;
-		float coeff = (float)Math.sin(halfAngle) / norm;
+		float coeff = MathUtils.sin(halfAngle) / norm;
 
-		q0 = (float)Math.cos (halfAngle);
+		q0 = MathUtils.cos (halfAngle);
 		q1 = coeff * newAxis.x;
 		q2 = coeff * newAxis.y;
 		q3 = coeff * newAxis.z;
@@ -151,9 +151,9 @@ public class MRotation {
 		}*/
 
 		float halfAngle = -0.5f * newAngle;
-		float coeff = (float)Math.sin(halfAngle) / norm;
+		float coeff = MathUtils.sin(halfAngle) / norm;
 
-		q0 = (float)Math.cos (halfAngle);
+		q0 = MathUtils.cos (halfAngle);
 		q1 = coeff * axis.x;
 		q2 = coeff * axis.y;
 		q3 = coeff * axis.z;
@@ -254,7 +254,7 @@ public class MRotation {
 		  float u2z = u2.z;
 
 		  // normalize v1 in order to have (v1'|v1') = (u1|u1)
-		  float coeff = (float)Math.sqrt (u1u1 / v1v1);
+		  float coeff = MathUtils.sqrt (u1u1 / v1v1);
 		  float v1x   = coeff * v1.x;
 		  float v1y   = coeff * v1.y;
 		  float v1z   = coeff * v1.z;
@@ -265,7 +265,7 @@ public class MRotation {
 		  float v1v2   = v1.dot(v2);
 		  float coeffU = u1u2 / u1u1;
 		  float coeffV = v1v2 / u1u1;
-		  float beta   = (float)Math.sqrt((u2u2 - u1u2 * coeffU) / (v2v2 - v1v2 * coeffV));
+		  float beta   = MathUtils.sqrt((u2u2 - u1u2 * coeffU) / (v2v2 - v1v2 * coeffV));
 		  float alpha  = coeffU - beta * coeffV;
 		  float v2x    = alpha * v1x + beta * v2.x;
 		  float v2y    = alpha * v1y + beta * v2.y;
@@ -290,7 +290,7 @@ public class MRotation {
 		             k.y * (u1z * u2x - u1x * u2z) +
 		             k.z * (u1x * u2y - u1y * u2x);
 
-		  if ((float)Math.abs(c) <=MathUtils.FLOAT_ROUNDING_ERROR) {
+		  if (MathUtils.abs(c) <=MathUtils.FLOAT_ROUNDING_ERROR) {
 		    // the (q1, q2, q3) vector is in the (u1, u2) plane
 		    // we try other vectors
 			 SGVec_3f u3 = u1.crossCopy(u2);
@@ -312,7 +312,7 @@ public class MRotation {
 		        k.y * (u1z * u3x - u1x * u3z) +
 		        k.z * (u1x * u3y - u1y * u3x);
 
-		    if ((float)Math.abs(c) <= MathUtils.FLOAT_ROUNDING_ERROR) {
+		    if (MathUtils.abs(c) <= MathUtils.FLOAT_ROUNDING_ERROR) {
 		      // the (q1, q2, q3) vector is aligned with u1:
 		      // we try (u2, u3) and (v2, v3)
 		      k = new SGVec_3f(dy2 * dz3 - dz2 * dy3,
@@ -322,7 +322,7 @@ public class MRotation {
 		          k.y * (u2z * u3x - u2x * u3z) +
 		          k.z * (u2x * u3y - u2y * u3x);
 
-		      if ((float)Math.abs(c) <= MathUtils.FLOAT_ROUNDING_ERROR) {
+		      if (MathUtils.abs(c) <= MathUtils.FLOAT_ROUNDING_ERROR) {
 		        // the (q1, q2, q3) vector is aligned with everything
 		        // this is really the identity rotation
 		        q0 = 1.0f;
@@ -424,7 +424,7 @@ public class MRotation {
 		} else {
 			// general case: (u, v) defines a plane, we select
 			// the shortest possible rotation: axis orthogonal to this plane
-			q0 = (float)Math.sqrt(0.5f * (1.0f + dot / normProduct));
+			q0 = MathUtils.sqrt(0.5f * (1.0f + dot / normProduct));
 			float coeff = 1.0f / (2.0f * q0 * normProduct);
 			SGVec_3f q = v.crossCopy(u);
 			q1 = coeff * q.x;
@@ -579,10 +579,10 @@ public class MRotation {
 		if (squaredSine == 0) {
 			return new SGVec_3f(1, 0, 0);
 		} else if (q0 < 0) {
-			float inverse = 1f / (float)Math.sqrt(squaredSine);
+			float inverse = 1f / MathUtils.sqrt(squaredSine);
 			return new SGVec_3f(q1 * inverse, q2 * inverse, q3 * inverse);
 		}
-		float inverse = -1 / (float)Math.sqrt(squaredSine);
+		float inverse = -1 / MathUtils.sqrt(squaredSine);
 		return new SGVec_3f(q1 * inverse, q2 * inverse, q3 * inverse);
 	}
 
@@ -604,11 +604,11 @@ public class MRotation {
 	 */
 	public float getAngle() {
 		if ((q0 < -0.1) || (q0 > 0.1)) {
-			return 2 * (float)Math.asin((float)Math.sqrt(q1 * q1 + q2 * q2 + q3 * q3));
+			return 2 * MathUtils.asin(MathUtils.sqrt(q1 * q1 + q2 * q2 + q3 * q3));
 		} else if (q0 < 0) {
-			return 2 * (float)Math.acos(-q0);
+			return 2 * MathUtils.acos(-q0);
 		}
-		return 2 * (float)Math.acos(q0);
+		return 2 * MathUtils.acos(q0);
 	}
 
 	/** Get the Cardan or Euler angles corresponding to the instance.
@@ -659,9 +659,9 @@ public class MRotation {
 				throw new CardanEulerSingularityException(true);
 			}
 			return new float[] {
-					(float)Math.atan2(-(v1.y), v1.z),
-					(float)Math.asin(v2.z),
-					(float)Math.atan2(-(v2.y), v2.x)
+					MathUtils.atan2(-(v1.y), v1.z),
+					MathUtils.asin(v2.z),
+					MathUtils.atan2(-(v2.y), v2.x)
 			};
 
 		} else if (order == RotationOrder.XZY) {
@@ -677,9 +677,9 @@ public class MRotation {
 				throw new CardanEulerSingularityException(true);
 			}
 			return new float[] {
-					(float)Math.atan2(v1.z, v1.y),
-					-(float)Math.asin(v2.y),
-					(float)Math.atan2(v2.z, v2.x)
+					MathUtils.atan2(v1.z, v1.y),
+					-MathUtils.asin(v2.y),
+					MathUtils.atan2(v2.z, v2.x)
 			};
 
 		} else if (order == RotationOrder.YXZ) {
@@ -695,9 +695,9 @@ public class MRotation {
 				throw new CardanEulerSingularityException(true);
 			}
 			return new float[] {
-					(float)Math.atan2(v1.x, v1.z),
-					-(float)Math.asin(v2.z),
-					(float)Math.atan2(v2.x, v2.y)
+					MathUtils.atan2(v1.x, v1.z),
+					-MathUtils.asin(v2.z),
+					MathUtils.atan2(v2.x, v2.y)
 			};
 
 		} else if (order == RotationOrder.YZX) {
@@ -713,9 +713,9 @@ public class MRotation {
 				throw new CardanEulerSingularityException(true);
 			}
 			return new float[] {
-					(float)Math.atan2(-(v1.z), v1.x),
-					(float)Math.asin(v2.x),
-					(float)Math.atan2(-(v2.z), v2.y)
+					MathUtils.atan2(-(v1.z), v1.x),
+					MathUtils.asin(v2.x),
+					MathUtils.atan2(-(v2.z), v2.y)
 			};
 
 		} else if (order == RotationOrder.ZXY) {
@@ -731,9 +731,9 @@ public class MRotation {
 				throw new CardanEulerSingularityException(true);
 			}
 			return new float[] {
-					(float)Math.atan2(-(v1.x), v1.y),
-					(float)Math.asin(v2.y),
-					(float)Math.atan2(-(v2.x), v2.z)
+					MathUtils.atan2(-(v1.x), v1.y),
+					MathUtils.asin(v2.y),
+					MathUtils.atan2(-(v2.x), v2.z)
 			};
 
 		} else if (order == RotationOrder.ZYX) {
@@ -749,9 +749,9 @@ public class MRotation {
 				throw new CardanEulerSingularityException(true);
 			}
 			return new float[] {
-					(float)Math.atan2(v1.y, v1.x),
-					-(float)Math.asin(v2.x),
-					(float)Math.atan2(v2.y, v2.z)
+					MathUtils.atan2(v1.y, v1.x),
+					-MathUtils.asin(v2.x),
+					MathUtils.atan2(v2.y, v2.z)
 			};
 
 		} else if (order == RotationOrder.XYX) {
@@ -767,9 +767,9 @@ public class MRotation {
 				throw new CardanEulerSingularityException(false);
 			}
 			return new float[] {
-					(float)Math.atan2(v1.y, -v1.z),
-					(float)Math.acos(v2.x),
-					(float)Math.atan2(v2.y, v2.z)
+					MathUtils.atan2(v1.y, -v1.z),
+					MathUtils.acos(v2.x),
+					MathUtils.atan2(v2.y, v2.z)
 			};
 
 		} else if (order == RotationOrder.XZX) {
@@ -785,9 +785,9 @@ public class MRotation {
 				throw new CardanEulerSingularityException(false);
 			}
 			return new float[] {
-					(float)Math.atan2(v1.z, v1.y),
-					(float)Math.acos(v2.x),
-					(float)Math.atan2(v2.z, -v2.y)
+					MathUtils.atan2(v1.z, v1.y),
+					MathUtils.acos(v2.x),
+					MathUtils.atan2(v2.z, -v2.y)
 			};
 
 		} else if (order == RotationOrder.YXY) {
@@ -803,9 +803,9 @@ public class MRotation {
 				throw new CardanEulerSingularityException(false);
 			}
 			return new float[] {
-					(float)Math.atan2(v1.x, v1.z),
-					(float)Math.acos(v2.y),
-					(float)Math.atan2(v2.x, -v2.z)
+					MathUtils.atan2(v1.x, v1.z),
+					MathUtils.acos(v2.y),
+					MathUtils.atan2(v2.x, -v2.z)
 			};
 
 		} else if (order == RotationOrder.YZY) {
@@ -821,9 +821,9 @@ public class MRotation {
 				throw new CardanEulerSingularityException(false);
 			}
 			return new float[] {
-					(float)Math.atan2(v1.z, -v1.x),
-					(float)Math.acos(v2.y),
-					(float)Math.atan2(v2.z, v2.x)
+					MathUtils.atan2(v1.z, -v1.x),
+					MathUtils.acos(v2.y),
+					MathUtils.atan2(v2.z, v2.x)
 			};
 
 		} else if (order == RotationOrder.ZXZ) {
@@ -839,9 +839,9 @@ public class MRotation {
 				throw new CardanEulerSingularityException(false);
 			}
 			return new float[] {
-					(float)Math.atan2(v1.x, -v1.y),
-					(float)Math.acos(v2.z),
-					(float)Math.atan2(v2.x, v2.y)
+					MathUtils.atan2(v1.x, -v1.y),
+					MathUtils.acos(v2.z),
+					MathUtils.atan2(v2.x, v2.y)
 			};
 
 		} else { // last possibility is ZYZ
@@ -857,9 +857,9 @@ public class MRotation {
 				throw new CardanEulerSingularityException(false);
 			}
 			return new float[] {
-					(float)Math.atan2(v1.y, v1.x),
-					(float)Math.acos(v2.z),
-					(float)Math.atan2(v2.y, -v2.x)
+					MathUtils.atan2(v1.y, v1.x),
+					MathUtils.acos(v2.z),
+					MathUtils.atan2(v2.y, -v2.x)
 			};
 
 		}
@@ -1188,7 +1188,7 @@ public class MRotation {
 	
 	public void setToNormalized() {
 			// normalization preprocessing
-			float inv = 1.0f / (float)Math.sqrt(q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3);
+			float inv = (float) (1.0d / MathUtils.sqrt(q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3));
 			q0 *= inv;
 			q1 *= inv;
 			q2 *= inv;
@@ -1202,7 +1202,7 @@ public class MRotation {
 	 * @return the norm.
 	 */
 	public float len() {
-	    return (float)Math.sqrt(q0 * q0 +
+	    return MathUtils.sqrt(q0 * q0 +
 	                         q1 * q1 +
 	                         q2 * q2 +
 	                         q3 * q3);
@@ -1262,9 +1262,9 @@ public class MRotation {
 		}
 
 		float halfAngle = -0.5f * angle;
-		float coeff = (float)Math.sin(halfAngle) / norm;
+		float coeff = MathUtils.sin(halfAngle) / norm;
 
-		q0 = (float)Math.cos (halfAngle);
+		q0 = MathUtils.cos (halfAngle);
 		q1 = coeff * axis.x;
 		q2 = coeff * axis.y;
 		q3 = coeff * axis.z;
@@ -1346,7 +1346,7 @@ public class MRotation {
 					corr20 * corr20 + corr21 * corr21 + corr22 * corr22;
 
 			// convergence test
-			if ((float)Math.abs(fn1 - fn) <= threshold) {
+			if (MathUtils.abs(fn1 - fn) <= threshold) {
 				return o;
 			}
 
@@ -1405,7 +1405,7 @@ public class MRotation {
 	
 	public String toString() {
 		String result = "axis: " + getAxis().toSGVec3f().toString();
-		result += "\n angle : " + (float)Math.toDegrees(getAngle()) + " degrees " ;
+		result += "\n angle : " + MathUtils.toDegrees(getAngle()) + " degrees " ;
 		return result;
 	}
 }

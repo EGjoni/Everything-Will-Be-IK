@@ -60,7 +60,7 @@ public class Quaternion implements Serializable {
 	 * 
 	 * @param axis The axis
 	 * @param angle The angle in radians. */
-	public Quaternion (SGVec_3d axis, double angle) {
+	public <V extends Vec3d<?>> Quaternion (V axis, double angle) {
 		this.set(axis, angle);
 	}
 
@@ -90,7 +90,7 @@ public class Quaternion implements Serializable {
 	 * @param axis The axis
 	 * @param angle The angle in degrees
 	 * @return This quaternion for chaining. */
-	public Quaternion set (SGVec_3d axis, double angle) {
+	public <V extends Vec3d<?>>  Quaternion set (V axis, double angle) {
 		return setFromAxisRad(axis.x, axis.y, axis.z, angle);
 	}
 
@@ -196,7 +196,7 @@ public class Quaternion implements Serializable {
 	/** Transforms the given vector using this quaternion
 	 * 
 	 * @param v Vector to transform */
-	public SGVec_3d transform (SGVec_3d v) {
+	public <V extends Vec3d<?>> V  transform (V v) {
 		tmp2.set(this);
 		tmp2.conjugate();
 		tmp2.mulLeft(tmp1.set(0, v.x, v.y, v.z)).mulLeft(this);
@@ -311,7 +311,7 @@ public class Quaternion implements Serializable {
 	 * @param axis The axis
 	 * @param radians The angle in radians
 	 * @return This quaternion for chaining. */
-	public Quaternion setFromAxisRad (final SGVec_3d axis, final double radians) {
+	public <V extends Vec3d<?>>  Quaternion setFromAxisRad (final V axis, final double radians) {
 		return setFromAxisRad(axis.x, axis.y, axis.z, radians);
 	}
 
@@ -323,7 +323,7 @@ public class Quaternion implements Serializable {
 	 * @param radians The angle in radians
 	 * @return This quaternion for chaining. */
 	public Quaternion setFromAxisRad (final double x, final double y, final double z, final double radians) {
-		double d = SGVec_3d.mag(x, y, z);
+		double d = Vec3d.mag(x, y, z);
 		if (d == 0d) return idt();
 		d = 1d / d;
 		double l_ang = radians < 0 ? MathUtils.PI2 - (-radians % MathUtils.PI2) : radians % MathUtils.PI2;
@@ -407,9 +407,9 @@ public class Quaternion implements Serializable {
 	public Quaternion setFromAxes (boolean normalizeAxes, double xx, double xy, double xz, double yx, double yy, double yz, double zx,
 		double zy, double zz) {
 		if (normalizeAxes) {
-			final double lx = 1d / SGVec_3d.mag(xx, xy, xz);
-			final double ly = 1d / SGVec_3d.mag(yx, yy, yz);
-			final double lz = 1d / SGVec_3d.mag(zx, zy, zz);
+			final double lx = 1d / Vec3d.mag(xx, xy, xz);
+			final double ly = 1d / Vec3d.mag(yx, yy, yz);
+			final double lz = 1d / Vec3d.mag(zx, zy, zz);
 			xx *= lx;
 			xy *= lx;
 			xz *= lx;
@@ -462,7 +462,7 @@ public class Quaternion implements Serializable {
 	 * @param v1 The base vector, which should be normalized.
 	 * @param v2 The target vector, which should be normalized.
 	 * @return This quaternion for chaining */
-	public Quaternion setFromCross (final SGVec_3d v1, final SGVec_3d v2) {
+	public <V extends Vec3d<?>> Quaternion setFromCross (final V v1, final V v2) {
 		final double dot = MathUtils.clamp(v1.dot(v2), -1d, 1d);
 		final double angle = (double)Math.acos(dot);
 		return setFromAxisRad(v1.y * v2.z - v1.z * v2.y, v1.z * v2.x - v1.x * v2.z, v1.x * v2.y - v1.y * v2.x, angle);
@@ -477,7 +477,7 @@ public class Quaternion implements Serializable {
 	 * @param z2 The target vector z value, which should be normalized.
 	 * @return This quaternion for chaining */
 	public Quaternion setFromCross (final double x1, final double y1, final double z1, final double x2, final double y2, final double z2) {
-		final double dot = MathUtils.clamp(SGVec_3d.dot(x1, y1, z1, x2, y2, z2), -1d, 1d);
+		final double dot = MathUtils.clamp(Vec3d.dot(x1, y1, z1, x2, y2, z2), -1d, 1d);
 		final double angle = (double)Math.acos(dot);
 		return setFromAxisRad(y1 * z2 - z1 * y2, z1 * x2 - x1 * z2, x1 * y2 - y1 * x2, angle);
 	}
@@ -646,7 +646,7 @@ public class Quaternion implements Serializable {
 	 * @return the angle in radians
 	 * @see <a href="http://en.wikipedia.org/wiki/Axis%E2%80%93angle_representation">wikipedia</a>
 	 * @see <a href="http://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToAngle">calculation</a> */
-	public double getAxisAngleRad (SGVec_3d axis) {
+	public <V extends Vec3d<?>> double getAxisAngleRad (V axis) {
 		if (this.q0 > 1) this.nor(); // if w>1 acos and sqrt will produce errors, this cant happen if quaternion is normalised
 		double angle = (double)(2.0 * Math.acos(this.q0));
 		double s = Math.sqrt(1 - this.q0 * this.q0); // assuming quaternion normalised then w is less than 1, so term always positive.
@@ -665,15 +665,15 @@ public class Quaternion implements Serializable {
 	}
 
 	/** Get the angle in radians of the rotation this quaternion represents. Does not normalize the quaternion. Use
-	 * {@link #getAxisAngleRad(SGVec_3d)} to get both the axis and the angle of this rotation. Use
-	 * {@link #getAngleAroundRad(SGVec_3d)} to get the angle around a specific axis.
+	 * {@link #getAxisAngleRad(Vec3d)} to get both the axis and the angle of this rotation. Use
+	 * {@link #getAngleAroundRad(Vec3d)} to get the angle around a specific axis.
 	 * @return the angle in radians of the rotation */
 	public double getAngleRad () {
 		return (double)(2.0 * Math.acos((this.q0 > 1) ? (this.q0 / len()) : this.q0));
 	}
 
-	/** Get the angle in degrees of the rotation this quaternion represents. Use {@link #getAxisAngle(SGVec_3d)} to get both the axis
-	 * and the angle of this rotation. Use {@link #getAngleAround(SGVec_3d)} to get the angle around a specific axis.
+	/** Get the angle in degrees of the rotation this quaternion represents. Use {@link #getAxisAngle(Vec3d)} to get both the axis
+	 * and the angle of this rotation. Use {@link #getAngleAround(Vec3d)} to get the angle around a specific axis.
 	 * @return the angle in degrees of the rotation */
 	public double getAngle () {
 		return getAngleRad();
@@ -690,9 +690,9 @@ public class Quaternion implements Serializable {
 	 * @param swing will receive the swing rotation: the rotation around an axis perpendicular to the specified axis
 	 * @param twist will receive the twist rotation: the rotation around the specified axis
 	 * @see <a href="http://www.euclideanspace.com/maths/geometry/rotations/for/decomposition">calculation</a> */
-	public void getSwingTwist (final double axisX, final double axisY, final double axisZ, final Quaternion swing,
+	public <V extends Vec3d<?>> void getSwingTwist (final double axisX, final double axisY, final double axisZ, final Quaternion swing,
 		final Quaternion twist) {
-		final double d = SGVec_3d.dot(this.q1, this.q2, this.q3, axisX, axisY, axisZ);
+		final double d = V.dot(this.q1, this.q2, this.q3, axisX, axisY, axisZ);
 		twist.set(this.q0, axisX * d, axisY * d, axisZ * d).nor();
 		if (d < 0) twist.mul(-1d);
 		swing.set(twist).conjugate().mulLeft(this);
@@ -707,7 +707,7 @@ public class Quaternion implements Serializable {
 	 * @param swing will receive the swing rotation: the rotation around an axis perpendicular to the specified axis
 	 * @param twist will receive the twist rotation: the rotation around the specified axis
 	 * @see <a href="http://www.euclideanspace.com/maths/geometry/rotations/for/decomposition">calculation</a> */
-	public void getSwingTwist (final SGVec_3d axis, final Quaternion swing, final Quaternion twist) {
+	public <V extends Vec3d<?>>  void getSwingTwist (final V axis, final Quaternion swing, final Quaternion twist) {
 		getSwingTwist(axis.x, axis.y, axis.z, swing, twist);
 	}
 
@@ -717,7 +717,7 @@ public class Quaternion implements Serializable {
 	 * @param axisZ the z component of the normalized axis for which to get the angle
 	 * @return the angle in radians of the rotation around the specified axis */
 	public double getAngleAroundRad (final double axisX, final double axisY, final double axisZ) {
-		final double d = SGVec_3d.dot(this.q1, this.q2, this.q3, axisX, axisY, axisZ);
+		final double d = Vec3d.dot(this.q1, this.q2, this.q3, axisX, axisY, axisZ);
 		final double l2 = Quaternion.len2(axisX * d, axisY * d, axisZ * d, this.q0);
 		return MathUtils.isZero(l2) ? 0d : (double)(2.0 * Math.acos(MathUtils.clamp(
 			(double)((d < 0 ? -this.q0 : this.q0) / Math.sqrt(l2)), -1d, 1d)));
@@ -726,7 +726,7 @@ public class Quaternion implements Serializable {
 	/** Get the angle in radians of the rotation around the specified axis. The axis must be normalized.
 	 * @param axis the normalized axis for which to get the angle
 	 * @return the angle in radians of the rotation around the specified axis */
-	public double getAngleAroundRad (final SGVec_3d axis) {
+	public <V extends Vec3d<?>> double getAngleAroundRad (final V axis) {
 		return getAngleAroundRad(axis.x, axis.y, axis.z);
 	}
 
@@ -742,7 +742,7 @@ public class Quaternion implements Serializable {
 	/** Get the angle in degrees of the rotation around the specified axis. The axis must be normalized.
 	 * @param axis the normalized axis for which to get the angle
 	 * @return the angle in degrees of the rotation around the specified axis */
-	public double getAngleAround (final SGVec_3d axis) {
+	public <V extends Vec3d<?>>  double getAngleAround (final V axis) {
 		return getAngleAround(axis.x, axis.y, axis.z);
 	}
 	

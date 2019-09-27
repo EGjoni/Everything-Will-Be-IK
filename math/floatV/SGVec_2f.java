@@ -380,19 +380,8 @@ public class SGVec_2f implements Serializable, Vec2f<SGVec_2f> {
 		return this;
 	}
 
-	@Override
-	public SGVec_2f lerp (SGVec_2f target, float alpha) {
-		final float invAlpha = 1.0f - alpha;
-		this.x = (x * invAlpha) + (target.x * alpha);
-		this.y = (y * invAlpha) + (target.y * alpha);
-		return this;
-	}
 
-	@Override
-	public SGVec_2f interpolate (SGVec_2f target, float alpha, Interpolation interpolation) {
-		return lerp(target, interpolation.apply(alpha));
-	}
-
+	
 /*	@Override
 	public Vector2 setToRandomDirection () {
 		float theta = MathUtils.random(0f, MathUtils.PI2);
