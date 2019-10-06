@@ -1,3 +1,4 @@
+package asj;
 public class TypeIdentifier {
 	Object key; 
 	Object value; 

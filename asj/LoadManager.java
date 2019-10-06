@@ -1,7 +1,8 @@
+package asj;
 import java.util.ArrayList;
 
-import data.JSONArray;
-import data.JSONObject;
+import asj.data.JSONArray;
+import asj.data.JSONObject;
 
 public interface LoadManager {
 

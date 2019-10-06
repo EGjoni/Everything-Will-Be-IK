@@ -1,4 +1,5 @@
-package data;
+package asj.data;
+
 import java.io.File;
 import java.io.PrintWriter;
 import java.util.Arrays;
@@ -6,8 +7,9 @@ import java.util.Iterator;
 import java.util.Random;
 
 
+
 /**
- * Helper class for a list of Strings. Lists are designed to have some of the
+ * Helper class for a list of floats. Lists are designed to have some of the
  * features of ArrayLists, but to maintain the simplicity and efficiency of
  * working with arrays.
  *
@@ -16,65 +18,78 @@ import java.util.Random;
  *
  * @webref data:composite
  * @see IntList
- * @see FloatList
+ * @see StringList
  */
-public class StringList implements Iterable<String> {
+public class FloatList implements Iterable<Float> {
   int count;
-  String[] data;
+  float[] data;
 
 
-  public StringList() {
-    this(10);
+  public FloatList() {
+    data = new float[10];
   }
+
 
   /**
    * @nowebref
    */
-  public StringList(int length) {
-    data = new String[length];
+  public FloatList(int length) {
+    data = new float[length];
   }
+
 
   /**
    * @nowebref
    */
-  public StringList(String[] list) {
+  public FloatList(float[] list) {
     count = list.length;
-    data = new String[count];
+    data = new float[count];
     System.arraycopy(list, 0, data, 0, count);
   }
 
 
   /**
-   * Construct a StringList from a random pile of objects. Null values will
-   * stay null, but all the others will be converted to String values.
+   * Construct an FloatList from an iterable pile of objects.
+   * For instance, a float array, an array of strings, who knows).
+   * Un-parseable or null values will be set to NaN.
+   * @nowebref
    */
-  public StringList(Object... items) {
-    count = items.length;
-    data = new String[count];
-    int index = 0;
-    for (Object o : items) {
-//      // Not gonna go with null values staying that way because perhaps
-//      // the most common case here is to immediately call join() or similar.
-//      data[index++] = String.valueOf(o);
-      // Keep null values null (because join() will make non-null anyway)
-      if (o != null) {  // leave null values null
-        data[index] = o.toString();
+  public FloatList(Iterable<Object> iter) {
+    this(10);
+    for (Object o : iter) {
+      if (o == null) {
+        append(Float.NaN);
+      } else if (o instanceof Number) {
+        append(((Number) o).floatValue());
+      } else {
+        append(StringFuncs.parseFloat(o.toString().trim()));
       }
-      index++;
     }
+    crop();
   }
 
 
   /**
-   * Create from something iterable, for instance:
-   * StringList list = new StringList(hashMap.keySet());
-   *
-   * @nowebref
+   * Construct an FloatList from a random pile of objects.
+   * Un-parseable or null values will be set to NaN.
    */
-  public StringList(Iterable<String> iter) {
-    this(10);
-    for (String s : iter) {
-      append(s);
+  public FloatList(Object... items) {
+    // nuts, no good way to pass missingValue to this fn (varargs must be last)
+    final float missingValue = Float.NaN;
+
+    count = items.length;
+    data = new float[count];
+    int index = 0;
+    for (Object o : items) {
+      float value = missingValue;
+      if (o != null) {
+        if (o instanceof Number) {
+          value = ((Number) o).floatValue();
+        } else {
+          value = StringFuncs.parseFloat(o.toString().trim(), missingValue);
+        }
+      }
+      data[index++] = value;
     }
   }
 
@@ -95,7 +110,7 @@ public class StringList implements Iterable<String> {
   /**
    * Get the length of the list.
    *
-   * @webref stringlist:method
+   * @webref floatlist:method
    * @brief Get the length of the list
    */
   public int size() {
@@ -105,7 +120,7 @@ public class StringList implements Iterable<String> {
 
   public void resize(int length) {
     if (length > data.length) {
-      String[] temp = new String[length];
+      float[] temp = new float[length];
       System.arraycopy(data, 0, temp, 0, count);
       data = temp;
 
@@ -119,7 +134,7 @@ public class StringList implements Iterable<String> {
   /**
    * Remove all entries from the list.
    *
-   * @webref stringlist:method
+   * @webref floatlist:method
    * @brief Remove all entries from the list
    */
   public void clear() {
@@ -130,10 +145,10 @@ public class StringList implements Iterable<String> {
   /**
    * Get an entry at a particular index.
    *
-   * @webref stringlist:method
+   * @webref floatlist:method
    * @brief Get an entry at a particular index
    */
-  public String get(int index) {
+  public float get(int index) {
     if (index >= count) {
       throw new ArrayIndexOutOfBoundsException(index);
     }
@@ -146,14 +161,14 @@ public class StringList implements Iterable<String> {
    * the list, it'll expand the list to accommodate, and fill the intermediate
    * entries with 0s.
    *
-   * @webref stringlist:method
-   * @brief Set an entry at a particular index
+   * @webref floatlist:method
+   * @brief Set the entry at a particular index
    */
-  public void set(int index, String what) {
+  public void set(int index, float what) {
     if (index >= count) {
       data = StringFuncs.expand(data, index+1);
       for (int i = count; i < index; i++) {
-        data[i] = null;
+        data[i] = 0;
       }
       count = index+1;
     }
@@ -162,17 +177,17 @@ public class StringList implements Iterable<String> {
 
 
   /** Just an alias for append(), but matches pop() */
-  public void push(String value) {
+  public void push(float value) {
     append(value);
   }
 
 
-  public String pop() {
+  public float pop() {
     if (count == 0) {
       throw new RuntimeException("Can't call pop() on an empty list");
     }
-    String value = get(count-1);
-    data[--count] = null;  // avoid leak
+    float value = get(count-1);
+    count--;
     return value;
   }
 
@@ -180,19 +195,21 @@ public class StringList implements Iterable<String> {
   /**
    * Remove an element from the specified index.
    *
-   * @webref stringlist:method
+   * @webref floatlist:method
    * @brief Remove an element from the specified index
    */
-  public String remove(int index) {
+  public float remove(int index) {
     if (index < 0 || index >= count) {
       throw new ArrayIndexOutOfBoundsException(index);
     }
-    String entry = data[index];
+    float entry = data[index];
 //    int[] outgoing = new int[count - 1];
 //    System.arraycopy(data, 0, outgoing, 0, index);
 //    count--;
 //    System.arraycopy(data, index + 1, outgoing, 0, count - index);
 //    data = outgoing;
+    // For most cases, this actually appears to be faster
+    // than arraycopy() on an array copying into itself.
     for (int i = index; i < count-1; i++) {
       data[i] = data[i+1];
     }
@@ -201,38 +218,31 @@ public class StringList implements Iterable<String> {
   }
 
 
-  // Remove the first instance of a particular value and return its index.
-  public int removeValue(String value) {
-    if (value == null) {
-      for (int i = 0; i < count; i++) {
-        if (data[i] == null) {
-          remove(i);
-          return i;
-        }
-      }
-    } else {
-      int index = index(value);
-      if (index != -1) {
-        remove(index);
-        return index;
-      }
+  // Remove the first instance of a particular value,
+  // and return the index at which it was found.
+  public int removeValue(int value) {
+    int index = index(value);
+    if (index != -1) {
+      remove(index);
+      return index;
     }
     return -1;
   }
 
 
-  // Remove all instances of a particular value and return the count removed.
-  public int removeValues(String value) {
+  // Remove all instances of a particular value,
+  // and return the number of values found and removed
+  public int removeValues(int value) {
     int ii = 0;
-    if (value == null) {
+    if (Float.isNaN(value)) {
       for (int i = 0; i < count; i++) {
-        if (data[i] != null) {
+        if (!Float.isNaN(data[i])) {
           data[ii++] = data[i];
         }
       }
     } else {
       for (int i = 0; i < count; i++) {
-        if (!value.equals(data[i])) {
+        if (data[i] != value) {
           data[ii++] = data[i];
         }
       }
@@ -243,42 +253,41 @@ public class StringList implements Iterable<String> {
   }
 
 
-  // replace the first value that matches, return the index that was replaced
-  public int replaceValue(String value, String newValue) {
-    if (value == null) {
+  /** Replace the first instance of a particular value */
+  public boolean replaceValue(float value, float newValue) {
+    if (Float.isNaN(value)) {
       for (int i = 0; i < count; i++) {
-        if (data[i] == null) {
+        if (Float.isNaN(data[i])) {
           data[i] = newValue;
-          return i;
+          return true;
         }
       }
     } else {
-      for (int i = 0; i < count; i++) {
-        if (value.equals(data[i])) {
-          data[i] = newValue;
-          return i;
-        }
+      int index = index(value);
+      if (index != -1) {
+        data[index] = newValue;
+        return true;
       }
     }
-    return -1;
+    return false;
   }
 
 
-  // replace all values that match, return the count of those replaced
-  public int replaceValues(String value, String newValue) {
-    int changed = 0;
-    if (value == null) {
+  /** Replace all instances of a particular value */
+  public boolean replaceValues(float value, float newValue) {
+    boolean changed = false;
+    if (Float.isNaN(value)) {
       for (int i = 0; i < count; i++) {
-        if (data[i] == null) {
+        if (Float.isNaN(data[i])) {
           data[i] = newValue;
-          changed++;
+          changed = true;
         }
       }
     } else {
       for (int i = 0; i < count; i++) {
-        if (value.equals(data[i])) {
+        if (data[i] == value) {
           data[i] = newValue;
-          changed++;
+          changed = true;
         }
       }
     }
@@ -286,13 +295,14 @@ public class StringList implements Iterable<String> {
   }
 
 
+
   /**
    * Add a new entry to the list.
    *
-   * @webref stringlist:method
+   * @webref floatlist:method
    * @brief Add a new entry to the list
    */
-  public void append(String value) {
+  public void append(float value) {
     if (count == data.length) {
       data = StringFuncs.expand(data);
     }
@@ -300,22 +310,22 @@ public class StringList implements Iterable<String> {
   }
 
 
-  public void append(String[] values) {
-    for (String v : values) {
+  public void append(float[] values) {
+    for (float v : values) {
       append(v);
     }
   }
 
 
-  public void append(StringList list) {
-    for (String v : list.values()) {  // will concat the list...
+  public void append(FloatList list) {
+    for (float v : list.values()) {  // will concat the list...
       append(v);
     }
   }
 
 
   /** Add this value, but only if it's not already in the list. */
-  public void appendUnique(String value) {
+  public void appendUnique(float value) {
     if (!hasValue(value)) {
       append(value);
     }
@@ -352,13 +362,13 @@ public class StringList implements Iterable<String> {
 //  }
 
 
-  public void insert(int index, String value) {
-    insert(index, new String[] { value });
+  public void insert(int index, float value) {
+    insert(index, new float[] { value });
   }
 
 
   // same as splice
-  public void insert(int index, String[] values) {
+  public void insert(int index, float[] values) {
     if (index < 0) {
       throw new IllegalArgumentException("insert() index cannot be negative: it was " + index);
     }
@@ -366,7 +376,7 @@ public class StringList implements Iterable<String> {
       throw new IllegalArgumentException("insert() index " + index + " is past the end of this list");
     }
 
-    String[] temp = new String[count + values.length];
+    float[] temp = new float[count + values.length];
 
     // Copy the old values, but not more than already exist
     System.arraycopy(data, 0, temp, 0, Math.min(count, index));
@@ -386,7 +396,7 @@ public class StringList implements Iterable<String> {
   }
 
 
-  public void insert(int index, StringList list) {
+  public void insert(int index, FloatList list) {
     insert(index, list.values());
   }
 
@@ -435,47 +445,39 @@ public class StringList implements Iterable<String> {
 
 
   /** Return the first index of a particular value. */
-  public int index(String what) {
-    if (what == null) {
-      for (int i = 0; i < count; i++) {
-        if (data[i] == null) {
-          return i;
-        }
+  public int index(float what) {
+    /*
+    if (indexCache != null) {
+      try {
+        return indexCache.get(what);
+      } catch (Exception e) {  // not there
+        return -1;
       }
-    } else {
-      for (int i = 0; i < count; i++) {
-        if (what.equals(data[i])) {
-          return i;
-        }
+    }
+    */
+    for (int i = 0; i < count; i++) {
+      if (data[i] == what) {
+        return i;
       }
     }
     return -1;
   }
 
 
-  // !!! TODO this is not yet correct, because it's not being reset when
-  // the rest of the entries are changed
-//  protected void cacheIndices() {
-//    indexCache = new HashMap<Integer, Integer>();
-//    for (int i = 0; i < count; i++) {
-//      indexCache.put(data[i], i);
-//    }
-//  }
-
   /**
-   * @webref stringlist:method
-   * @brief Check if a value is a part of the list
+   * @webref floatlist:method
+   * @brief Check if a number is a part of the list
    */
-  public boolean hasValue(String value) {
-    if (value == null) {
+  public boolean hasValue(float value) {
+    if (Float.isNaN(value)) {
       for (int i = 0; i < count; i++) {
-        if (data[i] == null) {
+        if (Float.isNaN(data[i])) {
           return true;
         }
       }
     } else {
       for (int i = 0; i < count; i++) {
-        if (value.equals(data[i])) {
+        if (data[i] == value) {
           return true;
         }
       }
@@ -484,44 +486,221 @@ public class StringList implements Iterable<String> {
   }
 
 
+  private void boundsProblem(int index, String method) {
+    final String msg = String.format("The list size is %d. " +
+      "You cannot %s() to element %d.", count, method, index);
+    throw new ArrayIndexOutOfBoundsException(msg);
+  }
+
+
+  /**
+   * @webref floatlist:method
+   * @brief Add to a value
+   */
+  public void add(int index, float amount) {
+    if (index < count) {
+      data[index] += amount;
+    } else {
+      boundsProblem(index, "add");
+    }
+  }
+
+
+  /**
+   * @webref floatlist:method
+   * @brief Subtract from a value
+   */
+  public void sub(int index, float amount) {
+    if (index < count) {
+      data[index] -= amount;
+    } else {
+      boundsProblem(index, "sub");
+    }
+  }
+
+
+  /**
+   * @webref floatlist:method
+   * @brief Multiply a value
+   */
+  public void mult(int index, float amount) {
+    if (index < count) {
+      data[index] *= amount;
+    } else {
+      boundsProblem(index, "mult");
+    }
+  }
+
+
+  /**
+   * @webref floatlist:method
+   * @brief Divide a value
+   */
+  public void div(int index, float amount) {
+    if (index < count) {
+      data[index] /= amount;
+    } else {
+      boundsProblem(index, "div");
+    }
+  }
+
+
+  private void checkMinMax(String functionName) {
+    if (count == 0) {
+      String msg =
+        String.format("Cannot use %s() on an empty %s.",
+                      functionName, getClass().getSimpleName());
+      throw new RuntimeException(msg);
+    }
+  }
+
+
+  /**
+   * @webref floatlist:method
+   * @brief Return the smallest value
+   */
+  public float min() {
+    checkMinMax("min");
+    int index = minIndex();
+    return index == -1 ? Float.NaN : data[index];
+  }
+
+
+  public int minIndex() {
+    checkMinMax("minIndex");
+    float m = Float.NaN;
+    int mi = -1;
+    for (int i = 0; i < count; i++) {
+      // find one good value to start
+      if (data[i] == data[i]) {
+        m = data[i];
+        mi = i;
+
+        // calculate the rest
+        for (int j = i+1; j < count; j++) {
+          float d = data[j];
+          if (!Float.isNaN(d) && (d < m)) {
+            m = data[j];
+            mi = j;
+          }
+        }
+        break;
+      }
+    }
+    return mi;
+  }
+
+
+  /**
+   * @webref floatlist:method
+   * @brief Return the largest value
+   */
+  public float max() {
+    checkMinMax("max");
+    int index = maxIndex();
+    return index == -1 ? Float.NaN : data[index];
+  }
+
+
+  public int maxIndex() {
+    checkMinMax("maxIndex");
+    float m = Float.NaN;
+    int mi = -1;
+    for (int i = 0; i < count; i++) {
+      // find one good value to start
+      if (data[i] == data[i]) {
+        m = data[i];
+        mi = i;
+
+        // calculate the rest
+        for (int j = i+1; j < count; j++) {
+          float d = data[j];
+          if (!Float.isNaN(d) && (d > m)) {
+            m = data[j];
+            mi = j;
+          }
+        }
+        break;
+      }
+    }
+    return mi;
+  }
+
+
+  public float sum() {
+    double amount = sumDouble();
+    if (amount > Float.MAX_VALUE) {
+      throw new RuntimeException("sum() exceeds " + Float.MAX_VALUE + ", use sumDouble()");
+    }
+    if (amount < -Float.MAX_VALUE) {
+      throw new RuntimeException("sum() lower than " + -Float.MAX_VALUE + ", use sumDouble()");
+    }
+    return (float) amount;
+  }
+
+
+  public double sumDouble() {
+    double sum = 0;
+    for (int i = 0; i < count; i++) {
+      sum += data[i];
+    }
+    return sum;
+  }
+
+
   /**
    * Sorts the array in place.
    *
-   * @webref stringlist:method
-   * @brief Sorts the array in place
+   * @webref floatlist:method
+   * @brief Sorts an array, lowest to highest
    */
   public void sort() {
-    sortImpl(false);
+    Arrays.sort(data, 0, count);
   }
 
 
   /**
-   * Reverse sort, orders values from highest to lowest.
+   * Reverse sort, orders values from highest to lowest
    *
-   * @webref stringlist:method
+   * @webref floatlist:method
    * @brief Reverse sort, orders values from highest to lowest
    */
   public void sortReverse() {
-    sortImpl(true);
-  }
-
-
-  private void sortImpl(final boolean reverse) {
     new Sort() {
       @Override
       public int size() {
-        return count;
+        // if empty, don't even mess with the NaN check, it'll AIOOBE
+        if (count == 0) {
+          return 0;
+        }
+        // move NaN values to the end of the list and don't sort them
+        int right = count - 1;
+        while (data[right] != data[right]) {
+          right--;
+          if (right == -1) {  // all values are NaN
+            return 0;
+          }
+        }
+        for (int i = right; i >= 0; --i) {
+          float v = data[i];
+          if (v != v) {
+            data[i] = data[right];
+            data[right] = v;
+            --right;
+          }
+        }
+        return right + 1;
       }
 
       @Override
       public int compare(int a, int b) {
-        int diff = data[a].compareToIgnoreCase(data[b]);
-        return reverse ? -diff : diff;
+        float diff = data[b] - data[a];
+        return diff == 0 ? 0 : (diff < 0 ? -1 : 1);
       }
 
       @Override
       public void swap(int a, int b) {
-        String temp = data[a];
+        float temp = data[a];
         data[a] = data[b];
         data[b] = temp;
       }
@@ -537,8 +716,8 @@ public class StringList implements Iterable<String> {
 //  public void subset(int start) {
 //    subset(start, count - start);
 //  }
-//
-//
+
+
 //  public void subset(int start, int num) {
 //    for (int i = 0; i < num; i++) {
 //      data[i] = data[i+start];
@@ -546,14 +725,15 @@ public class StringList implements Iterable<String> {
 //    count = num;
 //  }
 
+
   /**
-   * @webref stringlist:method
+   * @webref floatlist:method
    * @brief Reverse the order of the list elements
    */
   public void reverse() {
     int ii = count - 1;
     for (int i = 0; i < count/2; i++) {
-      String t = data[i];
+      float t = data[i];
       data[i] = data[ii];
       data[ii] = t;
       --ii;
@@ -565,7 +745,7 @@ public class StringList implements Iterable<String> {
    * Randomize the order of the list elements. Note that this does not
    * obey the randomSeed() function in StringFuncs.
    *
-   * @webref stringlist:method
+   * @webref floatlist:method
    * @brief Randomize the order of the list elements
    */
   public void shuffle() {
@@ -574,7 +754,7 @@ public class StringList implements Iterable<String> {
     while (num > 1) {
       int value = r.nextInt(num);
       num--;
-      String temp = data[num];
+      float temp = data[num];
       data[num] = data[value];
       data[value] = temp;
     }
@@ -590,77 +770,47 @@ public class StringList implements Iterable<String> {
     while (num > 1) {
       int value = (int) sketch.random(num);
       num--;
-      String temp = data[num];
+      float temp = data[num];
       data[num] = data[value];
       data[value] = temp;
     }
   }
 
 
-  /**
-   * Make the entire list lower case.
-   *
-   * @webref stringlist:method
-   * @brief Make the entire list lower case
-   */
-  public void lower() {
-    for (int i = 0; i < count; i++) {
-      if (data[i] != null) {
-        data[i] = data[i].toLowerCase();
-      }
-    }
-  }
-
-
-  /**
-   * Make the entire list upper case.
-   *
-   * @webref stringlist:method
-   * @brief Make the entire list upper case
-   */
-  public void upper() {
-    for (int i = 0; i < count; i++) {
-      if (data[i] != null) {
-        data[i] = data[i].toUpperCase();
-      }
-    }
-  }
-
-
-  public StringList copy() {
-    StringList outgoing = new StringList(data);
+  public FloatList copy() {
+    FloatList outgoing = new FloatList(data);
     outgoing.count = count;
     return outgoing;
   }
 
 
   /**
-   * Returns the actual array being used to store the data. Suitable for
-   * iterating with a for() loop, but modifying the list could cause terrible
-   * things to happen.
+   * Returns the actual array being used to store the data. For advanced users,
+   * this is the fastest way to access a large list. Suitable for iterating
+   * with a for() loop, but modifying the list will have terrible consequences.
    */
-  public String[] values() {
+  public float[] values() {
     crop();
     return data;
   }
 
 
+  /** Implemented this way so that we can use a FloatList in a for loop. */
   @Override
-  public Iterator<String> iterator() {
-//    return valueIterator();
+  public Iterator<Float> iterator() {
 //  }
 //
 //
-//  public Iterator<String> valueIterator() {
-    return new Iterator<String>() {
+//  public Iterator<Float> valueIterator() {
+    return new Iterator<Float>() {
       int index = -1;
 
       public void remove() {
-        StringList.this.remove(index);
+        FloatList.this.remove(index);
         index--;
       }
 
-      public String next() {
+      public Float next() {
         return data[++index];
       }
 
@@ -673,12 +823,11 @@ public class StringList implements Iterable<String> {
 
   /**
    * Create a new array with a copy of all the values.
-   *
    * @return an array sized by the length of the list with each of the values.
-   * @webref stringlist:method
+   * @webref floatlist:method
    * @brief Create a new array with a copy of all the values
    */
-  public String[] array() {
+  public float[] array() {
     return array(null);
   }
 
@@ -688,50 +837,44 @@ public class StringList implements Iterable<String> {
    * not the same size, a new array will be allocated.
    * @param array
    */
-  public String[] array(String[] array) {
+  public float[] array(float[] array) {
     if (array == null || array.length != count) {
-      array = new String[count];
+      array = new float[count];
     }
     System.arraycopy(data, 0, array, 0, count);
     return array;
   }
 
 
-  public StringList getSubset(int start) {
+  /**
+   * Returns a normalized version of this array. Called getPercent() for
+   * consistency with the Dict classes. It's a getter method because it needs
+   * to returns a new list (because IntList/Dict can't do percentages or
+   * normalization in place on int values).
+   */
+  public FloatList getPercent() {
+    double sum = 0;
+    for (float value : array()) {
+      sum += value;
+    }
+    FloatList outgoing = new FloatList(count);
+    for (int i = 0; i < count; i++) {
+      double percent = data[i] / sum;
+      outgoing.set(i, (float) percent);
+    }
+    return outgoing;
+  }
+
+
+  public FloatList getSubset(int start) {
     return getSubset(start, count - start);
   }
 
 
-  public StringList getSubset(int start, int num) {
-    String[] subset = new String[num];
+  public FloatList getSubset(int start, int num) {
+    float[] subset = new float[num];
     System.arraycopy(data, start, subset, 0, num);
-    return new StringList(subset);
-  }
-
-
-  /** Get a list of all unique entries. */
-  public String[] getUnique() {
-    return getTally().keyArray();
-  }
-
-
-  /** Count the number of times each String entry is found in this list. */
-  public IntDict getTally() {
-    IntDict outgoing = new IntDict();
-    for (int i = 0; i < count; i++) {
-      outgoing.increment(data[i]);
-    }
-    return outgoing;
-  }
-
-
-  /** Create a dictionary associating each entry in this list to its index. */
-  public IntDict getOrder() {
-    IntDict outgoing = new IntDict();
-    for (int i = 0; i < count; i++) {
-      outgoing.set(data[i], i);
-    }
-    return outgoing;
+    return new FloatList(subset);
   }
 
 
@@ -751,7 +894,7 @@ public class StringList implements Iterable<String> {
 
   public void print() {
     for (int i = 0; i < count; i++) {
-      System.out.format("[%d] %s%n", i, data[i]);
+      System.out.format("[%d] %f%n", i, data[i]);
     }
   }
 
@@ -781,11 +924,7 @@ public class StringList implements Iterable<String> {
    * Return this dictionary as a String in JSON format.
    */
   public String toJSON() {
-    StringList temp = new StringList();
-    for (String item : this) {
-      temp.append(JSONObject.quote(item));
-    }
-    return "[ " + temp.join(", ") + " ]";
+    return "[ " + join(", ") + " ]";
   }
 
 

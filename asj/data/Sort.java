@@ -1,4 +1,4 @@
-package data;
+package asj.data;
 /**
  * Internal sorter used by several data classes.
  * Advanced users only, not official API.

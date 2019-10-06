@@ -1,6 +1,6 @@
+package asj;
 
-
-import data.JSONObject;
+import asj.data.JSONObject;
 
 /**
  * This interface defines objects which can self populate from JSONObjects but don't 

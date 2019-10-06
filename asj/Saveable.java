@@ -1,4 +1,6 @@
-import data.JSONObject;
+package asj;
+
+import asj.data.JSONObject;
 
 public interface Saveable {
 	

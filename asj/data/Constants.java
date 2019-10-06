@@ -1,4 +1,4 @@
-package data;
+package asj.data;
 /**
  *These are mostly just constants potentially useful for saving and loading JSOn files. 
  */

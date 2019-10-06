@@ -1,3 +1,4 @@
+package asj;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -5,11 +6,12 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.WeakHashMap;
 
-import data.FloatList;
-import data.IntList;
-import data.JSONArray;
-import data.JSONObject;
-import data.StringList;
+import asj.data.FloatList;
+import asj.data.IntList;
+import asj.data.JSONArray;
+import asj.data.JSONObject;
+import asj.data.StringList;
+
 
 
 public abstract class SaveManager {

@@ -1,4 +1,4 @@
-package data;
+package asj.data;
 
 import java.io.File;
 import java.io.PrintWriter;
@@ -20,47 +20,47 @@ import java.util.Random;
  * @see IntList
  * @see StringList
  */
-public class FloatList implements Iterable<Float> {
+public class DoubleList implements Iterable<Double> {
   int count;
-  float[] data;
+  double[] data;
 
 
-  public FloatList() {
-    data = new float[10];
+  public DoubleList() {
+    data = new double[10];
   }
 
 
   /**
    * @nowebref
    */
-  public FloatList(int length) {
-    data = new float[length];
+  public DoubleList(int length) {
+    data = new double[length];
   }
 
 
   /**
    * @nowebref
    */
-  public FloatList(float[] list) {
+  public DoubleList(double[] list) {
     count = list.length;
-    data = new float[count];
+    data = new double[count];
     System.arraycopy(list, 0, data, 0, count);
   }
 
 
   /**
    * Construct an FloatList from an iterable pile of objects.
-   * For instance, a float array, an array of strings, who knows).
+   * For instance, a double array, an array of strings, who knows).
    * Un-parseable or null values will be set to NaN.
    * @nowebref
    */
-  public FloatList(Iterable<Object> iter) {
+  public DoubleList(Iterable<Object> iter) {
     this(10);
     for (Object o : iter) {
       if (o == null) {
-        append(Float.NaN);
+        append(Double.NaN);
       } else if (o instanceof Number) {
-        append(((Number) o).floatValue());
+        append(((Number) o).doubleValue());
       } else {
         append(StringFuncs.parseFloat(o.toString().trim()));
       }
@@ -73,20 +73,24 @@ public class FloatList implements Iterable<Float> {
    * Construct an FloatList from a random pile of objects.
    * Un-parseable or null values will be set to NaN.
    */
-  public FloatList(Object... items) {
+  public DoubleList(Object... items) {
     // nuts, no good way to pass missingValue to this fn (varargs must be last)
-    final float missingValue = Float.NaN;
+    final double missingValue = Double.NaN;
 
     count = items.length;
-    data = new float[count];
+    data = new double[count];
     int index = 0;
     for (Object o : items) {
-      float value = missingValue;
+      double value = missingValue;
       if (o != null) {
         if (o instanceof Number) {
-          value = ((Number) o).floatValue();
+          value = ((Number) o).doubleValue();
         } else {
-          value = StringFuncs.parseFloat(o.toString().trim(), missingValue);
+          try {
+            value = Double.parseDouble(o.toString().trim());
+          } catch (NumberFormatException nfe) {
+            value = missingValue;
+          }
         }
       }
       data[index++] = value;
@@ -110,7 +114,7 @@ public class FloatList implements Iterable<Float> {
   /**
    * Get the length of the list.
    *
-   * @webref floatlist:method
+   * @webref doublelist:method
    * @brief Get the length of the list
    */
   public int size() {
@@ -120,7 +124,7 @@ public class FloatList implements Iterable<Float> {
 
   public void resize(int length) {
     if (length > data.length) {
-      float[] temp = new float[length];
+      double[] temp = new double[length];
       System.arraycopy(data, 0, temp, 0, count);
       data = temp;
 
@@ -134,7 +138,7 @@ public class FloatList implements Iterable<Float> {
   /**
    * Remove all entries from the list.
    *
-   * @webref floatlist:method
+   * @webref doublelist:method
    * @brief Remove all entries from the list
    */
   public void clear() {
@@ -145,10 +149,10 @@ public class FloatList implements Iterable<Float> {
   /**
    * Get an entry at a particular index.
    *
-   * @webref floatlist:method
+   * @webref doublelist:method
    * @brief Get an entry at a particular index
    */
-  public float get(int index) {
+  public double get(int index) {
     if (index >= count) {
       throw new ArrayIndexOutOfBoundsException(index);
     }
@@ -161,10 +165,10 @@ public class FloatList implements Iterable<Float> {
    * the list, it'll expand the list to accommodate, and fill the intermediate
    * entries with 0s.
    *
-   * @webref floatlist:method
+   * @webref doublelist:method
    * @brief Set the entry at a particular index
    */
-  public void set(int index, float what) {
+  public void set(int index, double what) {
     if (index >= count) {
       data = StringFuncs.expand(data, index+1);
       for (int i = count; i < index; i++) {
@@ -177,16 +181,16 @@ public class FloatList implements Iterable<Float> {
 
 
   /** Just an alias for append(), but matches pop() */
-  public void push(float value) {
+  public void push(double value) {
     append(value);
   }
 
 
-  public float pop() {
+  public double pop() {
     if (count == 0) {
       throw new RuntimeException("Can't call pop() on an empty list");
     }
-    float value = get(count-1);
+    double value = get(count-1);
     count--;
     return value;
   }
@@ -195,14 +199,14 @@ public class FloatList implements Iterable<Float> {
   /**
    * Remove an element from the specified index.
    *
-   * @webref floatlist:method
+   * @webref doublelist:method
    * @brief Remove an element from the specified index
    */
-  public float remove(int index) {
+  public double remove(int index) {
     if (index < 0 || index >= count) {
       throw new ArrayIndexOutOfBoundsException(index);
     }
-    float entry = data[index];
+    double entry = data[index];
 //    int[] outgoing = new int[count - 1];
 //    System.arraycopy(data, 0, outgoing, 0, index);
 //    count--;
@@ -234,9 +238,9 @@ public class FloatList implements Iterable<Float> {
   // and return the number of values found and removed
   public int removeValues(int value) {
     int ii = 0;
-    if (Float.isNaN(value)) {
+    if (Double.isNaN(value)) {
       for (int i = 0; i < count; i++) {
-        if (!Float.isNaN(data[i])) {
+        if (!Double.isNaN(data[i])) {
           data[ii++] = data[i];
         }
       }
@@ -254,10 +258,10 @@ public class FloatList implements Iterable<Float> {
 
 
   /** Replace the first instance of a particular value */
-  public boolean replaceValue(float value, float newValue) {
-    if (Float.isNaN(value)) {
+  public boolean replaceValue(double value, double newValue) {
+    if (Double.isNaN(value)) {
       for (int i = 0; i < count; i++) {
-        if (Float.isNaN(data[i])) {
+        if (Double.isNaN(data[i])) {
           data[i] = newValue;
           return true;
         }
@@ -274,11 +278,11 @@ public class FloatList implements Iterable<Float> {
 
 
   /** Replace all instances of a particular value */
-  public boolean replaceValues(float value, float newValue) {
+  public boolean replaceValues(double value, double newValue) {
     boolean changed = false;
-    if (Float.isNaN(value)) {
+    if (Double.isNaN(value)) {
       for (int i = 0; i < count; i++) {
-        if (Float.isNaN(data[i])) {
+        if (Double.isNaN(data[i])) {
           data[i] = newValue;
           changed = true;
         }
@@ -299,10 +303,10 @@ public class FloatList implements Iterable<Float> {
   /**
    * Add a new entry to the list.
    *
-   * @webref floatlist:method
+   * @webref doublelist:method
    * @brief Add a new entry to the list
    */
-  public void append(float value) {
+  public void append(double value) {
     if (count == data.length) {
       data = StringFuncs.expand(data);
     }
@@ -310,22 +314,22 @@ public class FloatList implements Iterable<Float> {
   }
 
 
-  public void append(float[] values) {
-    for (float v : values) {
+  public void append(double[] values) {
+    for (double v : values) {
       append(v);
     }
   }
 
 
-  public void append(FloatList list) {
-    for (float v : list.values()) {  // will concat the list...
+  public void append(DoubleList list) {
+    for (double v : list.values()) {  // will concat the list...
       append(v);
     }
   }
 
 
   /** Add this value, but only if it's not already in the list. */
-  public void appendUnique(float value) {
+  public void appendUnique(double value) {
     if (!hasValue(value)) {
       append(value);
     }
@@ -362,13 +366,13 @@ public class FloatList implements Iterable<Float> {
 //  }
 
 
-  public void insert(int index, float value) {
-    insert(index, new float[] { value });
+  public void insert(int index, double value) {
+    insert(index, new double[] { value });
   }
 
 
   // same as splice
-  public void insert(int index, float[] values) {
+  public void insert(int index, double[] values) {
     if (index < 0) {
       throw new IllegalArgumentException("insert() index cannot be negative: it was " + index);
     }
@@ -376,7 +380,7 @@ public class FloatList implements Iterable<Float> {
       throw new IllegalArgumentException("insert() index " + index + " is past the end of this list");
     }
 
-    float[] temp = new float[count + values.length];
+    double[] temp = new double[count + values.length];
 
     // Copy the old values, but not more than already exist
     System.arraycopy(data, 0, temp, 0, Math.min(count, index));
@@ -396,7 +400,7 @@ public class FloatList implements Iterable<Float> {
   }
 
 
-  public void insert(int index, FloatList list) {
+  public void insert(int index, DoubleList list) {
     insert(index, list.values());
   }
 
@@ -445,7 +449,7 @@ public class FloatList implements Iterable<Float> {
 
 
   /** Return the first index of a particular value. */
-  public int index(float what) {
+  public int index(double what) {
     /*
     if (indexCache != null) {
       try {
@@ -465,13 +469,13 @@ public class FloatList implements Iterable<Float> {
 
 
   /**
-   * @webref floatlist:method
+   * @webref doublelist:method
    * @brief Check if a number is a part of the list
    */
-  public boolean hasValue(float value) {
-    if (Float.isNaN(value)) {
+  public boolean hasValue(double value) {
+    if (Double.isNaN(value)) {
       for (int i = 0; i < count; i++) {
-        if (Float.isNaN(data[i])) {
+        if (Double.isNaN(data[i])) {
           return true;
         }
       }
@@ -494,10 +498,10 @@ public class FloatList implements Iterable<Float> {
 
 
   /**
-   * @webref floatlist:method
+   * @webref doublelist:method
    * @brief Add to a value
    */
-  public void add(int index, float amount) {
+  public void add(int index, double amount) {
     if (index < count) {
       data[index] += amount;
     } else {
@@ -507,10 +511,10 @@ public class FloatList implements Iterable<Float> {
 
 
   /**
-   * @webref floatlist:method
+   * @webref doublelist:method
    * @brief Subtract from a value
    */
-  public void sub(int index, float amount) {
+  public void sub(int index, double amount) {
     if (index < count) {
       data[index] -= amount;
     } else {
@@ -520,10 +524,10 @@ public class FloatList implements Iterable<Float> {
 
 
   /**
-   * @webref floatlist:method
+   * @webref doublelist:method
    * @brief Multiply a value
    */
-  public void mult(int index, float amount) {
+  public void mult(int index, double amount) {
     if (index < count) {
       data[index] *= amount;
     } else {
@@ -533,10 +537,10 @@ public class FloatList implements Iterable<Float> {
 
 
   /**
-   * @webref floatlist:method
+   * @webref doublelist:method
    * @brief Divide a value
    */
-  public void div(int index, float amount) {
+  public void div(int index, double amount) {
     if (index < count) {
       data[index] /= amount;
     } else {
@@ -556,19 +560,19 @@ public class FloatList implements Iterable<Float> {
 
 
   /**
-   * @webref floatlist:method
+   * @webref doublelist:method
    * @brief Return the smallest value
    */
-  public float min() {
+  public double min() {
     checkMinMax("min");
     int index = minIndex();
-    return index == -1 ? Float.NaN : data[index];
+    return index == -1 ? Double.NaN : data[index];
   }
 
 
   public int minIndex() {
     checkMinMax("minIndex");
-    float m = Float.NaN;
+    double m = Double.NaN;
     int mi = -1;
     for (int i = 0; i < count; i++) {
       // find one good value to start
@@ -578,8 +582,8 @@ public class FloatList implements Iterable<Float> {
 
         // calculate the rest
         for (int j = i+1; j < count; j++) {
-          float d = data[j];
-          if (!Float.isNaN(d) && (d < m)) {
+          double d = data[j];
+          if (!Double.isNaN(d) && (d < m)) {
             m = data[j];
             mi = j;
           }
@@ -592,19 +596,19 @@ public class FloatList implements Iterable<Float> {
 
 
   /**
-   * @webref floatlist:method
+   * @webref doublelist:method
    * @brief Return the largest value
    */
-  public float max() {
+  public double max() {
     checkMinMax("max");
     int index = maxIndex();
-    return index == -1 ? Float.NaN : data[index];
+    return index == -1 ? Double.NaN : data[index];
   }
 
 
   public int maxIndex() {
     checkMinMax("maxIndex");
-    float m = Float.NaN;
+    double m = Double.NaN;
     int mi = -1;
     for (int i = 0; i < count; i++) {
       // find one good value to start
@@ -614,8 +618,8 @@ public class FloatList implements Iterable<Float> {
 
         // calculate the rest
         for (int j = i+1; j < count; j++) {
-          float d = data[j];
-          if (!Float.isNaN(d) && (d > m)) {
+          double d = data[j];
+          if (!Double.isNaN(d) && (d > m)) {
             m = data[j];
             mi = j;
           }
@@ -627,19 +631,7 @@ public class FloatList implements Iterable<Float> {
   }
 
 
-  public float sum() {
-    double amount = sumDouble();
-    if (amount > Float.MAX_VALUE) {
-      throw new RuntimeException("sum() exceeds " + Float.MAX_VALUE + ", use sumDouble()");
-    }
-    if (amount < -Float.MAX_VALUE) {
-      throw new RuntimeException("sum() lower than " + -Float.MAX_VALUE + ", use sumDouble()");
-    }
-    return (float) amount;
-  }
-
-
-  public double sumDouble() {
+  public double sum() {
     double sum = 0;
     for (int i = 0; i < count; i++) {
       sum += data[i];
@@ -651,7 +643,7 @@ public class FloatList implements Iterable<Float> {
   /**
    * Sorts the array in place.
    *
-   * @webref floatlist:method
+   * @webref doublelist:method
    * @brief Sorts an array, lowest to highest
    */
   public void sort() {
@@ -662,7 +654,7 @@ public class FloatList implements Iterable<Float> {
   /**
    * Reverse sort, orders values from highest to lowest
    *
-   * @webref floatlist:method
+   * @webref doublelist:method
    * @brief Reverse sort, orders values from highest to lowest
    */
   public void sortReverse() {
@@ -682,7 +674,7 @@ public class FloatList implements Iterable<Float> {
           }
         }
         for (int i = right; i >= 0; --i) {
-          float v = data[i];
+          double v = data[i];
           if (v != v) {
             data[i] = data[right];
             data[right] = v;
@@ -694,13 +686,13 @@ public class FloatList implements Iterable<Float> {
 
       @Override
       public int compare(int a, int b) {
-        float diff = data[b] - data[a];
+        double diff = data[b] - data[a];
         return diff == 0 ? 0 : (diff < 0 ? -1 : 1);
       }
 
       @Override
       public void swap(int a, int b) {
-        float temp = data[a];
+        double temp = data[a];
         data[a] = data[b];
         data[b] = temp;
       }
@@ -727,13 +719,13 @@ public class FloatList implements Iterable<Float> {
 
 
   /**
-   * @webref floatlist:method
+   * @webref doublelist:method
    * @brief Reverse the order of the list elements
    */
   public void reverse() {
     int ii = count - 1;
     for (int i = 0; i < count/2; i++) {
-      float t = data[i];
+      double t = data[i];
       data[i] = data[ii];
       data[ii] = t;
       --ii;
@@ -745,7 +737,7 @@ public class FloatList implements Iterable<Float> {
    * Randomize the order of the list elements. Note that this does not
    * obey the randomSeed() function in StringFuncs.
    *
-   * @webref floatlist:method
+   * @webref doublelist:method
    * @brief Randomize the order of the list elements
    */
   public void shuffle() {
@@ -754,7 +746,7 @@ public class FloatList implements Iterable<Float> {
     while (num > 1) {
       int value = r.nextInt(num);
       num--;
-      float temp = data[num];
+      double temp = data[num];
       data[num] = data[value];
       data[value] = temp;
     }
@@ -770,15 +762,15 @@ public class FloatList implements Iterable<Float> {
     while (num > 1) {
       int value = (int) sketch.random(num);
       num--;
-      float temp = data[num];
+      double temp = data[num];
       data[num] = data[value];
       data[value] = temp;
     }
   }
 
 
-  public FloatList copy() {
-    FloatList outgoing = new FloatList(data);
+  public DoubleList copy() {
+    DoubleList outgoing = new DoubleList(data);
     outgoing.count = count;
     return outgoing;
   }
@@ -789,7 +781,7 @@ public class FloatList implements Iterable<Float> {
    * this is the fastest way to access a large list. Suitable for iterating
    * with a for() loop, but modifying the list will have terrible consequences.
    */
-  public float[] values() {
+  public double[] values() {
     crop();
     return data;
   }
@@ -797,20 +789,20 @@ public class FloatList implements Iterable<Float> {
 
   /** Implemented this way so that we can use a FloatList in a for loop. */
   @Override
-  public Iterator<Float> iterator() {
+  public Iterator<Double> iterator() {
 //  }
 //
 //
 //  public Iterator<Float> valueIterator() {
-    return new Iterator<Float>() {
+    return new Iterator<Double>() {
       int index = -1;
 
       public void remove() {
-        FloatList.this.remove(index);
+        DoubleList.this.remove(index);
         index--;
       }
 
-      public Float next() {
+      public Double next() {
         return data[++index];
       }
 
@@ -824,10 +816,10 @@ public class FloatList implements Iterable<Float> {
   /**
    * Create a new array with a copy of all the values.
    * @return an array sized by the length of the list with each of the values.
-   * @webref floatlist:method
+   * @webref doublelist:method
    * @brief Create a new array with a copy of all the values
    */
-  public float[] array() {
+  public double[] array() {
     return array(null);
   }
 
@@ -837,9 +829,9 @@ public class FloatList implements Iterable<Float> {
    * not the same size, a new array will be allocated.
    * @param array
    */
-  public float[] array(float[] array) {
+  public double[] array(double[] array) {
     if (array == null || array.length != count) {
-      array = new float[count];
+      array = new double[count];
     }
     System.arraycopy(data, 0, array, 0, count);
     return array;
@@ -852,29 +844,29 @@ public class FloatList implements Iterable<Float> {
    * to returns a new list (because IntList/Dict can't do percentages or
    * normalization in place on int values).
    */
-  public FloatList getPercent() {
+  public DoubleList getPercent() {
     double sum = 0;
-    for (float value : array()) {
+    for (double value : array()) {
       sum += value;
     }
-    FloatList outgoing = new FloatList(count);
+    DoubleList outgoing = new DoubleList(count);
     for (int i = 0; i < count; i++) {
       double percent = data[i] / sum;
-      outgoing.set(i, (float) percent);
+      outgoing.set(i, percent);
     }
     return outgoing;
   }
 
 
-  public FloatList getSubset(int start) {
+  public DoubleList getSubset(int start) {
     return getSubset(start, count - start);
   }
 
 
-  public FloatList getSubset(int start, int num) {
-    float[] subset = new float[num];
+  public DoubleList getSubset(int start, int num) {
+    double[] subset = new double[num];
     System.arraycopy(data, start, subset, 0, num);
-    return new FloatList(subset);
+    return new DoubleList(subset);
   }
 
 

@@ -1,4 +1,4 @@
-package data;
+package asj.data;
 
 // This code has been modified heavily to more closely match the rest of the
 // Processing API. In the spirit of the rest of the project, where we try to

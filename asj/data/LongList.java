@@ -1,5 +1,4 @@
-package data;
-
+package asj.data;
 import java.io.File;
 import java.io.PrintWriter;
 import java.util.Arrays;
@@ -25,30 +24,30 @@ import java.util.Random;
  * @see FloatList
  * @see StringList
  */
-public class IntList implements Iterable<Integer> {
+public class LongList implements Iterable<Long> {
   protected int count;
-  protected int[] data;
+  protected long[] data;
 
 
-  public IntList() {
-    data = new int[10];
+  public LongList() {
+    data = new long[10];
   }
 
 
   /**
    * @nowebref
    */
-  public IntList(int length) {
-    data = new int[length];
+  public LongList(int length) {
+    data = new long[length];
   }
 
 
   /**
    * @nowebref
    */
-  public IntList(int[] source) {
+  public LongList(int[] source) {
     count = source.length;
-    data = new int[count];
+    data = new long[count];
     System.arraycopy(source, 0, data, 0, count);
   }
 
@@ -59,7 +58,7 @@ public class IntList implements Iterable<Integer> {
    * Un-parseable or null values will be set to 0.
    * @nowebref
    */
-  public IntList(Iterable<Object> iter) {
+  public LongList(Iterable<Object> iter) {
     this(10);
     for (Object o : iter) {
       if (o == null) {
@@ -78,11 +77,11 @@ public class IntList implements Iterable<Integer> {
    * Construct an IntList from a random pile of objects.
    * Un-parseable or null values will be set to zero.
    */
-  public IntList(Object... items) {
+  public LongList(Object... items) {
     final int missingValue = 0;  // nuts, can't be last/final/second arg
 
     count = items.length;
-    data = new int[count];
+    data = new long[count];
     int index = 0;
     for (Object o : items) {
       int value = missingValue;
@@ -98,14 +97,14 @@ public class IntList implements Iterable<Integer> {
   }
 
 
-  static public IntList fromRange(int stop) {
+  static public LongList fromRange(int stop) {
     return fromRange(0, stop);
   }
 
 
-  static public IntList fromRange(int start, int stop) {
+  static public LongList fromRange(int start, int stop) {
     int count = stop - start;
-    IntList newbie = new IntList(count);
+    LongList newbie = new LongList(count);
     for (int i = 0; i < count; i++) {
       newbie.set(i, start+i);
     }
@@ -139,7 +138,7 @@ public class IntList implements Iterable<Integer> {
 
   public void resize(int length) {
     if (length > data.length) {
-      int[] temp = new int[length];
+      long[] temp = new long[length];
       System.arraycopy(data, 0, temp, 0, count);
       data = temp;
 
@@ -167,7 +166,7 @@ public class IntList implements Iterable<Integer> {
    * @webref intlist:method
    * @brief Get an entry at a particular index
    */
-  public int get(int index) {
+  public long get(int index) {
     if (index >= this.count) {
       throw new ArrayIndexOutOfBoundsException(index);
     }
@@ -201,11 +200,11 @@ public class IntList implements Iterable<Integer> {
   }
 
 
-  public int pop() {
+  public long pop() {
     if (count == 0) {
       throw new RuntimeException("Can't call pop() on an empty list");
     }
-    int value = get(count-1);
+    long value = get(count-1);
     count--;
     return value;
   }
@@ -217,11 +216,11 @@ public class IntList implements Iterable<Integer> {
    * @webref intlist:method
    * @brief Remove an element from the specified index
    */
-  public int remove(int index) {
+  public long remove(int index) {
     if (index < 0 || index >= count) {
       throw new ArrayIndexOutOfBoundsException(index);
     }
-    int entry = data[index];
+    long entry = data[index];
 //    int[] outgoing = new int[count - 1];
 //    System.arraycopy(data, 0, outgoing, 0, index);
 //    count--;
@@ -270,7 +269,7 @@ public class IntList implements Iterable<Integer> {
    * @webref intlist:method
    * @brief Add a new entry to the list
    */
-  public void append(int value) {
+  public void append(long value) {
     if (count == data.length) {
       data = StringFuncs.expand(data);
     }
@@ -285,8 +284,8 @@ public class IntList implements Iterable<Integer> {
   }
 
 
-  public void append(IntList list) {
-    for (int v : list.values()) {  // will concat the list...
+  public void append(LongList list) {
+    for (long v : list.values()) {  // will concat the list...
       append(v);
     }
   }
@@ -330,13 +329,13 @@ public class IntList implements Iterable<Integer> {
 //  }
 
 
-  public void insert(int index, int value) {
-    insert(index, new int[] { value });
+  public void insert(int index, long value) {
+    insert(index, new long[] { value });
   }
 
 
   // same as splice
-  public void insert(int index, int[] values) {
+  public void insert(int index, long[] values) {
     if (index < 0) {
       throw new IllegalArgumentException("insert() index cannot be negative: it was " + index);
     }
@@ -344,7 +343,7 @@ public class IntList implements Iterable<Integer> {
       throw new IllegalArgumentException("insert() index " + index + " is past the end of this list");
     }
 
-    int[] temp = new int[count + values.length];
+    long[] temp = new long[count + values.length];
 
     // Copy the old values, but not more than already exist
     System.arraycopy(data, 0, temp, 0, Math.min(count, index));
@@ -364,7 +363,7 @@ public class IntList implements Iterable<Integer> {
   }
 
 
-  public void insert(int index, IntList list) {
+  public void insert(int index, LongList list) {
     insert(index, list.values());
   }
 
@@ -540,9 +539,9 @@ public class IntList implements Iterable<Integer> {
    * @webref intlist:method
    * @brief Return the smallest value
    */
-  public int min() {
+  public long min() {
     checkMinMax("min");
-    int outgoing = data[0];
+    long outgoing = data[0];
     for (int i = 1; i < count; i++) {
       if (data[i] < outgoing) outgoing = data[i];
     }
@@ -554,7 +553,7 @@ public class IntList implements Iterable<Integer> {
   // if there are ties, it returns the first one found.
   public int minIndex() {
     checkMinMax("minIndex");
-    int value = data[0];
+    long value = data[0];
     int index = 0;
     for (int i = 1; i < count; i++) {
       if (data[i] < value) {
@@ -570,9 +569,9 @@ public class IntList implements Iterable<Integer> {
    * @webref intlist:method
    * @brief Return the largest value
    */
-  public int max() {
+  public long max() {
     checkMinMax("max");
-    int outgoing = data[0];
+    long outgoing = data[0];
     for (int i = 1; i < count; i++) {
       if (data[i] > outgoing) outgoing = data[i];
     }
@@ -584,7 +583,7 @@ public class IntList implements Iterable<Integer> {
   // if there are ties, it returns the first one found.
   public int maxIndex() {
     checkMinMax("maxIndex");
-    int value = data[0];
+    long value = data[0];
     int index = 0;
     for (int i = 1; i < count; i++) {
       if (data[i] > value) {
@@ -643,12 +642,13 @@ public class IntList implements Iterable<Integer> {
 
       @Override
       public int compare(int a, int b) {
-        return data[b] - data[a];
+        long diff = data[b] - data[a];
+        return diff == 0 ? 0 : (diff < 0 ? -1 : 1);
       }
 
       @Override
       public void swap(int a, int b) {
-        int temp = data[a];
+        long temp = data[a];
         data[a] = data[b];
         data[b] = temp;
       }
@@ -680,7 +680,7 @@ public class IntList implements Iterable<Integer> {
   public void reverse() {
     int ii = count - 1;
     for (int i = 0; i < count/2; i++) {
-      int t = data[i];
+      long t = data[i];
       data[i] = data[ii];
       data[ii] = t;
       --ii;
@@ -701,7 +701,7 @@ public class IntList implements Iterable<Integer> {
     while (num > 1) {
       int value = r.nextInt(num);
       num--;
-      int temp = data[num];
+      long temp = data[num];
       data[num] = data[value];
       data[value] = temp;
     }
@@ -717,15 +717,15 @@ public class IntList implements Iterable<Integer> {
     while (num > 1) {
       int value = (int) sketch.random(num);
       num--;
-      int temp = data[num];
+      long temp = data[num];
       data[num] = data[value];
       data[value] = temp;
     }
   }
 
 
-  public IntList copy() {
-    IntList outgoing = new IntList(data);
+  public LongList copy() {
+    LongList outgoing = new LongList(data);
     outgoing.count = count;
     return outgoing;
   }
@@ -736,24 +736,24 @@ public class IntList implements Iterable<Integer> {
    * this is the fastest way to access a large list. Suitable for iterating
    * with a for() loop, but modifying the list will have terrible consequences.
    */
-  public int[] values() {
+  public long[] values() {
     crop();
     return data;
   }
 
 
   @Override
-  public Iterator<Integer> iterator() {
+  public Iterator<Long> iterator() {
 //  public Iterator<Integer> valueIterator() {
-    return new Iterator<Integer>() {
+    return new Iterator<Long>() {
       int index = -1;
 
       public void remove() {
-        IntList.this.remove(index);
+        LongList.this.remove(index);
         index--;
       }
 
-      public Integer next() {
+      public Long next() {
         return data[++index];
       }
 
@@ -866,15 +866,15 @@ public class IntList implements Iterable<Integer> {
 //  }
 
 
-  public IntList getSubset(int start) {
+  public LongList getSubset(int start) {
     return getSubset(start, count - start);
   }
 
 
-  public IntList getSubset(int start, int num) {
+  public LongList getSubset(int start, int num) {
     int[] subset = new int[num];
     System.arraycopy(data, start, subset, 0, num);
-    return new IntList(subset);
+    return new LongList(subset);
   }
 
 

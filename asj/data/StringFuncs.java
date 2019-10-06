@@ -1,4 +1,4 @@
-package data;
+package asj.data;
 /* -*- mode: java; c-basic-offset: 2; indent-tabs-mode: nil -*- */
 
 /*
