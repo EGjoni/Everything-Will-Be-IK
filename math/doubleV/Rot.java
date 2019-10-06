@@ -64,19 +64,20 @@ public class Rot {
 	}
 
 	public <V extends Vec3d<?>> Rot( V v1, V v2, V u1, V u2) {
-		try {
+		//try {
 			rotation = new MRotation(v1,v2,u1,u2);
-		} catch(Exception e) {
-			rotation = new MRotation(v1, 0f);
-		}
+		//} catch(Exception e) {
+			//rotation = new MRotation(v1, 0f);
+		//}
 	}
 
+	
 	public <V extends Vec3d<?>> Rot( V  axis, double angle) {		
-		try {
+		//try {
 			rotation = new MRotation(axis, angle); 
-		} catch(Exception e) { 
-			rotation = new MRotation(RotationOrder.X, 0d);
-		}
+		//} catch(Exception e) { 
+			//rotation = new MRotation(RotationOrder.X, 0d);
+		//}
 	}
 
 	public Rot(double w, double x, double y, double z, boolean needsNormalization) {
@@ -84,11 +85,11 @@ public class Rot {
 	}  
 	
 	public <V extends Vec3d<?>> Rot( V begin, V end) {
-		try{ 
+		//try{ 
 			rotation = new MRotation(begin, end);
-		} catch(Exception e) { 
-			rotation = new MRotation(RotationOrder.X, 0d);
-		}
+		//} catch(Exception e) { 
+			//rotation = new MRotation(RotationOrder.X, 0d);
+		//}
 	}
 
 	
@@ -289,7 +290,6 @@ public class Rot {
 		rotation.revert(r.rotation);
 	}
 
-
 	/*
 	 * interpolate between two rotations (SLERP)
 	 * 
@@ -337,7 +337,7 @@ public class Rot {
 
 		double dot = value1.dot(value2);
 		double x2, y2, z2, w2;
-		if (dot < 0.0)
+		/*if (dot < 0.0)
 		{
 			dot = 0.0 - dot;
 			x2 = 0.0 - value2.getQ1();
@@ -346,12 +346,12 @@ public class Rot {
 			w2 = 0.0 - value2.getQ0();
 		}
 		else
-		{
+		{*/
 			x2 = value2.getQ1();
 			y2 = value2.getQ2();
 			z2 = value2.getQ3();
 			w2 = value2.getQ0();
-		}
+		//}
 
 		double t1, t2;
 
@@ -389,7 +389,7 @@ public class Rot {
 
 		double dot = value1.dotProduct(value2);
 		double x2, y2, z2, w2;
-		if (dot < 0.0)
+		/*if (dot < 0.0)
 		{
 			dot = 0.0 - dot;
 			x2 = 0.0 - value2.getQ1();
@@ -398,12 +398,12 @@ public class Rot {
 			w2 = 0.0 - value2.getQ0();
 		}
 		else
-		{
+		{*/
 			x2 = value2.getQ1();
 			y2 = value2.getQ2();
 			z2 = value2.getQ3();
 			w2 = value2.getQ0();
-		}
+		//}
 
 		double t1, t2;
 
@@ -521,7 +521,11 @@ public class Rot {
 	}
 
 	public String toString() {
-		return "\n axis: "+ this.getAxis().toVec3f() +", \n angle: "+((float)Math.toDegrees(this.getAngle()));
+		return rotation.toString();//"\n axis: "+ this.getAxis().toVec3f() +", \n angle: "+((float)Math.toDegrees(this.getAngle()));
+	}
+	
+	public boolean equalTo(Rot m) {
+		return MRotation.distance(this.rotation, m.rotation) < MathUtils.DOUBLE_ROUNDING_ERROR;
 	}
 	
 	/**
@@ -546,6 +550,5 @@ public class Rot {
 		result.append(this.rotation.getQ3());
 		return result;
 	}
-
 
 }

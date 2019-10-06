@@ -20,7 +20,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 package sceneGraph.math.doubleV;
 
-import data.JSONObject;
 import sceneGraph.math.floatV.SGVec_3f;
 
 /**
@@ -37,12 +36,12 @@ public class sgRayd {
 		//this.p1 = new SGVec_3d();
 	}
 	
-	public <V extends Vec3d<?>> sgRayd(V origin) {
+	public sgRayd(Vec3d<?> origin) {
 		this.workingVector =  origin.copy();
 		this.p1 =  origin.copy();
 	}
 
-	public <V extends Vec3d<?>> sgRayd(V p1, V p2) {
+	public sgRayd(Vec3d<?> p1, Vec3d<?> p2) {
 		this.workingVector =  p1.copy();
 		this.p1 =  p1.copy();
 		if(p2 != null)
@@ -391,8 +390,20 @@ public class sgRayd {
 		if(this.heading().dot(heading) < 0) this.reverse(); 
 	}
 	public sgRayd getRayScaledBy(double scalar) {
-
 		return new sgRayd(p1, this.getMultipledBy(scalar));
+	}
+	
+	/**
+	 * sets the values of the given vector to where the 
+	 * tip of this Ray would be if the ray were inverted
+	 * @param vec
+	 * @return the vector that was passed in after modification (for chaining) 
+	 */
+	public Vec3d<?> setToInvertedTip(Vec3d<?> vec) {
+		vec.x = (p1.x - p2.x)+p1.x; 
+		vec.y = (p1.y - p2.y)+p1.y; 
+		vec.z = (p1.z - p2.z)+p1.z; 
+		return vec;
 	}
 
 	public void contractTo(double percent) {
@@ -910,14 +921,6 @@ public class sgRayd {
 		return (1-t)*a + t*b;
 	}
 
-	public JSONObject toJSON() {
-		JSONObject result = new JSONObject();
-		SGVec_3d p1j = new SGVec_3d(p1.x, p1.y, p1.z);
-		SGVec_3d p2j = new SGVec_3d(p2.x, p2.y, p2.z);
-		result.setJSONArray("p1", p1j.toJSONArray());
-		result.setJSONArray("p2", p2j.toJSONArray());
-		return result;
-	}
 
 	public Vec3d<?> p2() {
 		return p2;

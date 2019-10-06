@@ -2,8 +2,6 @@ package sceneGraph.math.doubleV;
 
 import sceneGraph.math.doubleV.MRotation;
 import sceneGraph.math.doubleV.MathUtils;
-import sceneGraph.math.doubleV.Matrix3d;
-import sceneGraph.math.doubleV.Matrix4d;
 import sceneGraph.math.doubleV.Rot;
 import sceneGraph.math.doubleV.SGVec_3d;
 

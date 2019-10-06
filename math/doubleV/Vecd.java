@@ -16,8 +16,7 @@
 
 package sceneGraph.math.doubleV;
 
-import data.CanLoad;
-import data.Saveable;
+
 import sceneGraph.math.Vec;
 import sceneGraph.math.floatV.SGVec_3f;
 import sceneGraph.math.floatV.Vec3f;
@@ -25,7 +24,7 @@ import sceneGraph.math.floatV.Vec3f;
 /** Encapsulates a general vector. Allows chaining operations by returning a reference to itself in all modification methods. See
  * {@link SGVec_2d} and {@link SGVec_3d} for specific imlementations.
  * @author Xoppa */
-public interface Vecd<T extends Vecd<T>> extends Vec<T>, CanLoad {	
+public interface Vecd<T extends Vecd<T>> extends Vec<T> {	
 
 	
 

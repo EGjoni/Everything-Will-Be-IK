@@ -1,9 +1,15 @@
 package sceneGraph.math.doubleV;
 
+import data.JSONObject;
+import data.LoadManager;
+import sceneGraph.math.doubleV.AbstractAxes;
+import sceneGraph.math.doubleV.Rot;
+import sceneGraph.math.floatV.SGVec_3f;
+
 public class CartesianAxes extends AbstractAxes {
 
 	
-	public CartesianAxes(AbstractBasis globalBasis, AbstractAxes parent) {
+	public CartesianAxes(AbstractBasis globalBasis, sceneGraph.math.doubleV.AbstractAxes parent) {
 		super(globalBasis, parent);
 	}
 	public CartesianAxes(Vec3d<?> origin, Vec3d<?> inX, Vec3d<?> inY, Vec3d<?> inZ,
@@ -84,6 +90,28 @@ public class CartesianAxes extends AbstractAxes {
 		return freeCopy;
 	}
 
+	
+	@Override 
+	public void loadFromJSONObject(JSONObject j, LoadManager l) {
+		super.loadFromJSONObject(j, l);
+		/*SGVec_3d origin = new SGVec_3d(j.getJSONArray("translation"));
+		SGVec_3d x = new SGVec_3d(j.getJSONObject("bases").getJSONArray("x"));
+		SGVec_3d y = new SGVec_3d(j.getJSONObject("bases").getJSONArray("y"));
+		SGVec_3d z =  new SGVec_3d(j.getJSONObject("bases").getJSONArray("z"));
+		Rot rotation = new Rot(j.getJSONArray("rotation"));
+		this.forceOrthoNormality = j.getBoolean("forceOrthoNormality");
+		this.localMBasis.setShearXBaseTo(x, false);
+		this.localMBasis.setShearYBaseTo(y, false);
+		this.localMBasis.setShearZBaseTo(z, false);
+		this.localMBasis.translate = origin;
+		this.localMBasis.rotation = rotation;
+		this.localMBasis.refreshMatrices();
+		AbstractAxes par = (AbstractAxes) l.getObjectFor(AbstractAxes.class, j, "parent");
+		if(par != null)
+			this.setRelativeToParent(par);
+		this.setSlipType(j.getInt("slipType"));
+		super.loadFromJSONObject(j, l);*/
+	} 
 	
 	/**
 	 * Creates an exact copy of this Axes object. Attached to the same parent as this Axes object

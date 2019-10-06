@@ -18,9 +18,12 @@ package sceneGraph.math.doubleV;
 
 import java.io.Serializable;
 
-import data.CanLoad;
-import data.JSONArray;
-import data.JSONObject;
+import sceneGraph.data.CanLoad;
+import sceneGraph.data.JSONArray;
+import sceneGraph.data.JSONObject;
+import sceneGraph.data.LoadManager;
+import sceneGraph.data.SaveManager;
+import sceneGraph.data.Saveable;
 import sceneGraph.math.floatV.SGVec_3f;
 import sceneGraph.math.floatV.Vec3f;
 
@@ -29,7 +32,7 @@ import sceneGraph.math.floatV.Vec3f;
 
 /** Encapsulates a 3D vector. Allows chaining operations by returning a reference to itself in all modification methods.
  * @author badlogicgames@gmail.com */
-public class SGVec_3d extends Vec3d<SGVec_3d> implements Serializable, CanLoad {
+public class SGVec_3d extends Vec3d<SGVec_3d> implements CanLoad {
 	
 
 	public SGVec_3d(SGVec_3d sgVec_3d) {
@@ -82,6 +85,25 @@ public class SGVec_3d extends Vec3d<SGVec_3d> implements Serializable, CanLoad {
 	@Override
 	public SGVec_3f toVec3f() {
 		return new SGVec_3f((float)x,(float)y,(float)z);
+	}
+
+
+
+	public JSONArray toJSONArray() {
+		JSONArray vec = new JSONArray();
+		vec.append(this.x); vec.append(this.y); vec.append(this.z);
+		return vec;
+	}
+	 
+	@Override
+	public JSONObject toJSONObject() {
+		JSONObject j = new JSONObject(); 
+		JSONArray components = new JSONArray(); 
+		components.append(this.x);
+		components.append(this.y);
+		components.append(this.z);
+		j.setJSONArray("vec", components); 
+		return j;
 	}
 
 

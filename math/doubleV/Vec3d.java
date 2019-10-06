@@ -1,8 +1,5 @@
 package sceneGraph.math.doubleV;
 
-import data.CanLoad;
-import data.JSONArray;
-import data.JSONObject;
 import sceneGraph.IKVector;
 import sceneGraph.math.Vec;
 import sceneGraph.math.floatV.SGVec_3f;
@@ -22,7 +19,6 @@ public abstract class Vec3d<T extends Vec3d<T>> implements Vecd<T> {
 
 	public final static int X = 0, Y= 1, Z = 2;
 
-	private final static Matrix4d tmpMat = new Matrix4d();
 
 	/** Constructs a vector at (0,0,0) */
 	public Vec3d () {
@@ -85,15 +81,6 @@ public abstract class Vec3d<T extends Vec3d<T>> implements Vecd<T> {
 	@Override
 	public T set (final double[] values) {
 		return this.set(values[0], values[1], values[2]);
-	}
-
-	/** Sets the components of the given vector and z-component
-	 *
-	 * @param vector The vector
-	 * @param z The z-component
-	 * @return This vector for chaining */
-	public T set (final SGVec_2d vector, double z) {
-		return this.set(vector.x, vector.y, z);
 	}
 
 	/** Sets the components from the given spherical coordinate
@@ -373,63 +360,6 @@ public abstract class Vec3d<T extends Vec3d<T>> implements Vecd<T> {
 		return set(x * matrix[0] + y * matrix[3] + z * matrix[6] + matrix[9], x * matrix[1] + y * matrix[4] + z * matrix[7]
 			+ matrix[10], x * matrix[2] + y * matrix[5] + z * matrix[8] + matrix[11]);
 	}
-
-	/** Left-multiplies the vector by the given matrix, assuming the fourth (w) component of the vector is 1.
-	 * @param matrix The matrix
-	 * @return This vector for chaining */
-	public T mul (final Matrix4d matrix) {
-		final double l_mat[] = matrix.val;
-		return this.set(x * l_mat[Matrix4d.M00] + y * l_mat[Matrix4d.M01] + z * l_mat[Matrix4d.M02] + l_mat[Matrix4d.M03], x
-			* l_mat[Matrix4d.M10] + y * l_mat[Matrix4d.M11] + z * l_mat[Matrix4d.M12] + l_mat[Matrix4d.M13], x * l_mat[Matrix4d.M20] + y
-			* l_mat[Matrix4d.M21] + z * l_mat[Matrix4d.M22] + l_mat[Matrix4d.M23]);
-	}
-
-	/** Multiplies the vector by the transpose of the given matrix, assuming the fourth (w) component of the vector is 1.
-	 * @param matrix The matrix
-	 * @return This vector for chaining */
-	public T traMul (final Matrix4d matrix) {
-		final double l_mat[] = matrix.val;
-		return this.set(x * l_mat[Matrix4d.M00] + y * l_mat[Matrix4d.M10] + z * l_mat[Matrix4d.M20] + l_mat[Matrix4d.M30], x
-			* l_mat[Matrix4d.M01] + y * l_mat[Matrix4d.M11] + z * l_mat[Matrix4d.M21] + l_mat[Matrix4d.M31], x * l_mat[Matrix4d.M02] + y
-			* l_mat[Matrix4d.M12] + z * l_mat[Matrix4d.M22] + l_mat[Matrix4d.M32]);
-	}
-
-	/** Left-multiplies the vector by the given matrix.
-	 * @param matrix The matrix
-	 * @return This vector for chaining */
-	public T mul (Matrix3d matrix) {
-		final double l_mat[] = matrix.val;
-		return set(x * l_mat[Matrix3d.M00] + y * l_mat[Matrix3d.M01] + z * l_mat[Matrix3d.M02], x * l_mat[Matrix3d.M10] + y
-			* l_mat[Matrix3d.M11] + z * l_mat[Matrix3d.M12], x * l_mat[Matrix3d.M20] + y * l_mat[Matrix3d.M21] + z * l_mat[Matrix3d.M22]);
-	}
-
-	/** Multiplies the vector by the transpose of the given matrix.
-	 * @param matrix The matrix
-	 * @return This vector for chaining */
-	public T traMul (Matrix3d matrix) {
-		final double l_mat[] = matrix.val;
-		return set(x * l_mat[Matrix3d.M00] + y * l_mat[Matrix3d.M10] + z * l_mat[Matrix3d.M20], x * l_mat[Matrix3d.M01] + y
-			* l_mat[Matrix3d.M11] + z * l_mat[Matrix3d.M21], x * l_mat[Matrix3d.M02] + y * l_mat[Matrix3d.M12] + z * l_mat[Matrix3d.M22]);
-	}
-
-	/** Multiplies the vector by the given {@link Quaternionf}.
-	 * @return This vector for chaining */
-	public T mul (final Quaternion quat) {
-		return (T) quat.transform(this);
-	}
-
-	/** Multiplies this vector by the given matrix dividing by w, assuming the fourth (w) component of the vector is 1. This is
-	 * mostly used to project/unproject vectors via a perspective projection matrix.
-	 *
-	 * @param matrix The matrix.
-	 * @return This vector for chaining */
-	public T prj (final Matrix4d matrix) {
-		final double l_mat[] = matrix.val;
-		final double l_w = 1f / (x * l_mat[Matrix4d.M30] + y * l_mat[Matrix4d.M31] + z * l_mat[Matrix4d.M32] + l_mat[Matrix4d.M33]);
-		return this.set((x * l_mat[Matrix4d.M00] + y * l_mat[Matrix4d.M01] + z * l_mat[Matrix4d.M02] + l_mat[Matrix4d.M03]) * l_w, (x
-			* l_mat[Matrix4d.M10] + y * l_mat[Matrix4d.M11] + z * l_mat[Matrix4d.M12] + l_mat[Matrix4d.M13])
-			* l_w, (x * l_mat[Matrix4d.M20] + y * l_mat[Matrix4d.M21] + z * l_mat[Matrix4d.M22] + l_mat[Matrix4d.M23]) * l_w);
-	}
 	
 	
 	/**
@@ -460,81 +390,6 @@ public abstract class Vec3d<T extends Vec3d<T>> implements Vecd<T> {
 		return (T) normProj.addCopy(this);
 	}
 
-	/** Multiplies this vector by the first three columns of the matrix, essentially only applying rotation and scaling.
-	 *
-	 * @param matrix The matrix
-	 * @return This vector for chaining */
-	public T rot (final Matrix4d matrix) {
-		final double l_mat[] = matrix.val;
-		return this.set(x * l_mat[Matrix4d.M00] + y * l_mat[Matrix4d.M01] + z * l_mat[Matrix4d.M02], x * l_mat[Matrix4d.M10] + y
-			* l_mat[Matrix4d.M11] + z * l_mat[Matrix4d.M12], x * l_mat[Matrix4d.M20] + y * l_mat[Matrix4d.M21] + z * l_mat[Matrix4d.M22]);
-	}
-
-	/** Multiplies this vector by the transpose of the first three columns of the matrix. Note: only works for translation and
-	 * rotation, does not work for scaling. For those, use {@link #rot(Matrix4d)} with {@link Matrix4d#inv()}.
-	 * @param matrix The transformation matrix
-	 * @return The vector for chaining */
-	public T unrotate (final Matrix4d matrix) {
-		final double l_mat[] = matrix.val;
-		return this.set(x * l_mat[Matrix4d.M00] + y * l_mat[Matrix4d.M10] + z * l_mat[Matrix4d.M20], x * l_mat[Matrix4d.M01] + y
-			* l_mat[Matrix4d.M11] + z * l_mat[Matrix4d.M21], x * l_mat[Matrix4d.M02] + y * l_mat[Matrix4d.M12] + z * l_mat[Matrix4d.M22]);
-	}
-
-	/** Translates this vector in the direction opposite to the translation of the matrix and the multiplies this vector by the
-	 * transpose of the first three columns of the matrix. Note: only works for translation and rotation, does not work for
-	 * scaling. For those, use {@link #mul(Matrix4d)} with {@link Matrix4d#inv()}.
-	 * @param matrix The transformation matrix
-	 * @return The vector for chaining */
-	public T untransform (final Matrix4d matrix) {
-		final double l_mat[] = matrix.val;
-		x -= l_mat[Matrix4d.M03];
-		y -= l_mat[Matrix4d.M03];
-		z -= l_mat[Matrix4d.M03];
-		return this.set(x * l_mat[Matrix4d.M00] + y * l_mat[Matrix4d.M10] + z * l_mat[Matrix4d.M20], x * l_mat[Matrix4d.M01] + y
-			* l_mat[Matrix4d.M11] + z * l_mat[Matrix4d.M21], x * l_mat[Matrix4d.M02] + y * l_mat[Matrix4d.M12] + z * l_mat[Matrix4d.M22]);
-	}
-
-	/** Rotates this vector by the given angle in degrees around the given axis.
-	 *
-	 * @param rad the angle in radians
-	 * @param axisX the x-component of the axis
-	 * @param axisY the y-component of the axis
-	 * @param axisZ the z-component of the axis
-	 * @return This vector for chaining */
-	public T rotate (double radians, double axisX, double axisY, double axisZ) {
-		return this.mul(tmpMat.setToRotation(axisX, axisY, axisZ, radians));
-	}
-
-	/** Rotates this vector by the given angle in radians around the given axis.
-	 *
-	 * @param radians the angle in radians
-	 * @param axisX the x-component of the axis
-	 * @param axisY the y-component of the axis
-	 * @param axisZ the z-component of the axis
-	 * @return This vector for chaining */
-	public T rotateRad (double radians, double axisX, double axisY, double axisZ) {
-		return this.mul(tmpMat.setToRotationRad(axisX, axisY, axisZ, radians));
-	}
-
-	/** Rotates this vector by the given angle in degrees around the given axis.
-	 *
-	 * @param axis the axis
-	 * @param degrees the angle in degrees
-	 * @return This vector for chaining */
-	public <V extends Vec3d<?>> T rotate (final V axis, double degrees) {
-		tmpMat.setToRotation(axis, degrees);
-		return this.mul(tmpMat);
-	}
-
-	/** Rotates this vector by the given angle in radians around the given axis.
-	 *
-	 * @param axis the axis
-	 * @param radians the angle in radians
-	 * @return This vector for chaining */
-	public <V extends Vec3d<?>> T rotateRad (final V axis, double radians) {
-		tmpMat.setToRotationRad(axis, radians);
-		return this.mul(tmpMat);
-	}
 
 	@Override
 	public boolean isUnit () {
@@ -874,8 +729,8 @@ public abstract class Vec3d<T extends Vec3d<T>> implements Vecd<T> {
 	 * @param v1 the vector to start from
 	 * @param v2 the vector to lerp to
 	 */
-	public static SGVec_3d lerp(SGVec_3d v1, SGVec_3d v2, double amt) {
-		SGVec_3d v = v1.copy();
+	public static <V extends Vec3d> V lerp(V v1, V v2, double amt) {
+		V v = (V)v1.copy();
 		v.lerp(v2, amt);
 		return v;
 	}
@@ -962,23 +817,6 @@ public abstract class Vec3d<T extends Vec3d<T>> implements Vecd<T> {
 		return this.z;
 	}
 
-	
-	public JSONArray toJSONArray() {
-		JSONArray vec = new JSONArray();
-		vec.append(this.x); vec.append(this.y); vec.append(this.z);
-		return vec;
-	}
-	 
-	@Override
-	public JSONObject toJSONObject() {
-		JSONObject j = new JSONObject(); 
-		JSONArray components = new JSONArray(); 
-		components.append(this.x);
-		components.append(this.y);
-		components.append(this.z);
-		j.setJSONArray("vec", components); 
-		return j;
-	}
 	
 	
 }

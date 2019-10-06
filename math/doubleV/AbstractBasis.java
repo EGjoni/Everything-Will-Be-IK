@@ -16,6 +16,11 @@ public abstract class AbstractBasis {
 	
 	public int chirality = RIGHT; 
 	
+	public static final int NONE = -1;
+	public static final int X = 0;
+	public static final int Y = 1;
+	public static final int Z = 2;
+	
 	public Rot rotation = new Rot();
 	public Rot inverseRotation = new Rot();
 	/**
@@ -32,6 +37,11 @@ public abstract class AbstractBasis {
 	protected sgRayd yRay;// = new sgRayd(new SGVec_3d(0,0,0), new SGVec_3d(0,1,0)); 
 	protected sgRayd zRay;// = new sgRayd(new SGVec_3d(0,0,0), new SGVec_3d(0,0,1)); 
 	
+	
+	/**
+	 * Initialize this basis at the origin. The basis will be righthanded by default. 
+	 * @param origin
+	 */
 	public AbstractBasis(Vec3d<?> origin) {
 			translate = origin.copy();
 			xBase = origin.copy(); yBase = origin.copy(); zBase = origin.copy(); 
@@ -55,15 +65,47 @@ public abstract class AbstractBasis {
 		
 	}
 	
+	
+	/**
+	 * Initialize this basis at the origin.
+	 *  The basis will be backed by a rotation object which presumes right handed chirality. 
+	 *  Therefore, the rotation object will align so its local XY plane aligns with this basis' XY plane
+	 *  Afterwards, it will check chirality, and if the basis isn't righthanded, this class will assume the
+	 *  z-axis is the one that's been flipped. 
+	 *  
+	 *  If you want to manually specify which axis has been flipped 
+	 *  (so that the rotation object aligns with respect to the plane formed 
+	 *  by the other two basis vectors) then use the constructor dedicated for that purpose
+	 * @param origin
+	 * @param x basis vector direction
+	 * @param y basis vector direction
+	 * @param z basis vector direction
+	 */
 	public <V extends Vec3d<?>> AbstractBasis(V origin, V x, V y, V z) {
 		this.translate = origin.copy();
 		xRay = new sgRayd(origin.copy(), origin.copy());
 		yRay = new sgRayd(origin.copy(), origin.copy());
 		zRay = new sgRayd(origin.copy(), origin.copy());
 		this.set(x.copy(), y.copy(), z.copy());
-		
 	}
 	
+	/**
+	 * Initialize this basis at the origin defined by the base of the @param x Ray.
+	 * 
+	 *  The basis will be backed by a rotation object which presumes right handed chirality. 
+	 *  Therefore, the rotation object will align so its local XY plane aligns with this basis' XY plane
+	 *  Afterwards, it will check chirality, and if the basis isn't righthanded, this class will assume the
+	 *  z-axis is the one that's been flipped.
+	 *   
+	 *  If you want to manually specify which axis has been flipped 
+	 *  (so that the rotation object aligns with respect to the plane formed 
+	 *  by the other two basis vectors) then use the constructor dedicated for that purpose
+	 *  
+	 *  
+	 * @param x basis Ray 
+	 * @param y basis Ray 
+	 * @param z basis Ray 
+	 */	
 	public <R extends sgRayd> AbstractBasis(R x, R y, R z) {
 		this.translate = x.p1().copy();		
 		xRay = x.copy(); yRay= y.copy(); zRay = z.copy();		
@@ -113,12 +155,12 @@ public abstract class AbstractBasis {
 	
 	private Rot createPrioritzedRotation(Vec3d<?> xHeading, Vec3d<?> yHeading, Vec3d<?> zHeading) {		
 	
-			Vec3d<?> tempV = xHeading.copy(); tempV.set(0,0,0);
-			Rot toYX = new Rot(yBase, xBase, yHeading, xHeading); 
-			toYX.applyTo(yBase, tempV);
+			Vec3d<?> tempV = zHeading.copy(); tempV.set(0,0,0);
+			Rot toYZ = new Rot(yBase, zBase, yHeading, zHeading); 
+			toYZ.applyTo(yBase, tempV);
 			Rot toY = new Rot(tempV, yHeading);
 
-			return toY.applyTo(toYX);
+			return toY.applyTo(toYZ);
 		/*Vec3d<?> xidt = xBase.copy(); Vec3d<?> yidt = yBase.copy();  Vec3d<?> zidt = zBase.copy();
 		Vec3d<?> origin = xBase.copy(); origin.set(0,0,0);  
 		
@@ -145,7 +187,7 @@ public abstract class AbstractBasis {
 	
 	public void refreshPrecomputed() {
 		this.rotation.setToReversion(inverseRotation);
-		this.updateRays();
+		this.updateRays();		
 	}
 	
 	public <V extends Vec3d<?>> V getLocalOf(V v) {
@@ -260,6 +302,24 @@ public abstract class AbstractBasis {
 
 	public Vec3d<?> getOrigin() {
 		return translate;
+	}
+	
+	/**
+	 * true if the input axis should be multiplied by negative one after rotation. 
+	 * By default, this always returns false. But can be overriden for more advanced implementations
+	 * allowing for reflection transformations. 
+	 * @param axis
+	 * @return true if axis should be flipped, false otherwise. Default is false. 
+	 */
+	public boolean isAxisFlipped(int axis) {
+		return false; 
+	}
+	
+	/**
+	 * @return a precomputed inverse of the rotation represented by this basis object.
+	 */
+	public Rot getInverseRotation() {
+		return this.inverseRotation;
 	}
 	
 

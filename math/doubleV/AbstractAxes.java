@@ -24,28 +24,24 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.WeakHashMap;
-
-import IK.PerfTimer;
-import IK.doubleIK.G;
-import data.EWBIKLoader;
-import data.JSONObject;
-import data.LoadManager;
-import data.SaveManager;
-import data.Saveable;
+import java.util.function.Consumer;
 
 /**
  * @author Eron Gjoni
  */
-public abstract class AbstractAxes implements AxisDependency, Saveable {
+public abstract class AbstractAxes implements AxisDependency, Saveable, CanLoad {
 	public static final int NORMAL = 0, IGNORE = 1, FORWARD = 2;
 	public static final int RIGHT = 1, LEFT = -1; 
 	public static final int X =0, Y=1, Z=2; 
 
 
 	public boolean debug = false;
+	//protected int globalChirality = RIGHT;
+	//protected int localChirality = RIGHT;
 
 	public AbstractBasis localMBasis; 
 	public AbstractBasis globalMBasis;
@@ -109,6 +105,9 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 		//this.updateChiralities();
 	}
 
+	
+
+
 	public AbstractAxes getParentAxes() {
 		if(this.parent == null) 
 			return null;
@@ -119,7 +118,7 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 	public void updateGlobal() {
 		if(this.dirty) {
 			if(this.areGlobal) {
-				getGlobalMBasis().adoptValues(this.localMBasis);
+				globalMBasis.adoptValues(this.localMBasis);
 			} else {
 				getParentAxes().updateGlobal();				
 				getParentAxes().getGlobalMBasis().setToGlobalOf(this.localMBasis, this.globalMBasis);			
@@ -169,9 +168,13 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 	public void setParent(AbstractAxes intendedParent, Object requestedBy) {	
 		this.updateGlobal();
 		AbstractAxes oldParent = this.getParentAxes();
-		for(DependencyReference<AxisDependency> ad : this.dependentsRegistry) {
+		/*for(DependencyReference<AxisDependency> ad : this.dependentsRegistry) {
 			ad.get().parentChangeWarning(this, oldParent, intendedParent, requestedBy);
-		}
+		}*/
+		forEachDependent(
+				(ad) -> ad.get().parentChangeWarning(this, oldParent, intendedParent, requestedBy));
+		
+		
 		if(intendedParent != null && intendedParent != this) {
 			intendedParent.updateGlobal(); 
 			intendedParent.getGlobalMBasis().setToLocalOf(globalMBasis, localMBasis);			
@@ -188,12 +191,65 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 		}
 		this.markDirty();
 		this.updateGlobal();
-		for(DependencyReference<AxisDependency> ad : this.dependentsRegistry) {
+		
+		forEachDependent(
+				(ad) -> ad.get().parentChangeCompletionNotice(this, oldParent, intendedParent, requestedBy));
+		/*for(DependencyReference<AxisDependency> ad : this.dependentsRegistry) {
 			ad.get().parentChangeCompletionNotice(this, oldParent, intendedParent, requestedBy);
+		}*/
+	}
+	
+	/**
+	 * runs the given runnable on each dependent axis,
+	 * taking advantage of the call to remove entirely any 
+	 * weakreferences to elements that have been cleaned up by the garbage collector. 
+	 * @param r
+	 */
+	public void forEachDependent(Consumer<DependencyReference<AxisDependency>> action) {		
+		Iterator<DependencyReference<AxisDependency>> i = dependentsRegistry.iterator();
+		while (i.hasNext()) {
+			DependencyReference<AxisDependency> dr = i.next();
+			if(dr.get() != null) {
+				action.accept(dr);
+			} else {
+				i.remove();
+			}		    
 		}
 	}
+	
+	public int getGlobalChirality() {
+		this.updateGlobal();
+		return this.getGlobalMBasis().chirality;
+	}
 
+	public int getLocalChirality() {
+		this.updateGlobal();
+		return this.getLocalMBasis().chirality;
+	}	
 
+	/**
+	 * True if the input axis of this Axes object in global coordinates should be multiplied by negative one after rotation. 
+	 * By default, this always returns false. But can be overriden for more advanced implementations
+	 * allowing for reflection transformations. 
+	 * @param axis
+	 * @return true if axis should be flipped, false otherwise. Default is false. 
+	 */
+	public boolean isGlobalAxisFlipped(int axis) {
+		this.updateGlobal();
+		return globalMBasis.isAxisFlipped(axis);
+	}
+	
+	/**
+	 * True if the input axis of this Axes object in local coordinates should be multiplied by negative one after rotation. 
+	 * By default, this always returns false. But can be overriden for more advanced implementations
+	 * allowing for reflection transformations. 
+	 * @param axis
+	 * @return true if axis should be flipped, false otherwise. Default is false. 
+	 */
+	public boolean isLocalAxisFlipped(int axis) {
+		return localMBasis.isAxisFlipped(axis);
+	}
+	
 	/**
 	 * Sets the parentAxes for this axis locally. 
 	 * in other words, lx,ly,lz remain unchanged, but globalX, globalY, and globalZ 
@@ -224,7 +280,6 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 	 * @return
 	 */
 	public <V extends Vec3d<?>> V getGlobalOf(V in) {
-		this.updateGlobal();
 		V result =  (V) in.copy();
 		setToGlobalOf(in, result);
 		return  result;
@@ -283,6 +338,7 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 
 
 	public <V extends Vec3d<?>> V getLocalOf(V in) {		
+		this.updateGlobal();
 		return getGlobalMBasis().getLocalOf(in);
 	}
 
@@ -307,6 +363,7 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 	 */
 
 	public <V extends Vec3d<?>> void setToLocalOf(V in, V out) {
+		this.updateGlobal();
 		this.getGlobalMBasis().setToLocalOf(in, out);
 	}
 
@@ -320,7 +377,8 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 		this.setToLocalOf(in.p2(), out.p2());
 	}
 
-	public void setToLocalOf(AffineBasis input, AffineBasis output) {
+	public void setToLocalOf(AbstractBasis input, AbstractBasis output) {
+		this.updateGlobal();
 		this.getGlobalMBasis().setToLocalOf(input, output);
 	}
 
@@ -334,9 +392,7 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 
 	public abstract AbstractAxes getLocalOf(AbstractAxes input);	
 
-	public AffineBasis getLocalOf(AffineBasis input) {
-		return new AffineBasis(this.getLocalOf(input.getXRay()), this.getLocalOf(input.getYRay()), this.getLocalOf(input.getZRay()));
-	}
+	public abstract <B extends AbstractBasis> B getLocalOf(B input);
 
 	public <V extends Vec3d<?>> void translateByLocal(V translate) {    
 		this.updateGlobal();
@@ -564,6 +620,21 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 		this.markDirty();
 	}
 
+	/**
+	 * updates the axes object such that its global orientation 
+	 * matches the given Rot object. 
+	 * @param rotation
+	 */
+	public void setGlobalOrientationTo(Rot rotation) {
+		this.updateGlobal();
+		if(this.getParentAxes() != null) {
+			this.getGlobalMBasis().rotateTo(rotation);
+			getParentAxes().getGlobalMBasis().setToLocalOf(this.globalMBasis, this.localMBasis);
+		} else {
+			this.getLocalMBasis().rotateTo(rotation);
+		}
+		this.markDirty();
+	}
 
 
 	public void registerDependent(AxisDependency newDependent) {
@@ -632,12 +703,57 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 	}
 	
 	public AbstractBasis getGlobalMBasis() {
+		this.updateGlobal();
 		return globalMBasis;
 	}
 	
 	public AbstractBasis getLocalMBasis() {
 		return localMBasis;
 	}
+	
+	@Override
+	public JSONObject getSaveJSON(SaveManager saveManager) {
+		this.updateGlobal();
+		JSONObject thisAxes = new JSONObject(); 
+		JSONObject shearScale = new JSONObject();
+		SGVec_3d xShear = new SGVec_3d(); 
+		SGVec_3d yShear = new SGVec_3d(); 
+		SGVec_3d zShear = new SGVec_3d(); 
+
+		this.getLocalMBasis().setToShearXBase(xShear);
+		this.getLocalMBasis().setToShearYBase(yShear);
+		this.getLocalMBasis().setToShearZBase(zShear);
+
+		shearScale.setJSONArray("x", xShear.toJSONArray());
+		shearScale.setJSONArray("y", yShear.toJSONArray());
+		shearScale.setJSONArray("z", zShear.toJSONArray());
+		
+		thisAxes.setJSONArray("translation", (new SGVec_3d(getLocalMBasis().translate)).toJSONArray());
+		thisAxes.setJSONArray("rotation", getLocalMBasis().rotation.toJsonArray());
+		thisAxes.setJSONObject("bases", shearScale);
+
+		//thisAxes.setJSONArray("flippedAxes", saveManager.primitiveArrayToJSONArray(this.getLocalMBasis().flippedAxes));
+		String parentHash = "-1"; 
+		if(getParentAxes() != null) parentHash = ((Saveable)getParentAxes()).getIdentityHash();
+		thisAxes.setString("parent",  parentHash);
+		thisAxes.setInt("slipType", this.getSlipType());
+		thisAxes.setString("identityHash",  this.getIdentityHash());
+		return thisAxes;
+	}
+
+	@Override
+	public void loadFromJSONObject(JSONObject j, LoadManager l) {
+		SGVec_3d origin = new SGVec_3d(j.getJSONArray("translation"));		
+		Rot rotation = new Rot(j.getJSONArray("rotation"));
+		this.getLocalMBasis().translate = origin;
+		this.getLocalMBasis().rotation = rotation;
+		this.getLocalMBasis().refreshPrecomputed();
+		AbstractAxes par = (AbstractAxes) l.getObjectFor(AbstractAxes.class, j, "parent");
+		if(par != null)
+			this.setRelativeToParent(par);
+		this.setSlipType(j.getInt("slipType"));
+	}
+
 
 	public void axisSlipWarning(AbstractAxes globalPriorToSlipping, AbstractAxes globalAfterSlipping, AbstractAxes actualAxis, ArrayList<Object>dontWarn) {
 		this.updateGlobal();
@@ -687,6 +803,22 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 		this.updateGlobal();
 
 		notifyDependentsOfSlipCompletion(originalGlobal);
+	}
+	
+	/**
+	 * You probably shouldn't touch this unless you're implementing i/o or undo/redo. 
+	 * @return
+	 */
+	protected DependencyReference<AbstractAxes> getWeakRefToParent() {
+		return this.parent;
+	}
+	
+	/**
+	 * You probably shouldn't touch this unless you're implementing i/o or undo/redo. 
+	 * @return
+	 */
+	protected void setWeakRefToParent(DependencyReference<AbstractAxes> parentRef) {
+		this.parent = parentRef;
 	}
 
 	public void slipTo(AbstractAxes newAxisGlobal, ArrayList<Object> dontWarn) {
@@ -757,82 +889,15 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 	}
 
 	public void markDependentsDirty() {
-		for(DependencyReference<AxisDependency> ad : dependentsRegistry) {
-			ad.get().markDirty();
-		}
+		forEachDependent((a) -> a.get().markDirty());
 	}
 
 	public String toString() {
 		String global = "Global: " + getGlobalMBasis().toString();
 		String local = "Local: " + getLocalMBasis().toString();
 		return global + "\n" + local;
-	}
+	}	
 	
-	
-	@Override
-	public JSONObject getSaveJSON(SaveManager saveManager) {
-		this.updateGlobal();
-		JSONObject thisAxes = new JSONObject(); 
-		JSONObject shearScale = new JSONObject();
-		SGVec_3d xShear = new SGVec_3d(); 
-		SGVec_3d yShear = new SGVec_3d(); 
-		SGVec_3d zShear = new SGVec_3d(); 
-
-		this.getLocalMBasis().setToShearXBase(xShear);
-		this.getLocalMBasis().setToShearYBase(yShear);
-		this.getLocalMBasis().setToShearZBase(zShear);
-
-		shearScale.setJSONArray("x", xShear.toJSONArray());
-		shearScale.setJSONArray("y", yShear.toJSONArray());
-		shearScale.setJSONArray("z", zShear.toJSONArray());
-		
-		thisAxes.setJSONArray("translation", (new SGVec_3d(getLocalMBasis().translate)).toJSONArray());
-		thisAxes.setJSONArray("rotation", getLocalMBasis().rotation.toJsonArray());
-		thisAxes.setJSONObject("bases", shearScale);
-
-		//thisAxes.setJSONArray("flippedAxes", saveManager.primitiveArrayToJSONArray(this.getLocalMBasis().flippedAxes));
-		String parentHash = "-1"; 
-		if(parent != null) parentHash = getParentAxes().getIdentityHash();
-		thisAxes.setString("parent",  parentHash);
-		thisAxes.setInt("slipType", this.getSlipType());
-		thisAxes.setString("identityHash",  this.getIdentityHash());
-		return thisAxes;
-	}
-
-	@Override
-	public void loadFromJSONObject(JSONObject j, LoadManager l) {
-		SGVec_3d origin = new SGVec_3d(j.getJSONArray("translation"));		
-		Rot rotation = new Rot(j.getJSONArray("rotation"));
-		this.getLocalMBasis().translate = origin;
-		this.getLocalMBasis().rotation = rotation;
-		this.getLocalMBasis().refreshPrecomputed();
-		AbstractAxes par = (AbstractAxes) l.getObjectFor(AbstractAxes.class, j, "parent");
-		if(par != null)
-			this.setRelativeToParent(par);
-		this.setSlipType(j.getInt("slipType"));
-	}
-
-	@Override
-	public void notifyOfSaveIntent(SaveManager saveManager) {}	
-
-	boolean isLoading = false;
-	@Override
-	public void setLoading(boolean loading) {isLoading = loading;}
-	@Override
-	public boolean isLoading() {return isLoading;}
-	@Override
-	public void notifyOfSaveCompletion(SaveManager saveManager) {}
-	
-	@Override
-	public void notifyOfLoadCompletion() {
-		this.markDirty();
-	}
-	
-	public void makeSaveable(SaveManager saveManager) {
-		if(this.getParentAxes() != null) 
-			getParentAxes().makeSaveable(saveManager);
-		saveManager.addToSaveState(this);
-	}
 	
 	/**
 	 * custom Weakreference extension for garbage collection
