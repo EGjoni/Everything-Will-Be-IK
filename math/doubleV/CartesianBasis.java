@@ -1,4 +1,4 @@
-package sceneGraph.math.doubleV;
+package math.doubleV;
 
 public class CartesianBasis extends AbstractBasis {
 

@@ -18,9 +18,9 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 
-package sceneGraph.math.doubleV;
+package math.doubleV;
 
-import sceneGraph.math.floatV.SGVec_3f;
+import math.floatV.SGVec_3f;
 
 /**
  * @author Eron Gjoni

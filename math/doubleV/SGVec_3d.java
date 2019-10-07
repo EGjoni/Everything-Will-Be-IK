@@ -14,18 +14,15 @@
  * limitations under the License.
  ******************************************************************************/
 
-package sceneGraph.math.doubleV;
+package math.doubleV;
 
 import java.io.Serializable;
 
-import sceneGraph.data.CanLoad;
-import sceneGraph.data.JSONArray;
-import sceneGraph.data.JSONObject;
-import sceneGraph.data.LoadManager;
-import sceneGraph.data.SaveManager;
-import sceneGraph.data.Saveable;
-import sceneGraph.math.floatV.SGVec_3f;
-import sceneGraph.math.floatV.Vec3f;
+import asj.CanLoad;
+import asj.data.JSONArray;
+import asj.data.JSONObject;
+import math.floatV.SGVec_3f;
+
 
 //import com.badlogic.gdx.utils.GdxRuntimeException;
 //import com.badlogic.gdx.utils.NumberUtils;

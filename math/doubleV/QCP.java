@@ -1,9 +1,4 @@
-package sceneGraph.math.doubleV;
-
-import sceneGraph.math.doubleV.MRotation;
-import sceneGraph.math.doubleV.MathUtils;
-import sceneGraph.math.doubleV.Rot;
-import sceneGraph.math.doubleV.SGVec_3d;
+package math.doubleV;
 
 public class QCP {
 

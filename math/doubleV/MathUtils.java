@@ -14,11 +14,12 @@
  * limitations under the License.
  ******************************************************************************/
 
-package sceneGraph.math.doubleV;
+package math.doubleV;
 
 import java.util.Random;
 
-import sceneGraph.math.RandomXS128;
+import math.RandomXS128;
+
 
 /** Utility and fast math functions.
 *

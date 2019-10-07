@@ -16,9 +16,7 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. 
 
  */
-
-package sceneGraph.math.doubleV;
-
+package math.doubleV;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -29,6 +27,16 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.WeakHashMap;
 import java.util.function.Consumer;
+
+import asj.*;
+import asj.*;
+import asj.data.*;
+import math.*;
+import math.doubleV.AbstractBasis;
+import math.doubleV.AxisDependency;
+import math.doubleV.Vec3d;
+
+
 
 /**
  * @author Eron Gjoni

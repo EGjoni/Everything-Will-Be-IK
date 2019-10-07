@@ -1,6 +1,4 @@
-package sceneGraph.math;
-
-import sceneGraph.IKVector;
+package math;
 
 public interface Vec<T extends Vec<T>>{
 	

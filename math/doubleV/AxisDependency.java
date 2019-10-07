@@ -18,7 +18,9 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 
-package sceneGraph.math.doubleV;
+package math.doubleV;
+
+
 
 public interface AxisDependency {
 	default void emancipate() {};

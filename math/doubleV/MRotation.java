@@ -3,23 +3,10 @@
  * but it is mutable. It is licensed under the Apache Commons License.
  */
 
-package sceneGraph.math.doubleV;
+package math.doubleV;
 
-import org.apache.commons.math3.*;
-import org.apache.commons.math3.exception.MathArithmeticException;
-import org.apache.commons.math3.exception.MathIllegalArgumentException;
-import org.apache.commons.math3.exception.ZeroException;
-import org.apache.commons.math3.exception.util.LocalizedFormats;
-import org.apache.commons.math3.geometry.euclidean.threed.CardanEulerSingularityException;
-import org.apache.commons.math3.geometry.euclidean.threed.NotARotationMatrixException;
-import org.apache.commons.math3.util.FastMath;
-import org.apache.commons.math3.util.Precision;
-
-import sceneGraph.math.floatV.SGVec_3f;
-
-
-
-
+import numerical.Precision;
+import numerical.Precision.*;
 
 public class MRotation {
 	public static final MRotation IDENTITY = new MRotation(1.0, 0.0, 0.0, 0.0, false);
@@ -104,11 +91,15 @@ public class MRotation {
 	 * @param angle rotation angle.
 	 * @exception MathIllegalArgumentException if the axis norm is zero
 	 */
-	public <V extends Vec3d<?>> MRotation(V axis, double angle) throws MathIllegalArgumentException {
+	public <V extends Vec3d<?>> MRotation(V axis, double angle)  {
 
 		double norm = axis.mag();
 		if (norm == 0) {
-			throw new MathIllegalArgumentException(LocalizedFormats.ZERO_NORM_FOR_ROTATION_AXIS);
+			try {
+				throw new Exception("Zero Norm for Rotation defining vector");
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 
 		double halfAngle = -0.5 * angle;					
@@ -125,14 +116,15 @@ public class MRotation {
 	 * without changing the angle.  
 	 *
 	 * @param angle
+	 * @throws Exception 
 	 */
-	public <T extends SGVec_3d> void setAxis(T  newAxis) {
+	public <T extends SGVec_3d> void setAxis(T  newAxis) throws Exception {
 
 		double angle = this.getAngle();
 		double norm = newAxis.mag();
 		if (norm == 0) {
 			try {
-				throw new MathIllegalArgumentException(LocalizedFormats.ZERO_NORM_FOR_ROTATION_AXIS);
+				throw new Exception("Zero Norm for Rotation Axis");
 			} catch (MathIllegalArgumentException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -278,9 +270,12 @@ public class MRotation {
 				ort[1][0] * (ort[0][1] * ort[2][2] - ort[2][1] * ort[0][2]) +
 				ort[2][0] * (ort[0][1] * ort[1][2] - ort[1][1] * ort[0][2]);
 		if (det < 0.0) {
-			throw new NotARotationMatrixException(
-					LocalizedFormats.CLOSEST_ORTHOGONAL_MATRIX_HAS_NEGATIVE_DETERMINANT,
-					det);
+			try {
+				throw new Exception("Closest Orthogonal Has Negative Determinant");
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 
 		double[] quat = mat2quat(ort);
@@ -335,9 +330,11 @@ public class MRotation {
 				ort[1][0] * (ort[0][1] * ort[2][2] - ort[2][1] * ort[0][2]) +
 				ort[2][0] * (ort[0][1] * ort[1][2] - ort[1][1] * ort[0][2]);
 		if (det < 0.0) {
-			throw new NotARotationMatrixException(
-					LocalizedFormats.CLOSEST_ORTHOGONAL_MATRIX_HAS_NEGATIVE_DETERMINANT,
-					det);
+			try {
+				throw new Exception("Closest Orthogonal Has Negative Determinant");
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 
 		double[] quat = mat2quat(ort);
@@ -364,8 +361,7 @@ public class MRotation {
 	 * @exception MathArithmeticException if the norm of one of the vectors is zero,
 	 * or if one of the pair is degenerated (i.e. the vectors of the pair are colinear)
 	 */
-	public <V extends Vec3d<?>> MRotation(V u1, V u2, V v1, V v2)
-			throws MathArithmeticException {
+	public <V extends Vec3d<?>> MRotation(V u1, V u2, V v1, V v2) {
 
 		// norms computation
 		double u1u1 = u1.dot(u1);
@@ -535,7 +531,7 @@ public class MRotation {
 	 * @param v desired image of u by the rotation
 	 * @exception MathArithmeticException if the norm of one of the vectors is zero
 	 */
-	public <V extends Vec3d<?>> MRotation(V u, V v) throws MathArithmeticException {
+	public <V extends Vec3d<?>> MRotation(V u, V v) {
 
 		double normProduct = u.mag() * v.mag();
 		if (normProduct == 0) {
@@ -754,8 +750,12 @@ public class MRotation {
 
 	public MRotation getInverse() {
 		final double squareNorm = q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3;
-		if (squareNorm < Precision.SAFE_MIN) {
-			throw new ZeroException(LocalizedFormats.NORM, squareNorm);
+		if (squareNorm < Precision.SAFE_MIN_DOUBLE) {
+			try {
+				throw new Exception("Zero Norm");
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 
 		return new MRotation(q0 / squareNorm,
@@ -772,11 +772,11 @@ public class MRotation {
 	 */
 	public double getAngle() {
 		if ((q0 < -0.1) || (q0 > 0.1)) {			
-			return 2 * FastMath.asin(Math.sqrt(q1 * q1 + q2 * q2 + q3 * q3));
+			return 2 * Math.asin(Math.sqrt(q1 * q1 + q2 * q2 + q3 * q3));
 		} else if (q0 < 0) {
-			return 2 * FastMath.acos(-q0);
+			return 2 * Math.acos(-q0);
 		}		
-		return 2 * FastMath.acos(q0);
+		return 2 * Math.acos(q0);
 	}
 
 	/** Get the Cardan or Euler angles corresponding to the instance.
@@ -1375,6 +1375,13 @@ public class MRotation {
 				false);
 	}
 
+	
+	public MRotation setToConjugate() {
+		q1 = -q1;
+		q2 = -q2;
+		q3 = -q3;		
+		return this;
+	}
 
 	public void set(double q0, double q1, double q2, double q3,
 			boolean needsNormalization) {
@@ -1419,8 +1426,12 @@ public class MRotation {
 	public MRotation normalize() {
 		final double norm = len();
 
-		if (norm < Precision.SAFE_MIN) {
-			throw new ZeroException(LocalizedFormats.NORM, norm);
+		if (norm < Precision.SAFE_MIN_DOUBLE) {
+			try {
+				throw new Exception("Zero Norm");
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 
 		return new MRotation(q0 / norm,
@@ -1429,11 +1440,15 @@ public class MRotation {
 				q3 / norm);
 	}
 
-	public <V extends Vec3d<?>> void set(V u, V v) throws MathArithmeticException {
+	public <V extends Vec3d<?>> void set(V u, V v) {
 
 		double normProduct = u.mag() * v.mag();
 		if (normProduct == 0) {
-			throw new MathArithmeticException(LocalizedFormats.ZERO_NORM_FOR_ROTATION_DEFINING_VECTOR);
+			try {
+				throw new Exception("Zero Norm for Rotation defining vector");
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 
 		double dot = u.dot(v);
@@ -1459,11 +1474,15 @@ public class MRotation {
 
 	}
 
-	public <V extends Vec3d<?>> void set(V  axis, double angle) throws MathIllegalArgumentException {
+	public <V extends Vec3d<?>> void set(V  axis, double angle) {
 
 		double norm = axis.mag();
 		if (norm == 0) {
-			throw new MathIllegalArgumentException(LocalizedFormats.ZERO_NORM_FOR_ROTATION_AXIS);
+			try {
+				throw new Exception("Zero Norm for Rotation defining vector");
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 
 		double halfAngle = -0.5 * angle;
@@ -1473,7 +1492,6 @@ public class MRotation {
 		q1 = coeff * axis.x;
 		q2 = coeff * axis.y;
 		q3 = coeff * axis.z;
-
 	}
 
 	/** Perfect orthogonality on a 3X3 matrix.

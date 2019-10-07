@@ -1,8 +1,12 @@
-package sceneGraph.math.doubleV;
+package math.doubleV;
 
-import sceneGraph.math.doubleV.Rot;
-import sceneGraph.math.floatV.Vec3f;
-import sceneGraph.numerical.Precision;
+import asj.*;
+import asj.*;
+import asj.data.*;
+import math.*;
+import math.doubleV.*;
+import math.floatV.Vec3f;
+
 
 /**
  * Minimal implementation of basis transformations. 

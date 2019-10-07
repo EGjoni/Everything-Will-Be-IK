@@ -1,15 +1,12 @@
-package sceneGraph.math.doubleV;
+package math.doubleV;
 
-import data.JSONObject;
-import data.LoadManager;
-import sceneGraph.math.doubleV.AbstractAxes;
-import sceneGraph.math.doubleV.Rot;
-import sceneGraph.math.floatV.SGVec_3f;
+import asj.LoadManager;
+import asj.data.JSONObject;
 
 public class CartesianAxes extends AbstractAxes {
 
 	
-	public CartesianAxes(AbstractBasis globalBasis, sceneGraph.math.doubleV.AbstractAxes parent) {
+	public CartesianAxes(AbstractBasis globalBasis, AbstractAxes parent) {
 		super(globalBasis, parent);
 	}
 	public CartesianAxes(Vec3d<?> origin, Vec3d<?> inX, Vec3d<?> inY, Vec3d<?> inZ,

@@ -14,12 +14,10 @@
  * limitations under the License.
  ******************************************************************************/
 
-package sceneGraph.math.doubleV;
+package math.doubleV;
 
-
-import sceneGraph.math.Vec;
-import sceneGraph.math.floatV.SGVec_3f;
-import sceneGraph.math.floatV.Vec3f;
+import math.Vec;
+import math.floatV.Vec3f;
 
 /** Encapsulates a general vector. Allows chaining operations by returning a reference to itself in all modification methods. See
  * {@link SGVec_2d} and {@link SGVec_3d} for specific imlementations.

@@ -1,10 +1,6 @@
-package sceneGraph.math.doubleV;
+package math.doubleV;
 
-import sceneGraph.IKVector;
-import sceneGraph.math.Vec;
-import sceneGraph.math.floatV.SGVec_3f;
-import sceneGraph.math.floatV.Vec3f;
-import sceneGraph.math.floatV.Vecf;
+import math.floatV.Vec3f;
 
 public abstract class Vec3d<T extends Vec3d<T>> implements Vecd<T> {
 		
