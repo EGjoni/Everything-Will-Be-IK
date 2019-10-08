@@ -125,5 +125,12 @@ public class CartesianAxes extends AbstractAxes {
 		copy.markDirty();
 		return copy;
 	}
+
+	@Override
+	public <B extends AbstractBasis> B getLocalOf(B input) {
+		CartesianBasis newBasis = new CartesianBasis((CartesianBasis)input);
+		getGlobalMBasis().setToLocalOf(input, newBasis);
+		return (B)newBasis;
+	}
 	
 }
