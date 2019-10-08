@@ -23,16 +23,17 @@ import java.util.HashMap;
 
 import IK.doubleIK.SegmentedArmature;
 import IK.doubleIK.SegmentedArmature.WorkingBone;
+import asj.LoadManager;
+import asj.SaveManager;
+import asj.Saveable;
+import asj.data.JSONObject;
 import data.EWBIKLoader;
 import data.EWBIKSaver;
 import math.doubleV.AbstractAxes;
 import math.doubleV.Rot;
 import math.doubleV.SGVec_3d;
 import math.doubleV.Vec3d;
-import asj.LoadManager;
-import asj.SaveManager;
-import asj.Saveable;
-import asj.data.JSONObject;
+
 
 /**
  * An Armature is a hierarchical collection of Bones. 

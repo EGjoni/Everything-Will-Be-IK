@@ -811,8 +811,7 @@ public class MRotation {
 	 * @exception CardanEulerSingularityException if the rotation is
 	 * singular with respect to the angles set specified
 	 */
-	public double[] getAngles(RotationOrder order)
-			throws CardanEulerSingularityException {
+	public double[] getAngles(RotationOrder order) {
 
 		if (order == RotationOrder.XYZ) {
 
@@ -824,7 +823,12 @@ public class MRotation {
 			SGVec_3d v1 = applyTo(RotationOrder.Z);
 			SGVec_3d v2 = applyInverseTo(RotationOrder.X);
 			if  ((v2.z < -0.9999999999) || (v2.z > 0.9999999999)) {
-				throw new CardanEulerSingularityException(true);
+				try {
+					throw new CardanEulerSingularityException(true);
+				} catch (CardanEulerSingularityException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}
 			return new double[] {
 					Math.atan2(-(v1.y), v1.z),
@@ -842,7 +846,11 @@ public class MRotation {
 			SGVec_3d v1 = applyTo(RotationOrder.X);
 			SGVec_3d v2 = applyInverseTo(RotationOrder.Y);
 			if ((v2.y < -0.9999999999) || (v2.y > 0.9999999999)) {
-				throw new CardanEulerSingularityException(true);
+				try {
+					throw new CardanEulerSingularityException(true);
+				} catch (CardanEulerSingularityException e) {
+					e.printStackTrace();
+				}
 			}
 			return new double[] {
 					Math.atan2(v1.z, v1.y),
@@ -860,7 +868,11 @@ public class MRotation {
 			SGVec_3d v1 = applyTo(RotationOrder.Z);
 			SGVec_3d v2 = applyInverseTo(RotationOrder.Y);
 			if ((v2.z < -0.9999999999) || (v2.z > 0.9999999999)) {
-				throw new CardanEulerSingularityException(true);
+				try {
+					throw new CardanEulerSingularityException(true);
+				} catch (CardanEulerSingularityException e) {
+					e.printStackTrace();
+				}
 			}
 			return new double[] {
 					Math.atan2(v1.x, v1.z),
@@ -878,7 +890,11 @@ public class MRotation {
 			SGVec_3d v1 = applyTo(RotationOrder.X);
 			SGVec_3d v2 = applyInverseTo(RotationOrder.Y);
 			if ((v2.x < -0.9999999999) || (v2.x > 0.9999999999)) {
-				throw new CardanEulerSingularityException(true);
+				try {
+					throw new CardanEulerSingularityException(true);
+				} catch (CardanEulerSingularityException e) {
+					e.printStackTrace();
+				}
 			}
 			return new double[] {
 					Math.atan2(-(v1.z), v1.x),
@@ -896,7 +912,11 @@ public class MRotation {
 			SGVec_3d v1 = applyTo(RotationOrder.Y);
 			SGVec_3d v2 = applyInverseTo(RotationOrder.Z);
 			if ((v2.y < -0.9999999999) || (v2.y > 0.9999999999)) {
-				throw new CardanEulerSingularityException(true);
+				try {
+					throw new CardanEulerSingularityException(true);
+				} catch (CardanEulerSingularityException e) {
+					e.printStackTrace();
+				}
 			}
 			return new double[] {
 					Math.atan2(-(v1.x), v1.y),
@@ -914,7 +934,11 @@ public class MRotation {
 			SGVec_3d v1 = applyTo(RotationOrder.X);
 			SGVec_3d v2 = applyInverseTo(RotationOrder.Z);
 			if ((v2.x < -0.9999999999) || (v2.x > 0.9999999999)) {
-				throw new CardanEulerSingularityException(true);
+				try {
+					throw new CardanEulerSingularityException(true);
+				} catch (CardanEulerSingularityException e) {
+					e.printStackTrace();
+				}
 			}
 			return new double[] {
 					Math.atan2(v1.y, v1.x),
@@ -932,7 +956,11 @@ public class MRotation {
 			SGVec_3d v1 = applyTo(RotationOrder.X);
 			SGVec_3d v2 = applyInverseTo(RotationOrder.X);
 			if ((v2.x < -0.9999999999) || (v2.x > 0.9999999999)) {
-				throw new CardanEulerSingularityException(false);
+				try {
+					throw new CardanEulerSingularityException(true);
+				} catch (CardanEulerSingularityException e) {
+					e.printStackTrace();
+				}
 			}
 			return new double[] {
 					Math.atan2(v1.y, -v1.z),
@@ -950,7 +978,11 @@ public class MRotation {
 			SGVec_3d v1 = applyTo(RotationOrder.X);
 			SGVec_3d v2 = applyInverseTo(RotationOrder.X);
 			if ((v2.x < -0.9999999999) || (v2.x > 0.9999999999)) {
-				throw new CardanEulerSingularityException(false);
+				try {
+					throw new CardanEulerSingularityException(true);
+				} catch (CardanEulerSingularityException e) {
+					e.printStackTrace();
+				}
 			}
 			return new double[] {
 					Math.atan2(v1.z, v1.y),
@@ -968,7 +1000,11 @@ public class MRotation {
 			SGVec_3d v1 = applyTo(RotationOrder.Y);
 			SGVec_3d v2 = applyInverseTo(RotationOrder.Y);
 			if ((v2.y < -0.9999999999) || (v2.y > 0.9999999999)) {
-				throw new CardanEulerSingularityException(false);
+				try {
+					throw new CardanEulerSingularityException(true);
+				} catch (CardanEulerSingularityException e) {
+					e.printStackTrace();
+				}
 			}
 			return new double[] {
 					Math.atan2(v1.x, v1.z),
@@ -986,7 +1022,11 @@ public class MRotation {
 			SGVec_3d v1 = applyTo(RotationOrder.Y);
 			SGVec_3d v2 = applyInverseTo(RotationOrder.Y);
 			if ((v2.y < -0.9999999999) || (v2.y > 0.9999999999)) {
-				throw new CardanEulerSingularityException(false);
+				try {
+					throw new CardanEulerSingularityException(true);
+				} catch (CardanEulerSingularityException e) {
+					e.printStackTrace();
+				}
 			}
 			return new double[] {
 					Math.atan2(v1.z, -v1.x),
@@ -1004,7 +1044,11 @@ public class MRotation {
 			SGVec_3d v1 = applyTo(RotationOrder.Z);
 			SGVec_3d v2 = applyInverseTo(RotationOrder.Z);
 			if ((v2.z < -0.9999999999) || (v2.z > 0.9999999999)) {
-				throw new CardanEulerSingularityException(false);
+				try {
+					throw new CardanEulerSingularityException(true);
+				} catch (CardanEulerSingularityException e) {
+					e.printStackTrace();
+				}
 			}
 			return new double[] {
 					Math.atan2(v1.x, -v1.y),
@@ -1022,7 +1066,11 @@ public class MRotation {
 			SGVec_3d v1 = applyTo(RotationOrder.Z);
 			SGVec_3d v2 = applyInverseTo(RotationOrder.Z);
 			if ((v2.z < -0.9999999999) || (v2.z > 0.9999999999)) {
-				throw new CardanEulerSingularityException(false);
+				try {
+					throw new CardanEulerSingularityException(true);
+				} catch (CardanEulerSingularityException e) {
+					e.printStackTrace();
+				}
 			}
 			return new double[] {
 					Math.atan2(v1.y, v1.x),
