@@ -1,6 +1,4 @@
-package sceneGraph.math.floatV;
-
-import sceneGraph.IKVector;
+package math.floatV;
 
 public final class RotationOrder {
 	
@@ -96,13 +94,13 @@ public final class RotationOrder {
     private final String name;
 
     /** Axis of the first rotation. */
-    private final Vec3f a1;
+    private final SGVec_3f a1;
 
     /** Axis of the second rotation. */
-    private final Vec3f a2;
+    private final SGVec_3f a2;
 
     /** Axis of the third rotation. */
-    private final Vec3f a3;
+    private final SGVec_3f a3;
 
     /** Private constructor.
      * This is a utility class that cannot be instantiated by the user,
@@ -112,8 +110,8 @@ public final class RotationOrder {
      * @param a2 axis of the second rotation
      * @param a3 axis of the third rotation
      */
-    private RotationOrder(final String name,
-                          final Vec3f a1, final Vec3f a2, final Vec3f a3) {
+    private <T extends SGVec_3f> RotationOrder(final String name,
+                          final T a1, final T a2, final T a3) {
         this.name = name;
         this.a1   = a1;
         this.a2   = a2;
@@ -132,21 +130,21 @@ public final class RotationOrder {
     /** Get the axis of the first rotation.
      * @return axis of the first rotation
      */
-    public Vec3f getA1() {
+    public SGVec_3f getA1() {
         return a1;
     }
 
     /** Get the axis of the second rotation.
      * @return axis of the second rotation
      */
-    public Vec3f getA2() {
+    public SGVec_3f getA2() {
         return a2;
     }
 
     /** Get the axis of the second rotation.
      * @return axis of the second rotation
      */
-    public Vec3f getA3() {
+    public SGVec_3f getA3() {
         return a3;
     }
 
