@@ -1,7 +1,7 @@
 package asj;
 public class TypeIdentifier {
-	Object key; 
-	Object value; 
+	public Object key; 
+	public Object value; 
 
 	/**
 	 * A hack to get around Java type erasure. The TypeIdentifier 
@@ -12,7 +12,5 @@ public class TypeIdentifier {
 	public TypeIdentifier(Object key, Object value) {
 		this.key = key;
 		this.value = value; 
-
-
 	}
 }
