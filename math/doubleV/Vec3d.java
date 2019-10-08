@@ -1,8 +1,9 @@
 package math.doubleV;
 
+import asj.CanLoad;
 import math.floatV.Vec3f;
 
-public abstract class Vec3d<T extends Vec3d<T>> implements Vecd<T> {
+public abstract class Vec3d<T extends Vec3d<T>> implements Vecd<T>, CanLoad {
 		
 	private static final long serialVersionUID = 3840054589595372522L;
 
