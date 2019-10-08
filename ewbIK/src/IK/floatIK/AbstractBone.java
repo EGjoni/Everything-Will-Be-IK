@@ -95,7 +95,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 		
 		this.lastRotation = new Rot(MRotation.IDENTITY);
 		if(par != null) {
-			if(this.tag == null || this.tag == "") {
+			if(inputTag == null || inputTag == "") {
 				this.tag = Integer.toString(System.identityHashCode(this));			
 			} else this.tag = inputTag;
 			this.boneHeight = inputBoneHeight;
@@ -171,7 +171,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 
 		this.lastRotation = new Rot(MRotation.IDENTITY);
 		if(par != null) {
-			if(this.tag == null || this.tag == "") {
+			if(inputTag == null || inputTag == "") {
 				this.tag = Integer.toString(System.identityHashCode(this));			
 			} else this.tag = inputTag;
 			this.boneHeight = inputBoneHeight;
@@ -247,7 +247,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 		
 		this.lastRotation = new Rot(MRotation.IDENTITY);
 		if(par != null) {
-			if(this.tag == null || this.tag == "") {
+			if(inputTag == null || inputTag == "") {
 				this.tag = Integer.toString(System.identityHashCode(this));			
 			} else this.tag = inputTag;
 
@@ -333,7 +333,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 
 		this.lastRotation = new Rot(MRotation.IDENTITY);
 		if(parArma != null) {
-			if(this.tag == null || this.tag == "") {
+			if(inputTag == null || inputTag == "") {
 				this.tag = Integer.toString(System.identityHashCode(this));			
 			} else this.tag = inputTag;
 
@@ -396,7 +396,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 
 		this.lastRotation = new Rot(MRotation.IDENTITY);
 		if(parArma != null) {
-			if(this.tag == null || this.tag == "") {
+			if(inputTag == null || inputTag == "") {
 				this.tag = Integer.toString(System.identityHashCode(this));			
 			} else this.tag = inputTag;
 
@@ -1164,5 +1164,9 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	@Override 
 	public int compareTo(AbstractBone i) {
 		return this.ancestorCount - i.ancestorCount;
+	}
+	
+	public String toString() {
+		return this.getTag();
 	}
 }

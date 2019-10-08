@@ -11,17 +11,19 @@ import IK.doubleIK.AbstractBone;
 import IK.doubleIK.AbstractIKPin;
 import IK.doubleIK.AbstractLimitCone;
 import IK.doubleIK.Constraint;
-import sceneGraph.math.doubleV.AbstractAxes;
-import sceneGraph.math.doubleV.MRotation;
-import sceneGraph.math.doubleV.Rot;
-import sceneGraph.math.doubleV.SGVec_3d;
-import sceneGraph.math.floatV.SGVec_3f;
+import asj.LoadManager;
+import asj.Saveable;
+import asj.TypeIdentifier;
+import asj.data.JSONArray;
+import asj.data.JSONObject;
+import asj.data.StringFuncs;
+import math.doubleV.AbstractAxes;
 
 public class DoubleBackedLoader {
 		
 	public static File currentFilePath; 
 
-	public static HashMap<String, JSONObject> 	    	axesJSONObjects 		= new HashMap<>();
+	public static HashMap<String, JSONObject> 	    	axesJSONObjects 		= new HashMap<>(); 
 	public static HashMap<String, AbstractAxes>			axesLoadObjects 		= new HashMap<>();  
 
 	public static HashMap<String, JSONObject> 	    	armatureJSONObjects 	= new HashMap<>();

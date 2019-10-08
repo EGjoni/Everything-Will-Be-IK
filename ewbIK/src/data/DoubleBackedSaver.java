@@ -13,6 +13,7 @@ import IK.floatIK.AbstractBone;
 import IK.floatIK.AbstractIKPin;
 import IK.floatIK.AbstractKusudama;
 import IK.floatIK.AbstractLimitCone;
+import sceneGraph.data.JSONObject;
 import sceneGraph.math.doubleV.AbstractAxes;
 import sceneGraph.math.doubleV.MRotation;
 import sceneGraph.math.doubleV.Rot;

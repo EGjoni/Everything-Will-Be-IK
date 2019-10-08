@@ -35,7 +35,7 @@ public abstract class AbstractLimitCone implements Saveable {
 	SGVec_3f controlPoint; 
 	SGVec_3f radialPoint; 
 	
-	//TODO: store this  internally as  cosine to save on the acos call necessary for angleBetween. 
+	//stored internally as  cosine to save on the acos call necessary for vec.angleBetween. 
 	protected float radius; 
 
 	public AbstractKusudama parentKusudama;

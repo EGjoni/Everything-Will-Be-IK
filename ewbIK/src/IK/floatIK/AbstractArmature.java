@@ -118,7 +118,7 @@ public abstract class AbstractArmature implements Saveable {
 	}
 	
 	/**
-	 * The default maximum number of degrees a bone is allowed to rotate per solver iteration. 
+	 * The default maximum number of radians a bone is allowed to rotate per solver iteration. 
 	 * The lower this value, the more natural the pose results. However, this will  the number of iterations 
 	 * the solver requires to converge. 
 	 * @param damp

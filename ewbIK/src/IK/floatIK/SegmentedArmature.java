@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.WeakHashMap;
 
+import sceneGraph.math.floatV.QCP;
 import sceneGraph.math.floatV.AbstractAxes;
 import sceneGraph.math.floatV.Basis;
 import sceneGraph.math.floatV.MRotation;

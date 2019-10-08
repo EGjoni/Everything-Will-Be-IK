@@ -28,7 +28,7 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	protected AbstractAxes limitingAxes; 
 
 	/**
-	 * An array containing all of the KusudamaExample's limitCones. The kusudama is built up
+	 * An array containing all of the Kusudama's limitCones. The kusudama is built up
 	 * with the expectation that any limitCone in the array is connected to the cone at the previous element in the array, 
 	 * and the cone at the next element in the array.  
 	 */
@@ -150,7 +150,7 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	sgRayf constrainedRay = new sgRayf(new SGVec_3f(), new SGVec_3f());
 	Rot rectifiedRot = new Rot(MRotation.IDENTITY);
 	/**
-	 * Snaps the bone this KusudamaExample is constraining to be within the KusudamaExample's orientational and axial limits. 
+	 * Snaps the bone this Kusudama is constraining to be within the Kusudama's orientational and axial limits. 
 	 */
 	public void snapToLimits() {
 		//System.out.println("snapping to limits");
@@ -208,7 +208,7 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	 * @param toSet
 	 */
 	public void setAxesToOrientationSnap(AbstractAxes toSet, AbstractAxes limitingAxes, Float snapStrength) {
-		float[] inBounds = {1f}; 
+		float[] inBounds = {1f}; 		
 		boneRay.p1().set(toSet.origin_()); boneRay.p2().set(toSet.y_().getScaledTo(attachedTo.boneHeight));    
 		SGVec_3f inLimits = this.pointInLimits(boneRay.p2(), inBounds, limitingAxes);
 		/*if(inBounds[0] == -1) {
@@ -251,7 +251,7 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 
 
 	/**
-	 * KusudamaExample constraints decompose the bone orientation into a swing component, and a twist component. 
+	 * Kusudama constraints decompose the bone orientation into a swing component, and a twist component. 
 	 * The "Swing" component is the final direction of the bone. The "Twist" component represents how much 
 	 * the bone is rotated about its own final direction. Where limit cones allow you to constrain the "Swing" 
 	 * component, this method lets you constrain the "twist" component. 
@@ -346,8 +346,8 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	}
 
 	/**
-	 * Given a point (in global coordinates), checks to see if a ray can be extended from the KusudamaExample's
-	 * origin to that point, such that the ray in the KusudamaExample's reference frame is within the range allowed by the KusudamaExample's
+	 * Given a point (in global coordinates), checks to see if a ray can be extended from the Kusudama's
+	 * origin to that point, such that the ray in the Kusudama's reference frame is within the range allowed by the Kusudama's
 	 * coneLimits.
 	 * If such a ray exists, the original point is returned (the point is within the limits). 
 	 * If it cannot exist, the tip of the ray within the kusudama's limits that would require the least rotation
@@ -374,8 +374,8 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 				AbstractLimitCone nextCone = limitCones.get(i+1);				
 				boolean inSegBounds = limitCones.get(i).inBoundsFromThisToNext(nextCone, point, collisionPoint);
 				
-				if(inSegBounds == false && (closestCollisionPoint == null 
-						|| SGVec_3f.angleBetween(collisionPoint, point) < SGVec_3f.angleBetween(point,closestCollisionPoint))) {
+				if(inSegBounds == false && 
+						(closestCollisionPoint == null	|| SGVec_3f.angleBetween(collisionPoint, point) < SGVec_3f.angleBetween(point,closestCollisionPoint))) {
 					closestCollisionPoint = collisionPoint.copy();     
 				} else if( inSegBounds == true) {
 					inBounds[0] = 1;  
@@ -423,8 +423,8 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	}
 
 	/**
-	 * Given a point (in local coordinates), checks to see if a ray can be extended from the KusudamaExample's
-	 * origin to that point, such that the ray in the KusudamaExample's reference frame is within the range allowed by the KusudamaExample's
+	 * Given a point (in local coordinates), checks to see if a ray can be extended from the Kusudama's
+	 * origin to that point, such that the ray in the Kusudama's reference frame is within the range allowed by the Kusudama's
 	 * coneLimits.
 	 * If such a ray exists, the original point is returned (the point is within the limits). 
 	 * If it cannot exist, the tip of the ray within the kusudama's limits that would require the least rotation
@@ -564,8 +564,8 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	}
 
 	/**
-	 * Add a LimitCone to the KusudamaExample. 
-	 * @param newPoint where on the KusudamaExample to add the LimitCone (in KusudamaExample's local coordinate frame defined by its bone's majorRotationAxes))
+	 * Add a LimitCone to the Kusudama. 
+	 * @param newPoint where on the Kusudama to add the LimitCone (in Kusudama's local coordinate frame defined by its bone's majorRotationAxes))
 	 * @param radius the radius of the limitCone
 	 * @param previous the LimitCone adjacent to this one (may be null if LimitCone is not supposed to be between two existing LimitCones)
 	 * @param next the other LimitCone adjacent to this one (may be null if LimitCone is not supposed to be between two existing LimitCones)
@@ -592,13 +592,13 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	public abstract AbstractLimitCone createLimitConeForIndex(int insertAt, SGVec_3f newPoint, float radius);
 	
 	/**
-	 * Adds a LimitCone to the KusudamaExample. LimitCones are reach cones which can be arranged sequentially. The KusudamaExample will infer
+	 * Adds a LimitCone to the Kusudama. LimitCones are reach cones which can be arranged sequentially. The Kusudama will infer
 	 * a smooth path leading from one LimitCone to the next. 
 	 * 
 	 * Using a single LimitCone is functionally equivalent to a classic reachCone constraint. 
 	 * 
-	 * @param insertAt the intended index for this LimitCone in the sequence of LimitCones from which the KusudamaExample will infer a path. @see IK.AbstractKusudama.limitCones limitCones array. 
-	 * @param newPoint where on the KusudamaExample to add the LimitCone (in KusudamaExample's local coordinate frame defined by its bone's majorRotationAxes))
+	 * @param insertAt the intended index for this LimitCone in the sequence of LimitCones from which the Kusudama will infer a path. @see IK.AbstractKusudama.limitCones limitCones array. 
+	 * @param newPoint where on the Kusudama to add the LimitCone (in Kusudama's local coordinate frame defined by its bone's majorRotationAxes))
 	 * @param radius the radius of the limitCone
 	 */
 	public void addLimitConeAtIndex(int insertAt, SGVec_3f newPoint, float radius) {
@@ -625,15 +625,14 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 
 
 	/**
-	 * @return the limitingAxes of this KusudamaExample (these are just its parentBone's majorRotationAxes)
+	 * @return the limitingAxes of this Kusudama (these are just its parentBone's majorRotationAxes)
 	 */
 	public AbstractAxes limitingAxes() {
 		//if(inverted) return inverseLimitingAxes; 
 		 return limitingAxes;
 	}
 
-	/**
-	 * 
+	/** 
 	 * @return the lower bound on the axial constraint
 	 */
 	public float minAxialAngle(){
@@ -738,7 +737,7 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	}
 
 	/**
-	 * attaches the KusudamaExample to the BoneExample. If the 
+	 * attaches the Kusudama to the BoneExample. If the 
 	 * kusudama has its own limiting axes specified,
 	 * replaces the bone's major rotation 
 	 * axes with the Kusudamas limiting axes. 
@@ -746,7 +745,7 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	 * otherwise, this function will set the kusudama's
 	 * limiting axes to the major rotation axes specified by the bone.
 	 * 
-	 * @param forBone the bone to which to attach this KusudamaExample.
+	 * @param forBone the bone to which to attach this Kusudama.
 	 */
 	public void attachTo(AbstractBone forBone) {
 		this.attachedTo = forBone; 
