@@ -466,11 +466,6 @@ public abstract class Vec3d<T extends Vec3d<T>> implements Vecd<T>, CanLoad {
 		return (T) this;
 	}
 
-	@Override
-	public T interpolate (Vec3d target, double alpha, Interpolation interpolator) {
-		return lerp(target, interpolator.apply(0f, 1f, alpha));
-	}
-
 	/** Spherically interpolates between this vector and the target vector by alpha which is in the range [0,1]. The result is
 	 * stored in this vector.
 	 *

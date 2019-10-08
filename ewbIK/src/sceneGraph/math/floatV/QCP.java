@@ -1,16 +1,9 @@
-package sceneGraph.math.floatV;
-
-import sceneGraph.math.floatV.MRotation;
-import sceneGraph.math.floatV.MathUtils;
-import sceneGraph.math.floatV.Matrix3f;
-import sceneGraph.math.floatV.Matrix4f;
-import sceneGraph.math.floatV.Rot;
-import sceneGraph.math.floatV.SGVec_3f;
+package math.floatV;
 
 public class QCP {
 
 	/**
-	 * Implementation of the Quaternionf-Based Characteristic Polynomial algorithm
+	 * Implementation of the Quaternionff-Based Characteristic Polynomial algorithm
 	 * for RMSD and Superposition calculations.
 	 * <p>
 	 * Usage:
@@ -94,8 +87,8 @@ public class QCP {
 	private float eval_prec = (float) 1E-11;
 	private int max_iterations = 5; 
 
-	public SGVec_3f[] target;
-	private SGVec_3f[] moved;
+	public Vec3f<?>[] target;
+	private Vec3f<?>[] moved;
 
 	private float[] weight;
 	private float wsum;
@@ -170,7 +163,7 @@ public class QCP {
 	 * @param weight
 	 *            a weight in the inclusive range [0,1] for each point
 	 */
-	public void set(SGVec_3f[] moved, SGVec_3f[] target, float[] weight, boolean translate) {
+	public <V extends Vec3f<?>> void set(V[] moved, V[] target, float[] weight, boolean translate) {
 		this.target = target;		
 		this.moved = moved;
 		/*this.target =new SGVec_3f[target.length];		
@@ -226,7 +219,7 @@ public class QCP {
 	 *            array of weigths for each equivalent point position
 	 * @return
 	 */
-	public Rot weightedSuperpose( SGVec_3f[] moved, SGVec_3f[] target, float[] weight, boolean translate) {
+	public <V extends Vec3f<?>> Rot weightedSuperpose( V[] moved, V[] target, float[] weight, boolean translate) {
 		set(moved, target, weight, translate);
 		Rot result = getRotation();
 		//transformation.set(rotmat);
@@ -252,7 +245,7 @@ public class QCP {
 	 * @param y
 	 *            3f points of coordinate set for superposition
 	 */
-	private void calcRmsd(SGVec_3f[] x, SGVec_3f[] y) {
+	private <V extends Vec3f<?>> void calcRmsd(V[] x, V[] y) {
 		//QCP doesn't handle alignment of single values, so if we only have one point 
 		//we just compute regular distance.
 		if(x.length == 1) {
@@ -278,7 +271,7 @@ public class QCP {
 	 * @param coords2
 	 * @return
 	 */
-	private void innerProduct(SGVec_3f[] coords1, SGVec_3f[] coords2) {
+	private <V extends Vec3f<?>> void innerProduct(V[] coords1, V[] coords2) {
 		float x1, x2, y1, y2, z1, z2;
 		float g1 = 0f, g2 = 0f;
 
@@ -507,13 +500,13 @@ public class QCP {
 	}
 
 
-	public static void translate(SGVec_3f trans, SGVec_3f[] x) {
-		for (SGVec_3f p : x) {
+	public static <V extends Vec3f<?>> void translate(V trans, V[] x) {
+		for (V p : x) {
 			p.add(trans);
 		}
 	}
 
-	public SGVec_3f getWeightedCenter(SGVec_3f[] toCenter, float[] weight, SGVec_3f center)	{	    	    
+	public <V extends Vec3f<?>> V getWeightedCenter(V[] toCenter, float[] weight, V center)	{	    	    
 
 		if (weight != null) {
 			for (int i = 0; i < toCenter.length; i++)

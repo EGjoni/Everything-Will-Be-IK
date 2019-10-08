@@ -756,10 +756,16 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 		this.getLocalMBasis().translate = origin;
 		this.getLocalMBasis().rotation = rotation;
 		this.getLocalMBasis().refreshPrecomputed();
-		AbstractAxes par = (AbstractAxes) l.getObjectFor(AbstractAxes.class, j, "parent");
-		if(par != null)
-			this.setRelativeToParent(par);
-		this.setSlipType(j.getInt("slipType"));
+		AbstractAxes par;
+		try {
+			par = (AbstractAxes) l.getObjectFor(AbstractAxes.class, j, "parent");
+			if(par != null)
+				this.setRelativeToParent(par);
+			this.setSlipType(j.getInt("slipType"));
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
 	}
 
 

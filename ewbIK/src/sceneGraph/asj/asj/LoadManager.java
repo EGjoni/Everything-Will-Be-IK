@@ -2,6 +2,7 @@ package asj;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Map;
 
 import asj.data.JSONArray;
 import asj.data.JSONObject;
@@ -11,8 +12,9 @@ public abstract class LoadManager {
 	
 	public HashMap<Class, HashMap<String, JSONObject>> jsonObjects = new HashMap<>();
 	public HashMap<Class, HashMap<String, Saveable>>  classObjects = new HashMap<>();
+	public ArrayList<Saveable> allLoadedObjects = new ArrayList<>();
 
-	public <T extends Saveable> T getObjectFor(Class objectClass, JSONObject j, String hashKey) throws Exception {
+	public <T extends Saveable> T getObjectFor(Class objectClass, JSONObject j, String hashKey)  {
 		if(j.hasKey(hashKey)) {
 			return (T)getObjectFromClassMaps(objectClass, j.getString(hashKey));
 		} else return null;
@@ -20,6 +22,24 @@ public abstract class LoadManager {
 	
 	public <T extends Saveable> T getObjectFor(Class objectClass, String hash) throws Exception {
 			return (T)getObjectFromClassMaps(objectClass, hash);
+	}
+	
+	public <T> void createEmptyLoadMaps (Map<String, JSONObject> jMap, Map<String, ? super T>oMap, JSONArray jArr, Class<T> c) {
+		try {
+			for(int i=0; i < jArr.size(); i++) {
+				JSONObject jo = jArr.getJSONObject(i);
+				String id = jo.getString("identityHash");
+
+				jMap.put(id, jo);
+				Object created = c.newInstance();
+				oMap.put(id, (T) created);			
+				allLoadedObjects.add((Saveable)created);
+
+			}
+		} catch (InstantiationException | IllegalAccessException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
 	/**
@@ -41,13 +61,18 @@ public abstract class LoadManager {
 		}
 	}
 	
-	public Saveable getObjectFromClassMaps(Class keyClass, String identityHash) throws Exception {
+	public Saveable getObjectFromClassMaps(Class keyClass, String identityHash) {
 		HashMap<String, Saveable> objectMap = classObjects.get(keyClass);
 		if(objectMap != null) {
 			return objectMap.get(identityHash);
 		} else {
+			try {
 			throw new Exception("Class not found in object maps. Either define the class using the InitializeClassMaps " +
 					"method in LoadManager, or override the getObjectFromClassMaps method to handle whatever edgecase you've encountered.");
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			return null;
 		}
 	}
 	

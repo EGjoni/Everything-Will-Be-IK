@@ -14,12 +14,11 @@
  * limitations under the License.
  ******************************************************************************/
 
-package sceneGraph.math.floatV;
+package math.floatV;
 
 import java.util.Random;
 
-import IK.floatIK.G;
-import sceneGraph.math.RandomXS128;
+import math.RandomXS128;
 
 /** Utility and fast math functions.
  * <p>
@@ -122,15 +121,7 @@ public final class MathUtils {
 		return  (float)Math.sin(radians + HALF_PI); //(float)Math.cos(radians);//sin(radians - 11f);
 	}
 
-	/** Returns the sine in radians from a lookup table. */
-	static public float sinDeg (float degrees) {
-		float rawIndex = (degrees * degToIndex);
-		int index = (int) rawIndex; 
-		float remainder = rawIndex - index; 
-		float result1 = Sin.table[index & SIN_MASK];
-		float result2 = Sin.table[index+1 & SIN_MASK]; 
-		return  G.lerp(result1, result2, remainder);
-	}
+
 
 	/** Returns the cosine in radians from a lookup table. */
 	static public float cosDeg (float degrees) {

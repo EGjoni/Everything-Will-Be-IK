@@ -74,7 +74,7 @@ public abstract class AbstractArmature implements Saveable {
 	 * @param name A human readable name for this armature
 	 */
 	public AbstractArmature(AbstractAxes inputOrigin, String name) {
-		
+
 		this.localAxes = (AbstractAxes) inputOrigin; 
 		this.tempWorkingAxes = localAxes.getGlobalCopy();
 		this.tag = name;
@@ -104,12 +104,12 @@ public abstract class AbstractArmature implements Saveable {
 	}
 
 	protected abstract void initializeRootBone(AbstractArmature armature, 
-			 Vec3d<?> tipHeading,  Vec3d<?> rollHeading, 
+			Vec3d<?> tipHeading,  Vec3d<?> rollHeading, 
 			String inputTag, 
 			double boneHeight, 
 			AbstractBone.frameType coordinateType);
 
-	
+
 	/**
 	 * The default number of iterations to run over this armature whenever IKSolver() is called. 
 	 * The higher this value, the more likely the Armature is to have converged on a solution when 
@@ -243,7 +243,7 @@ public abstract class AbstractArmature implements Saveable {
 		recursivelyUpdateBoneSegmentMapFrom(segmentedArmature);
 		SegmentedArmature.recursivelyCreateHeadingArraysFor(segmentedArmature);
 	}
-	
+
 	private void recursivelyUpdateBoneSegmentMapFrom(SegmentedArmature startFrom) {
 		for(AbstractBone b: startFrom.segmentBoneList) {
 			boneSegmentMap.put(b, startFrom);
@@ -361,11 +361,11 @@ public abstract class AbstractArmature implements Saveable {
 			armature = pinnedRootChain == null ? armature.getAncestorSegmentContaining(rootBone) : pinnedRootChain;
 			if(armature != null && armature.pinnedDescendants.size() > 0) {
 				armature.alignSimulationAxesToBones();
-				
+
 				iterations = iterations == -1 ? IKIterations : iterations;
 				dampening = dampening == -1? this.dampening : dampening;
 				stabilizationPasses = stabilizationPasses == -1 ? this.defaultStabilizingPassCount : stabilizationPasses; 
-				
+
 				for(int i = 0; i<iterations; i++) {			
 					if(!armature.isBasePinned() ) {
 						//alignSegmentTipOrientationsFor(armature, dampening);		
@@ -379,7 +379,7 @@ public abstract class AbstractArmature implements Saveable {
 					}
 					//outwardRecursiveSegmentSolver(armature, dampening);
 					//alignSegmentTipOrientationsFor(armature, dampening);
-					
+
 				}
 				armature.recursivelyAlignBonesToSimAxesFrom(armature.segmentRoot);
 				recursivelyNotifyBonesOfCompletedIKSolution(armature);
@@ -449,7 +449,7 @@ public abstract class AbstractArmature implements Saveable {
 			//System.out.print("---------");
 			while(currentBone != null) {			
 				if(!currentBone.getIKOrientationLock()) {
-				
+
 					chain.updateOptimalRotationToPinnedDescendants(currentBone, dampening, false, stabilizationPasses);
 				} 
 				if(currentBone == stopAfter) currentBone = null;
@@ -463,7 +463,7 @@ public abstract class AbstractArmature implements Saveable {
 		}
 	}
 
-	
+
 	void rootwardlyUpdateFalloffCacheFrom(AbstractBone forBone) {
 		SegmentedArmature current = boneSegmentMap.get(forBone);
 		while(current != null) {
@@ -506,7 +506,7 @@ public abstract class AbstractArmature implements Saveable {
 	double debugMag = 5f; 
 	SGVec_3d lastTargetPos = new SGVec_3d(); 
 
-	
+
 	/**
 	 * currently unused
 	 * @param enabled
@@ -541,7 +541,7 @@ public abstract class AbstractArmature implements Saveable {
 	public void setPerformanceMonitor(boolean state) {
 		monitorPerformance = state;
 	}
-	
+
 	public class PerformanceStats {
 		int timedCalls = 0;
 		int benchmarkWindow = 60;
@@ -620,11 +620,15 @@ public abstract class AbstractArmature implements Saveable {
 
 
 	public void loadFromJSONObject(JSONObject j, LoadManager l) {
-		this.localAxes = l.getObjectFor(AbstractAxes.class, j, "localAxes");
-		this.rootBone = l.getObjectFor(AbstractBone.class, j, "rootBone");
-		this.IKIterations =  j.getInt("defaultIterations");
-		this.dampening = j.getDouble("dampening");
-		this.tag = j.getString("tag");
+		try {
+			this.localAxes = l.getObjectFor(AbstractAxes.class, j, "localAxes");
+			this.rootBone = l.getObjectFor(AbstractBone.class, j, "rootBone");
+			this.IKIterations =  j.getInt("defaultIterations");
+			this.dampening = j.getDouble("dampening");
+			this.tag = j.getString("tag");
+		} catch(Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  ******************************************************************************/
 
-package sceneGraph.math;
+package math;
 
 import java.util.Random;
 
