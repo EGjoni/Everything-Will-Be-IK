@@ -22,17 +22,16 @@ import IK.doubleIK.AbstractKusudama;
 import IK.doubleIK.AbstractLimitCone;
 import IK.doubleIK.Constraint;
 import asj.LoadManager;
-import data.JSONArray;
-import data.JSONObject;
-import data.Saveable;
-import sceneGraph.math.doubleV.AbstractAxes;
-import sceneGraph.math.doubleV.MRotation;
-import sceneGraph.math.doubleV.Rot;
-import sceneGraph.math.doubleV.SGVec_3d;
-import sceneGraph.math.floatV.SGVec_3f;
-import sceneGraph.math.floatV.Vec3f;
+import asj.data.JSONArray;
+import asj.data.JSONObject;
+import asj.data.StringFuncs;
+import math.doubleV.AbstractAxes;
+import math.doubleV.MRotation;
+import math.doubleV.Rot;
+import math.doubleV.SGVec_3d;
+import math.floatV.SGVec_3f;
 
-public class EWBIKLoader implements LoadManager {
+public class EWBIKLoader extends LoadManager {
 
 	public static final int SINGLE = 1, DOUBLE = 2; 
 	public static int currentMode = DOUBLE;
@@ -93,7 +92,7 @@ public class EWBIKLoader implements LoadManager {
 	 */
 
 	public Collection<? extends  IK.floatIK.AbstractArmature> importSinglePrecisionArmatures(String filepath,
-			Class<? extends sceneGraph.math.floatV.AbstractAxes> AxesClass, 
+			Class<? extends math.floatV.AbstractAxes> AxesClass, 
 			Class<? extends IK.floatIK.AbstractBone> BoneClass, 
 			Class<? extends IK.floatIK.AbstractArmature> ArmatureClass, 
 			Class<? extends IK.floatIK.Constraint> KusudamaClass, 
