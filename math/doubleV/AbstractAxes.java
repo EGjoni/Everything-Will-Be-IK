@@ -41,7 +41,7 @@ import math.doubleV.Vec3d;
 /**
  * @author Eron Gjoni
  */
-public abstract class AbstractAxes implements AxisDependency, Saveable, CanLoad {
+public abstract class AbstractAxes implements AxisDependency, Saveable {
 	public static final int NORMAL = 0, IGNORE = 1, FORWARD = 2;
 	public static final int RIGHT = 1, LEFT = -1; 
 	public static final int X =0, Y=1, Z=2; 
@@ -906,6 +906,31 @@ public abstract class AbstractAxes implements AxisDependency, Saveable, CanLoad 
 		return global + "\n" + local;
 	}	
 	
+	@Override
+	public void notifyOfSaveIntent(SaveManager saveManager) {
+		// TODO Auto-generated method stub
+		
+	}
+	@Override
+	public void notifyOfSaveCompletion(SaveManager saveManager) {
+		// TODO Auto-generated method stub
+		
+	}
+	@Override
+	public void setLoading(boolean loading) {
+		// TODO Auto-generated method stub
+		
+	}
+	@Override
+	public boolean isLoading() {
+		
+		return false;
+	}
+	@Override
+	public void makeSaveable(SaveManager saveManager) {
+		// TODO Auto-generated method stub
+		
+	}
 	
 	/**
 	 * custom Weakreference extension for garbage collection

@@ -26,7 +26,7 @@ public class DoubleList implements Iterable<Double> {
 
 
   public DoubleList() {
-    data = new double[10];
+    data = new double[10]; 
   }
 
 
