@@ -18,6 +18,10 @@ import asj.data.JSONArray;
 import asj.data.JSONObject;
 import asj.data.StringFuncs;
 import math.doubleV.AbstractAxes;
+import math.doubleV.MRotation;
+import math.doubleV.Rot;
+import math.doubleV.SGVec_3d;
+import math.floatV.SGVec_3f;
 
 public class DoubleBackedLoader {
 		
