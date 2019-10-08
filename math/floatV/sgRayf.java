@@ -18,17 +18,17 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 
-package sceneGraph.math.floatV;
+package math.floatV;
 
-import data.JSONObject;
-import sceneGraph.math.doubleV.SGVec_3d;
-import sceneGraph.math.floatV.SGVec_3f;
+import asj.CanLoad;
+import asj.data.JSONObject;
+import math.doubleV.SGVec_3d;
 
 /**
  * @author Eron Gjoni
  *
  */
-public class sgRayf {
+public class sgRayf implements CanLoad {
 	public static final int X=0, Y=1, Z=2;
 	protected SGVec_3f  p1;
 	protected SGVec_3f p2; 
@@ -913,10 +913,30 @@ public class sgRayf {
 		return (1-t)*a + t*b;
 	}
 
-	public JSONObject toJSON() {
+	@Override
+	public CanLoad populateSelfFromJSON(JSONObject j) {
+		if(this.p1 != null) this.p2 = this.p1.copy();
+		if(this.p2 != null) this.p1 = this.p2.copy();
+		
+		if(this.p1 == null)
+			this.p1 = new SGVec_3f(j.getJSONObject("p1"));
+		else { 
+			this.p1.set(new SGVec_3f(j.getJSONObject("p1")));
+		}
+		
+		if(this.p2 == null) 
+			this.p2 = new SGVec_3f(j.getJSONObject("p2"));
+		else 
+			this.p2.set(new SGVec_3f(j.getJSONObject("p2")));
+		
+		return this;
+	}
+
+	@Override
+	public JSONObject toJSONObject() {
 		JSONObject result = new JSONObject();
-		result.setJSONArray("p1", p1.toJSONArray());
-		result.setJSONArray("p2", p2.toJSONArray());
+		result.setJSONObject("p1", p1.toJSONObject());
+		result.setJSONObject("p2", p2.toJSONObject());
 		return result;
 	}
 
