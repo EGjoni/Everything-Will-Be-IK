@@ -1504,8 +1504,7 @@ public class MRotation {
 	 * @exception NotARotationMatrixException if the matrix cannot be
 	 * orthogonalized with the given threshold after 10 iterations
 	 */
-	private double[][] orthogonalizeMatrix(double[][] m, double threshold)
-			throws NotARotationMatrixException {
+	private double[][] orthogonalizeMatrix(double[][] m, double threshold) {
 		double[] m0 = m[0];
 		double[] m1 = m[1];
 		double[] m2 = m[2];
@@ -1586,9 +1585,12 @@ public class MRotation {
 			fn  = fn1;
 		}
 		// the algorithm did not converge after 10 iterations
-		throw new NotARotationMatrixException(
-				LocalizedFormats.UNABLE_TO_ORTHOGONOLIZE_MATRIX,
-				i - 1);
+		try {
+			throw new Exception("Failed to converge on orthogonal matrix after 10 iterations");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}  
+		return null;
 	}
 
 	/** Compute the <i>distance</i> between two rotations.
