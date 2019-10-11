@@ -407,14 +407,14 @@ public abstract class AbstractLimitCone implements Saveable {
 			Vec3f<?> minorAppoloniusP3B = Vec3f.mult(minorAppoloniusAxisB, MathUtils.cos(minorAppoloniusRadiusB));
 
 			// ray from scaled center of next cone to half way point between the circumference of this cone and the next cone. 
-			sgRayf r1B = new sgRayf(minorAppoloniusP1B, minorAppoloniusP3B); r1B.elongate();
-			sgRayf r2B = new sgRayf(minorAppoloniusP1B, minorAppoloniusP2B); r2B.elongate();
+			sgRayf r1B = new sgRayf(minorAppoloniusP1B, minorAppoloniusP3B); r1B.elongate(99f);
+			sgRayf r2B = new sgRayf(minorAppoloniusP1B, minorAppoloniusP2B); r2B.elongate(99f);
 
 			Vec3f<?> intersection1 = r1B.intersectsPlane(minorAppoloniusP3A, minorAppoloniusP1A, minorAppoloniusP2A);
 			Vec3f<?> intersection2 = r2B.intersectsPlane( minorAppoloniusP3A, minorAppoloniusP1A, minorAppoloniusP2A);
 
 			sgRayf intersectionRay = new sgRayf(intersection1, intersection2);
-			intersectionRay.elongate();
+			intersectionRay.elongate(99f);
 
 			Vec3f<?> sphereIntersect1 = new SGVec_3f(); 
 			Vec3f<?> sphereIntersect2 = new SGVec_3f();
@@ -513,6 +513,7 @@ public abstract class AbstractLimitCone implements Saveable {
 		this.parentKusudama = (AbstractKusudama) l.getObjectFromClassMaps(AbstractKusudama.class, j.getString("parentKusudama")); 
 		SGVec_3f controlPointJ = new SGVec_3f(j.getJSONArray("controlPoint"));
 		this.setControlPoint(controlPointJ);
+		this.radiusCosine = MathUtils.cos(radius);
 		this.radius = j.getFloat("radius");
 	}
 

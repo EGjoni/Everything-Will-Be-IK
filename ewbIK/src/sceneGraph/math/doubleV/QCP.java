@@ -1,5 +1,8 @@
 package math.doubleV;
 
+import math.floatV.SGVec_3f;
+import math.floatV.Vec3f;
+
 public class QCP {
 
 	/**
@@ -225,6 +228,37 @@ public class QCP {
 		//transformation.set(rotmat);
 		return result;//transformation;
 	}
+	
+	/**
+	 * Weighted superposition.
+	 *
+	 * @param fixed
+	 * @param moved
+	 * @param weight
+	 *            array of weigths for each equivalent point position
+	 * @return
+	 */
+	public <V extends Vec3f<?>> Rot weightedSuperpose( V[] moved, V[] target, float[] weight, boolean translate) {
+		double[] weightd = null;
+		if(weight != null) weightd = new double[moved.length];
+		
+		SGVec_3d[] movedd = new SGVec_3d[moved.length];
+		SGVec_3d[] targetd = new SGVec_3d[target.length];
+		
+		for(int i =0; i< moved.length; i++) {
+			if(weight != null)
+				weightd[i] = weight[i];
+			
+			movedd[i] = new SGVec_3d((double)moved[i].x, (double)moved[i].y, (double)moved[i].z);
+			targetd[i] = new SGVec_3d((double)target[i].x, (double)target[i].y, (double)target[i].z);
+		}
+		
+		
+		set(movedd, targetd, weightd, translate);
+		Rot result = getRotation();
+		//transformation.set(rotmat);
+		return result;//transformation;
+	}
 
 	private Rot getRotation() {
 		getRmsd();
@@ -386,12 +420,17 @@ public class QCP {
 		int i;
 		for (i = 1; i < (max_iterations+1); ++i) {
 			double oldg = mxEigenV;
-			double x2 = mxEigenV * mxEigenV;
+			/*double x2 = mxEigenV * mxEigenV;
 			double b = (x2 + c2) * mxEigenV;
-			double a = b + c1;
-			double delta = ((a * mxEigenV + c0) / (2.0d * x2 * mxEigenV + b + a));
+			double a = b + c1;*/
+			//double delta = ((a * mxEigenV + c0) / (2.0d * x2 * mxEigenV + b + a));
+			/*double delta2 = (((x2 + c2)*mxEigenV + c1)*mxEigenV + c0) / ((4*x2 + 2*c2)*mxEigenV + c1);
+			double delta3 = (c0 + (c1 + (c2 +x2)*mxEigenV)*mxEigenV) / (c1 + (2*c2 + 4*x2)*mxEigenV);*/
+			double Y = 1d/mxEigenV;
+			double Y2 = Y*Y;
+			double delta = ((((Y*c0 + c1)*Y + c2)*Y2 + 1) / ((Y*c1 + 2*c2)*Y2*Y + 4));
 			mxEigenV -= delta;
-
+			
 			if (MathUtils.abs(mxEigenV - oldg) < MathUtils.abs(eval_prec * mxEigenV))
 				break;
 		}
@@ -528,6 +567,8 @@ public class QCP {
 
 		return center;
 	}
+	
+
 
 	public SGVec_3d getTranslation() {
 		return targetCenter.subCopy(movedCenter);		

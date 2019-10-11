@@ -21,6 +21,7 @@ import java.nio.channels.SeekableByteChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import IK.floatIK.AbstractIKPin;
 import IK.floatIK.SegmentedArmature;
 import IK.floatIK.SegmentedArmature.WorkingBone;
 import asj.LoadManager;
@@ -479,7 +480,9 @@ public abstract class AbstractArmature implements Saveable {
 		ArrayList<SegmentedArmature> pinnedTips = chain.pinnedDescendants;
 
 		for(SegmentedArmature tipChain : pinnedTips) {
-			alignSegmentTipOrientationFor(tipChain, dampening);
+			AbstractIKPin pin = tipChain.segmentTip.getIKPin();
+			if(!(pin.getDepthFalloff() != 0 && tipChain.childSegments.size() >0)) 
+				alignSegmentTipOrientationFor(tipChain, dampening);
 		}
 	}
 

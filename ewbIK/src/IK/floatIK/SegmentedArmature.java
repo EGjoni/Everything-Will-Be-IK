@@ -24,6 +24,7 @@ import java.util.WeakHashMap;
 
 import IK.PerfTimer;
 import math.floatV.AbstractAxes;
+import math.floatV.MRotation;
 import math.floatV.MathUtils;
 import math.floatV.QCP;
 import math.floatV.Rot;
@@ -397,10 +398,10 @@ public class SegmentedArmature {
 			float[] weights,
 			QCP qcpOrientationAligner) {
 
-		qcpOrientationAligner.setMaxIterations(50);		
-		Rot qcpRot =  qcpOrientationAligner.weightedSuperpose(localizedTipHeadings, localizedTargetHeadings, weights, translate);
-		
-		SGVec_3f translateBy = qcpOrientationAligner.getTranslation();
+		qcpOrientationAligner.setMaxIterations(10);		
+		Rot qcpRot = qcpOrientationAligner.weightedSuperpose(localizedTipHeadings, localizedTargetHeadings, weights, translate);
+	
+		SGVec_3f translateBy = qcpOrientationAligner.getTranslation().toVec3f();
 		float boneDamp = sb.cosHalfDampen; 
 		if(dampening != -1) {
 			boneDamp = dampening;

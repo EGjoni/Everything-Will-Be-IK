@@ -23,6 +23,7 @@ package math.doubleV;
 import asj.CanLoad;
 import asj.data.JSONObject;
 import math.floatV.SGVec_3f;
+import math.floatV.Vec3f;
 
 /**
  * @author Eron Gjoni
@@ -349,17 +350,20 @@ public class sgRayd implements CanLoad {
 	}
 
 
-/**
- * scale the ray outward in both directions by a large amount. (900000)
- */
-	public void elongate() {
-		sgRayd reverseRay = new sgRayd(this.p2.copy(), this.p1.copy()); 
-		sgRayd result = this.getRayScaledTo(900000); 
-		reverseRay = reverseRay.getRayScaledTo(900000);
-		result.p1 = reverseRay.p2.copy();
-		this.p1.set(result.p1); 
-		this.p2.set(result.p2);
-	}
+	/**
+	 *  adds the specified length to the ray in both directions.
+	 */
+		public void elongate(float amt) {
+			Vec3d midPoint = p1.addCopy(p2).multCopy(0.5d);
+			Vec3d p1Heading = p1.subCopy(midPoint);
+			Vec3d p2Heading = p2.subCopy(midPoint);
+			Vec3d p1Add = (Vec3d) p1Heading.copy().normalize().mult(amt);
+			Vec3d p2Add = (Vec3d) p2Heading.copy().normalize().mult(amt);
+			
+			this.p1.set((Vec3d)p1Heading.addCopy(p1Add).addCopy(midPoint)); 
+			this.p2.set((Vec3d)p2Heading.addCopy(p2Add).addCopy(midPoint));
+		}
+
 
 	public sgRayd copy() {
 		return new sgRayd(this.p1, this.p2);  
@@ -822,7 +826,10 @@ public class sgRayd implements CanLoad {
 		h.set(0d,0d,0d);
 		h =  (V) h.sub(rp1);  // h=r.o-c.M
 		double lf = e.dot(h);                      // lf=e.h
-		double s = Math.pow(radius, 2)-h.dot(h)+Math.pow(lf, 2);   // s=r^2-h^2+lf^2
+		double radpow = radius*radius;
+		double hdh = h.magSq(); 
+		double lfpow = lf*lf;		
+		double s = radpow-hdh+lfpow;   // s=r^2-h^2+lf^2
 		if (s < 0.0) return 0;                    // no intersection points ?
 		s = Math.sqrt(s);                              // s=sqrt(r^2-h^2+lf^2)
 

@@ -19,6 +19,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 package IK.doubleIK;
 import math.doubleV.AbstractAxes;
+import math.doubleV.CartesianAxes;
 import math.doubleV.MathUtils;
 import math.doubleV.Rot;
 import math.doubleV.SGVec_3d;
@@ -70,7 +71,6 @@ public abstract class AbstractLimitCone implements Saveable {
 
 	public AbstractLimitCone(Vec3d<?> location, double rad, AbstractKusudama attachedTo) {
 		setControlPoint(location); 
-		radialPoint = controlPoint.copy();
 		tangentCircleCenterNext1 = location.getOrthogonal();
 		tangentCircleCenterNext2 = SGVec_3d.mult(tangentCircleCenterNext1, -1);
 
@@ -129,6 +129,17 @@ public abstract class AbstractLimitCone implements Saveable {
 		}
 		return result;
 	}
+	
+	public <V extends Vec3d<?>> Vec3d<?> getClosestPathPoint(AbstractLimitCone next, V input) {
+		Vec3d<?> result = getOnPathSequence(next, input);
+		if(result == null) {
+			result = closestCone(next, input);
+		}
+		return result;
+	}
+	
+	
+	
 
 	/**
 	 * Determines if a ray emanating from the origin to given point in local space 
@@ -141,6 +152,7 @@ public abstract class AbstractLimitCone implements Saveable {
 	 * @return
 	 */
 	public boolean determineIfInBounds(AbstractLimitCone next, Vec3d<?> input) {
+
 		/**
 		 * Procedure : Check if input is contained in this cone, or the next cone 
 		 * 	if it is, then we're finished and in bounds. otherwise, 
@@ -169,131 +181,96 @@ public abstract class AbstractLimitCone implements Saveable {
 			 * 		of bounds. 
 			 *
 			 *	Older version of this code relied on a triangle intersection algorithm here, which I think is slightly less efficient on average
-			 *	ass it didn't allow for early termination. . 
+			 *	as it didn't allow for early termination. . 
 			 */
 
-			Vec3d<?> planeNormal = controlPoint.crossCopy(tangentCircleCenterNext1);
-			if(input.dot(planeNormal) < 0)
-				return false; 			
-			planeNormal = Vec3d.cross(tangentCircleCenterNext2, controlPoint, planeNormal);
-			if(input.dot(planeNormal) < 0)
-				return false; 
-			planeNormal = Vec3d.cross(next.controlPoint, tangentCircleCenterNext2, planeNormal);
-			if(input.dot(planeNormal) < 0)
-				return false; 
-			planeNormal = Vec3d.cross(tangentCircleCenterNext1, next.controlPoint, planeNormal);
-			if(input.dot(planeNormal) < 0)
-				return false; 
+			//Vec3d<?> planeNormal = controlPoint.crossCopy(tangentCircleCenterNext1);
+			Vec3d c1xc2 = controlPoint.crossCopy(next.controlPoint);		
+			double c1c2dir = input.dot(c1xc2);
 
-
-			return true;
-		}
-
-	}	
-
-
-	public <V extends Vec3d<?>> Vec3d<?> getOnGreatTangentTriangle(AbstractLimitCone next, V input) {
-
-		//first, we check to see if we're even out of bounds.
-		//-1 means we're within the region of tangentCircleCenterNext1
-		//0 means we are within neither region, 
-		// 1 means wer'e within the region of tangentCircleCenterNext2
-
-		Vec3d<?> planeNormal = controlPoint.crossCopy(tangentCircleCenterNext1);
-
-		/*if eany of the following four if statements fail, it means 
-		 * we're outside the confines of the great triangle formed 
-		 * by {this.controlPoint, tangentCircleCenterNext1, next.controlPoint}
-		 * and the adjacent triangle formed by 
-		 * {next.controlPoint, tangentCirclenteNext2, this.controlPoint}. 
-		 * 
-		 * So we send null to signal that point determination should be handled by some other function.
-		 **/
-		if(input.dot(planeNormal) < 0) 
-			return null;
-		planeNormal.set(tangentCircleCenterNext1).crs(next.controlPoint);
-		if(input.dot(planeNormal) < 0)
-			return null; 
-		planeNormal.set(tangentCircleCenterNext2).crs(controlPoint);
-		if(input.dot(planeNormal) < 0)
-			return null; 
-		planeNormal.set(next.controlPoint).crs(tangentCircleCenterNext2);
-		if(input.dot(planeNormal) < 0)
-			return null; 
-
-
-
-		if(input.dot(tangentCircleCenterNext1) > tangentCircleRadiusNextCos) 
-		{
-			/*
-			 * If we reach this point in the code, we're within the confines of tangentCircleCenterNext1, and the 
-			 * great triangle formed by {this.controlPoint, tangentCircleCenterNext1, next.controlPoint}.
-			 * so we have to calculate the rotation that rotates the input away from the tangentCenter enough
-			 * to bring it back outside of its radius. 
-			 * 
-			 * We return the result (which is not null) and thereby signals no futher action is required. 
-			 */
-			planeNormal = Vec3d.cross(tangentCircleCenterNext1, input, planeNormal); 
-			Rot rotateAboutBy = new Rot(planeNormal, tangentCircleRadiusNext);
-			return rotateAboutBy.applyToCopy(tangentCircleCenterNext1);
-		} 
-		else if(input.dot(tangentCircleCenterNext2) > tangentCircleRadiusNextCos) 
-		{
-			/*
-			 * If we reach this point in the code, we're within the confines of tangentCircleCenterNext2, and the 
-			 * great triangle formed by {next.controlPoint, tangentCircleCenterNext2, this.controlPoint}.
-			 * so we have to calculate the rotation that rotates the input away from the tangentCenter enough
-			 * to bring it back outside of its radius. 
-			 * 
-			 * We return the result (which is not null) and thereby signals no futher action is required. 
-			 */		
-			planeNormal = Vec3d.cross(tangentCircleCenterNext2, input, planeNormal); 
-			Rot rotateAboutBy = new Rot(planeNormal, tangentCircleRadiusNext);
-			return rotateAboutBy.applyToCopy(tangentCircleCenterNext2);	
-		} 
-		else 
-		{
-			/**
-			 * if both of the above conditions failed, it means also that we are 
-			 * neither in the impermissible regions around tangentCircleCenterNext1 
-			 * nor that of tangentCircleCenterNext2.
-			 * This means implicitly that we're in an acceptable region (because we know we're between 
-			 * this.controlPoint and next.controlPoint).
-			 * 
-			 *  So we set the result = to the input, to signal that no further action is required. 
-			 */
-			return input.copy();
-		}
-
-
-
-
-
-
-		/*
-		 * if we're at this point in the code we know  
-		 */
-
-
-		//Vec3d<?> result = input.copy(); 
-		/*sgRayd inRay = new sgRayd(new SGVec_3d(0,0,0), input);
-		Vec3d<?> intersectionResult = new SGVec_3d();
-		boolean tri1Intersects = inRay.intersectsTriangle(this.getControlPoint(),this.tangentCircleCenterNext1,next.getControlPoint(), intersectionResult);
-
-		if(tri1Intersects) {
-			Rot tan1ToBorder = new Rot(tangentCircleCenterNext1, input); 
-			result.set(new Rot(tan1ToBorder.getAxis(), tangentCircleRadiusNext).applyToCopy(tangentCircleCenterNext1));
-		} else {
-			boolean tri2Intersect = inRay.intersectsTriangle(this.getControlPoint(), this.tangentCircleCenterNext2, next.getControlPoint(), intersectionResult);
-			if(tri2Intersect) {
-				Rot tan2ToBorder = new Rot(tangentCircleCenterNext2, input); 
-				result.set(new Rot(tan2ToBorder.getAxis(), tangentCircleRadiusNext).applyToCopy(tangentCircleCenterNext2));
+			if(c1c2dir < 0.0) { 
+				Vec3d c1xt1 = controlPoint.crossCopy(tangentCircleCenterNext1); 
+				Vec3d t1xc2 = tangentCircleCenterNext1.crossCopy(next.controlPoint);	
+				return  input.dot(c1xt1) > 0 && input.dot(t1xc2) > 0; 	
 			} else {
-				result = null;
-			}
+				Vec3d t2xc1 = tangentCircleCenterNext2.crossCopy(controlPoint);	
+				Vec3d c2xt2 = next.controlPoint.crossCopy(tangentCircleCenterNext2);
+				return input.dot(t2xc1) > 0 && input.dot(c2xt2) > 0;
+			}	
 		}
+	}	
+	
+	public <V extends Vec3d<?>> Vec3d<?> closestCone(AbstractLimitCone next, V input) {
+		if(input.dot(controlPoint) > input.dot(next.controlPoint)) 
+			return this.controlPoint.copy();
+		else 
+			return next.controlPoint.copy();
+	}
 
-		return  result;*/
+	public <V extends Vec3d<?>> Vec3d<?> getOnPathSequence(AbstractLimitCone next, V input) {
+		Vec3d c1xc2 = controlPoint.crossCopy(next.controlPoint);		
+		double c1c2dir = input.dot(c1xc2);
+		if(c1c2dir < 0.0) { 
+			Vec3d c1xt1 = controlPoint.crossCopy(tangentCircleCenterNext1); 
+			Vec3d t1xc2 = tangentCircleCenterNext1.crossCopy(next.controlPoint);	
+			if(input.dot(c1xt1) > 0 && input.dot(t1xc2) > 0) {
+					sgRayd tan1ToInput = new sgRayd(tangentCircleCenterNext1, input);
+					SGVec_3d result = new SGVec_3d();
+					tan1ToInput.intersectsPlane(new SGVec_3d(0,0,0), controlPoint, next.controlPoint, result);
+					return result.normalize();
+			}	else {
+				return null;
+			}
+		} else {
+			Vec3d t2xc1 = tangentCircleCenterNext2.crossCopy(controlPoint);	
+			Vec3d c2xt2 = next.controlPoint.crossCopy(tangentCircleCenterNext2);
+			if(input.dot(t2xc1) > 0 && input.dot(c2xt2) > 0) {				
+				sgRayd tan2ToInput = new sgRayd(tangentCircleCenterNext2, input);
+				SGVec_3d result = new SGVec_3d();
+				tan2ToInput.intersectsPlane(new SGVec_3d(0,0,0), controlPoint, next.controlPoint, result);
+				return result.normalize();
+			}else {
+				return null;
+			}
+		}	
+
+	}
+	
+	
+	public <V extends Vec3d<?>> Vec3d<?> getOnGreatTangentTriangle(AbstractLimitCone next, V input) {
+		Vec3d c1xc2 = controlPoint.crossCopy(next.controlPoint);		
+		double c1c2dir = input.dot(c1xc2);
+		if(c1c2dir < 0.0) { 
+			Vec3d c1xt1 = controlPoint.crossCopy(tangentCircleCenterNext1); 
+			Vec3d t1xc2 = tangentCircleCenterNext1.crossCopy(next.controlPoint);	
+			if(input.dot(c1xt1) > 0 && input.dot(t1xc2) > 0) {
+				if(input.dot(tangentCircleCenterNext1) > tangentCircleRadiusNextCos) {
+					Vec3d<?> planeNormal = tangentCircleCenterNext1.crossCopy(input); 
+					Rot rotateAboutBy = new Rot(planeNormal, tangentCircleRadiusNext);
+					return rotateAboutBy.applyToCopy(tangentCircleCenterNext1);
+				}  else {
+					return input.copy();
+				}
+			} else {
+				return null;
+			}			
+		} else {
+			Vec3d t2xc1 = tangentCircleCenterNext2.crossCopy(controlPoint);	
+			Vec3d c2xt2 = next.controlPoint.crossCopy(tangentCircleCenterNext2);
+			if(input.dot(t2xc1) > 0 && input.dot(c2xt2) > 0) {
+				if(input.dot(tangentCircleCenterNext2) > tangentCircleRadiusNextCos) {
+					Vec3d<?> planeNormal = tangentCircleCenterNext2.crossCopy(input); 
+					Rot rotateAboutBy = new Rot(planeNormal, tangentCircleRadiusNext);
+					return rotateAboutBy.applyToCopy(tangentCircleCenterNext2);	
+				} else {
+					return input.copy();
+				} 
+			}
+			else {
+				return null;
+			}
+		}	
+
 	}
 
 	/**
@@ -407,14 +384,14 @@ public abstract class AbstractLimitCone implements Saveable {
 			Vec3d<?> minorAppoloniusP3B = Vec3d.mult(minorAppoloniusAxisB, Math.cos(minorAppoloniusRadiusB));
 
 			// ray from scaled center of next cone to half way point between the circumference of this cone and the next cone. 
-			sgRayd r1B = new sgRayd(minorAppoloniusP1B, minorAppoloniusP3B); r1B.elongate();
-			sgRayd r2B = new sgRayd(minorAppoloniusP1B, minorAppoloniusP2B); r2B.elongate();
+			sgRayd r1B = new sgRayd(minorAppoloniusP1B, minorAppoloniusP3B); r1B.elongate(99);
+			sgRayd r2B = new sgRayd(minorAppoloniusP1B, minorAppoloniusP2B); r2B.elongate(99);
 
 			Vec3d<?> intersection1 = r1B.intersectsPlane(minorAppoloniusP3A, minorAppoloniusP1A, minorAppoloniusP2A);
 			Vec3d<?> intersection2 = r2B.intersectsPlane( minorAppoloniusP3A, minorAppoloniusP1A, minorAppoloniusP2A);
 
 			sgRayd intersectionRay = new sgRayd(intersection1, intersection2);
-			intersectionRay.elongate();
+			intersectionRay.elongate(99);
 
 			Vec3d<?> sphereIntersect1 = new SGVec_3d(); 
 			Vec3d<?> sphereIntersect2 = new SGVec_3d();
@@ -452,19 +429,6 @@ public abstract class AbstractLimitCone implements Saveable {
 	}
 
 
-	public Vec3d<?> getRadialPoint() {
-		if(radialPoint == null) { 
-			radialPoint = controlPoint.getOrthogonal();
-			Vec3d<?> radialAxis = radialPoint.crossCopy(controlPoint);
-			Rot rotateToRadial = new Rot(radialAxis, radius);
-			radialPoint = rotateToRadial.applyToCopy(controlPoint);
-		}
-		return radialPoint;
-	}
-	public void setRadialPoint(SGVec_3d radialPoint) {
-		this.radialPoint = radialPoint;
-	}
-
 	public Vec3d<?> getControlPoint() {
 		return controlPoint;
 	}
@@ -496,6 +460,7 @@ public abstract class AbstractLimitCone implements Saveable {
 
 	@Override
 	public void makeSaveable(SaveManager saveManager) {
+		saveManager.addToSaveState(this);
 	}
 
 	@Override
@@ -510,12 +475,20 @@ public abstract class AbstractLimitCone implements Saveable {
 
 
 	public void loadFromJSONObject(JSONObject j, LoadManager l) {
-		this.parentKusudama = (AbstractKusudama) l.getObjectFromClassMaps(AbstractKusudama.class, j.getString("parentKusudama")); 
-		SGVec_3d controlPointJ = new SGVec_3d(j.getJSONArray("controlPoint"));
-		this.setControlPoint(controlPointJ);
+		this.parentKusudama = (AbstractKusudama) l.getObjectFromClassMaps(AbstractKusudama.class, j.getString("parentKusudama"));
+		SGVec_3d controlPointJ = null;
+		try {
+			controlPointJ = new SGVec_3d(j.getJSONObject("controlPoint"));
+		} catch(Exception e) {
+			controlPointJ = new SGVec_3d(j.getJSONArray("controlPoint"));
+		}
+		
+		controlPointJ.normalize();
+		
+		this.controlPoint = controlPointJ;
 		this.radius = j.getDouble("radius");
+		this.radiusCosine = Math.cos(radius);
 	}
-
 
 	@Override
 	public void notifyOfSaveIntent(SaveManager saveManager) {

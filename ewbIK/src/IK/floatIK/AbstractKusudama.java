@@ -651,6 +651,7 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 
 	@Override
 	public void notifyOfLoadCompletion() {
+		this.limitingAxes = attachedTo().getMajorRotationAxes();
 		this.constraintUpdateNotification();
 	}
 

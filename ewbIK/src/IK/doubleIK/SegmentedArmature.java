@@ -178,18 +178,30 @@ public class SegmentedArmature {
 				weightArray.add(innerWeightArray);
 				byte modeCode = pin.getModeCode();
 				innerWeightArray.add(pin.getPinWeight()*currentFalloff);
+				double maxPinWeight = 0d;
+				if((modeCode & AbstractIKPin.XDir) != 0)
+					maxPinWeight = MathUtils.max(maxPinWeight, pin.getXPriority());					
+				if((modeCode & AbstractIKPin.YDir) != 0) 
+					maxPinWeight = MathUtils.max(maxPinWeight, pin.getYPriority());				
+				if((modeCode & AbstractIKPin.ZDir) != 0)
+					maxPinWeight = MathUtils.max(maxPinWeight, pin.getZPriority());
+
+				if(maxPinWeight == 0d) maxPinWeight = 1d;
+
+				maxPinWeight = 1d;
+
 				if((modeCode & AbstractIKPin.XDir) != 0) {
-					double subTargetWeight = pin.getPinWeight() * pin.getXPriority()*currentFalloff;
+					double subTargetWeight = pin.getPinWeight() * (pin.getXPriority()/maxPinWeight)*currentFalloff;
 					innerWeightArray.add(subTargetWeight);
 					innerWeightArray.add(subTargetWeight);
 				}
 				if((modeCode & AbstractIKPin.YDir) != 0) {
-					double subTargetWeight = pin.getPinWeight() * pin.getYPriority()*currentFalloff;
+					double subTargetWeight = pin.getPinWeight() * (pin.getYPriority()/maxPinWeight)*currentFalloff;
 					innerWeightArray.add(subTargetWeight);
 					innerWeightArray.add(subTargetWeight);
 				}
 				if((modeCode & AbstractIKPin.ZDir) != 0) {
-					double subTargetWeight = pin.getPinWeight() * pin.getZPriority()*currentFalloff;
+					double subTargetWeight = pin.getPinWeight() * (pin.getZPriority()/maxPinWeight)*currentFalloff;
 					innerWeightArray.add(subTargetWeight);
 					innerWeightArray.add(subTargetWeight);
 				}
@@ -343,6 +355,17 @@ public class SegmentedArmature {
 			newDampening = Math.PI;
 		}
 
+		if(sb.springy) {
+			if(dampening != -1) {
+				double returnfullness = ((AbstractKusudama)forBone.getConstraint()).getReturnfullness();
+				double cosHalfAngle = Math.cos(forBone.getStiffness()*dampening*0.5d*returnfullness);		
+				forBone.setAxesToReturnfulled(thisBoneAxes, sb.simConstraintAxes, cosHalfAngle);
+			} else {
+				forBone.setAxesToReturnfulled(thisBoneAxes, sb.simConstraintAxes, sb.cosHalfReturnFullnessDampened);
+			}
+		}
+
+
 		updateTargetHeadings(localizedTargetHeadings, weights, thisBoneAxes);
 		upateTipHeadings(localizedTipHeadings, thisBoneAxes);		
 
@@ -353,7 +376,7 @@ public class SegmentedArmature {
 		if(stabilizationPasses > 0)
 			bestRMSD = getManualMSD(localizedTipHeadings, localizedTargetHeadings, weights);
 
-		
+
 		for(int i=0; i<stabilizationPasses + 1; i++) {
 			updateOptimalRotationToPinnedDescendants(
 					sb, newDampening, 
@@ -397,9 +420,9 @@ public class SegmentedArmature {
 			double[] weights,
 			QCP qcpOrientationAligner) {
 
-		qcpOrientationAligner.setMaxIterations(50);		
+		qcpOrientationAligner.setMaxIterations(10);		
 		Rot qcpRot =  qcpOrientationAligner.weightedSuperpose(localizedTipHeadings, localizedTargetHeadings, weights, translate);
-		
+
 		SGVec_3d translateBy = qcpOrientationAligner.getTranslation();
 		double boneDamp = sb.cosHalfDampen; 
 		if(dampening != -1) {
@@ -694,6 +717,8 @@ public class SegmentedArmature {
 		AbstractAxes simLocalAxes;
 		AbstractAxes simConstraintAxes;
 		double cosHalfDampen = 0d; 
+		double cosHalfReturnFullnessDampened = 0d;
+		boolean springy = false;
 
 		public WorkingBone(AbstractBone toSimulate) {
 			forBone = toSimulate;
@@ -703,6 +728,13 @@ public class SegmentedArmature {
 			double defaultDampening = forBone.parentArmature.dampening;
 			double dampening = forBone.getParent() == null ? MathUtils.PI : predamp * defaultDampening;					
 			cosHalfDampen = Math.cos(dampening/ 2d);
+			AbstractKusudama k = ((AbstractKusudama)forBone.getConstraint());
+			if( k != null && k.getReturnfullness() != 0d) {
+				springy = true;
+				cosHalfReturnFullnessDampened = Math.cos(((dampening*k.getReturnfullness())/2d));
+			} else {
+				springy = false;
+			}
 		}
 
 		public void updateCosDampening() {
@@ -710,6 +742,13 @@ public class SegmentedArmature {
 			double defaultDampening = forBone.parentArmature.dampening;
 			double dampening = forBone.getParent() == null ? MathUtils.PI : predamp * defaultDampening;					
 			cosHalfDampen = Math.cos(dampening/ 2d);
+			AbstractKusudama k = ((AbstractKusudama)forBone.getConstraint());
+			if( k != null && k.getReturnfullness() != 0d) {
+				springy = true;
+				cosHalfReturnFullnessDampened = Math.cos(((dampening*k.getReturnfullness())/2d));
+			} else {
+				springy = false;
+			}
 		}
 	}
 

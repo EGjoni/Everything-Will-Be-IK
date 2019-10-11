@@ -192,6 +192,7 @@ public abstract class AbstractBasis {
 	public void refreshPrecomputed() {
 		this.rotation.setToReversion(inverseRotation);
 		this.updateRays();		
+		
 	}
 	
 	public <V extends Vec3f<?>> V getLocalOf(V v) {

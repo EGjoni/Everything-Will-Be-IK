@@ -4,6 +4,7 @@
 package IK.doubleIK;
 import java.util.ArrayList;
 
+import IK.doubleIK.SegmentedArmature.WorkingBone;
 import data.EWBIKLoader;
 import data.EWBIKSaver;
 import math.doubleV.AbstractAxes;
@@ -26,6 +27,7 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	public static final double TAU = Math.PI*2;
 	public static final double PI = Math.PI;
 	protected AbstractAxes limitingAxes; 
+	protected double returnfullness; 
 
 	/**
 	 * An array containing all of the KusudamaExample's limitCones. The kusudama is built up
@@ -61,6 +63,8 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	public AbstractKusudama(AbstractBone forBone) {
 		this.attachedTo = forBone; 
 		this.limitingAxes = forBone.getMajorRotationAxes();
+		this.attachedTo.addConstraint(this);
+		this.enable();
 	}
 
 
@@ -70,14 +74,17 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	}
 
 	/**
-	 * If true, automatically reOrients the limitingAxes 
-	 * to minimize potential for degenerate rotations. 
+	 * This function should be called after you've set all of the Limiting Cones 
+	 * for this Kusudama. It will orient the axes relative to which constrained rotations are computed 
+	 * so as to minimize the potential for undesirable twist rotations due to antipodal singularities. 
+	 * 
+	 * In general, auto-optimization attempts to point the y-component of the constraint
+	 * axes in the direction that places it within an oreintation allowed by the constraint, 
+	 * and roughly as far as possible from any orientations not allowed by the constraint.  
 	 */
-	protected boolean autoOptimize = true;
-
 	public void optimizeLimitingAxes() {
 		AbstractAxes originalLimitingAxes = limitingAxes.getGlobalCopy();
-		if(autoOptimize) {
+	
 			ArrayList<Vec3d<?>> directions = new ArrayList<>(); 
 			if(getLimitCones().size() == 1) {
 				directions.add((limitCones.get(0).getControlPoint()).copy());
@@ -113,16 +120,11 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 
 			for(AbstractLimitCone lc : getLimitCones()) {
 				originalLimitingAxes.setToGlobalOf(lc.controlPoint, lc.controlPoint);
-				originalLimitingAxes.setToGlobalOf(lc.radialPoint, lc.radialPoint);
 				limitingAxes.setToLocalOf(lc.controlPoint, lc.controlPoint);
-				limitingAxes.setToLocalOf(lc.radialPoint, lc.radialPoint);
 				lc.controlPoint.normalize(); 
-				lc.radialPoint.normalize();
 			}
 
 			this.updateTangentRadii();			
-			//this.recomputeBaseInverseLimitAxes();
-		}
 	}
 
 
@@ -135,20 +137,10 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	}
 
 
-	/**
-	 * if true (default), the axes relative to which constraints are computed will be automatically reoriented on any changes in LimitCone position 
-	 * so as to minimize the potential for undesirable twist rotations. In general, auto-optimization attempts to point the y-component of the constraint
-	 * axes in the direction that places it within in an oreintation allowed by the constraint, and roughly as far as possible from any orientations not allowed by the constraint.  
-	 * @param b
-	 */
-	public void setAutoOptimizeConstraintOrientationBasis(boolean b) {
-		autoOptimize = b;
-	}
-
-
+	
 	sgRayd boneRay = new sgRayd(new SGVec_3d(), new SGVec_3d());
 	sgRayd constrainedRay = new sgRayd(new SGVec_3d(), new SGVec_3d());
-	Rot rectifiedRot = new Rot(MRotation.IDENTITY);
+	
 	/**
 	 * Snaps the bone this KusudamaExample is constraining to be within the KusudamaExample's orientational and axial limits. 
 	 */
@@ -177,7 +169,61 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 				snapToTwistLimits(toSet, limitingAxes);
 			}		
 		}
-
+	}
+	
+	
+	public void setAxesToReturnfulled(AbstractAxes toSet, AbstractAxes limitingAxes, double cosHalfReturnFullness) {
+		if(limitingAxes != null && returnfullness >0d) {
+			if(orientationallyConstrained) {				
+				Vec3d<?> origin = toSet.origin_();
+				Vec3d<?> inPoint = toSet.y_().p2().copy();
+				Vec3d<?> pathPoint = pointOnPathSequence(inPoint, limitingAxes);
+				inPoint.sub(origin);
+				pathPoint.sub(origin);				
+				Rot toClamp = new Rot(inPoint, pathPoint);				
+				toClamp.rotation.clampToQuadranceAngle(cosHalfReturnFullness);
+				toSet.rotateBy(toClamp);
+			}
+			if(axiallyConstrained) {
+				double angleToTwistMid = angleToTwistCenter(toSet, limitingAxes);
+				/*if(angleToTwistMid > 0) System.out.println("+:" + angleToTwistMid);
+				else if(angleToTwistMid < 0) 
+					System.out.println("- : " + angleToTwistMid);
+				else if(angleToTwistMid == 0) System.out.println("!:" + angleToTwistMid);*/
+				double rawAngle = 2*Math.acos(cosHalfReturnFullness);
+				double clampedAngle = MathUtils.clamp(angleToTwistMid, -rawAngle, rawAngle);
+				toSet.rotateAboutY(clampedAngle, false);
+			}
+		}
+	}
+	
+	/**
+	 * A value between (ideally between 0 and 1) dictating 
+	 * how much the bone to which this kusudama belongs 
+	 * prefers to be away from the edges of the kusudama  
+	 * @param amt
+	 */
+	public void setReturnfullness(double amt) {
+		returnfullness = amt;
+		if(attachedTo() != null && attachedTo().parentArmature != null) {
+			SegmentedArmature s =  attachedTo().parentArmature.boneSegmentMap.get(this.attachedTo());
+			if(s != null ) {
+				WorkingBone wb = s.simulatedBones.get(this.attachedTo());
+				if(wb != null) {
+					wb.updateCosDampening();
+				}
+			}
+		}
+	}
+	
+	
+	/**
+	 * @return A value between (ideally between 0 and 1) dictating 
+	 * how much the bone to which this kusudama belongs 
+	 * prefers to be away from the edges of the kusudama 
+	 */
+	public double getReturnfullness() {
+		return returnfullness;
 	}
 
 	@Override
@@ -203,7 +249,8 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 
 		if (inBounds[0] == -1 && inLimits != null) {     
 			constrainedRay.p1().set(boneRay.p1()); constrainedRay.p2().set(inLimits); 
-			rectifiedRot.set(boneRay.heading(), constrainedRay.heading());      
+			Rot rectifiedRot = new Rot(boneRay.heading(), constrainedRay.heading());
+			
 			//rectifiedRot.rotation.clampToQuadranceAngle(cosHalfAngleDampen);
 			toSet.rotateBy(rectifiedRot);
 			toSet.updateGlobal();			
@@ -242,7 +289,7 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	//protected CartesianAxes limitLocalAxes;
 
 
-	//FIXME: Implement a "localOfOrientation" function in Basis and have this function utilize it to determine axial offset
+	
 	/**
 	 * 
 	 * @param toSet
@@ -277,6 +324,21 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 			return 0;
 		}
 		//return 0;
+	}
+	
+	
+	public double angleToTwistCenter(AbstractAxes toSet, AbstractAxes limitingAxes) {
+
+		if(!axiallyConstrained) return 0d;
+
+		Rot alignRot = limitingAxes.getGlobalMBasis().getInverseRotation().applyTo(toSet.getGlobalMBasis().rotation);
+		Rot[] decomposition = alignRot.getSwingTwist(new SGVec_3d(0,1,0));
+		double angleDelta2 = decomposition[1].getAngle() * decomposition[1].getAxis().y*-1d; 
+		angleDelta2 = toTau(angleDelta2);
+		              
+		double distToMid =  signedAngleDifference(angleDelta2, TAU-(this.minAxialAngle()+(range/2d)));
+		return distToMid;	
+		
 	}
 
 	public boolean inTwistLimits(AbstractAxes boneAxes, AbstractAxes limitingAxes) {
@@ -372,6 +434,30 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 			return inPoint;
 		}
 	}
+	
+	
+	public <V extends Vec3d<?>> Vec3d<?> pointOnPathSequence(V inPoint, AbstractAxes limitingAxes) {
+		double closestPointDot = 0d; 
+		Vec3d point = limitingAxes.getLocalOf(inPoint);
+		point.normalize();
+		Vec3d result = (Vec3d) point.copy();
+				
+		if(limitCones.size() == 1) {
+			result.set(limitCones.get(0).controlPoint);
+		} else {
+			for (int i =0; i<limitCones.size() -1; i++) {
+				AbstractLimitCone nextCone = limitCones.get(i+1);
+				Vec3d<?> closestPathPoint = limitCones.get(i).getClosestPathPoint(nextCone, point);
+				double closeDot = closestPathPoint.dot(point);
+				if(closeDot > closestPointDot) {
+					result.set(closestPathPoint);
+					closestPointDot = closeDot;
+				}
+			}
+		}		
+		
+		return limitingAxes.getGlobalOf(result); 
+	}
 
 	//public double softLimit
 
@@ -426,6 +512,7 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 		}		
 		this.updateTangentRadii();
 		this.updateRotationalFreedom();
+		
 	}
 
 
@@ -627,10 +714,9 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 
 	public void loadFromJSONObject(JSONObject j, LoadManager l) {
 		this.attachedTo = l.getObjectFor(AbstractBone.class, j, "attachedTo");
-
+		this.limitingAxes = l.getObjectFor(AbstractAxes.class, j, "limitAxes");
 		limitCones = new ArrayList<>();
 		l.arrayListFromJSONArray(j.getJSONArray("limitCones"), limitCones, AbstractLimitCone.class);
-
 		this.minAxialAngle = j.getDouble("minAxialAngle");
 		this.range = j.getDouble("axialRange");
 		this.axiallyConstrained = j.getBoolean("axiallyConstrained"); 
@@ -652,6 +738,7 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	@Override
 	public void notifyOfLoadCompletion() {
 		this.constraintUpdateNotification();
+		this.optimizeLimitingAxes();
 	}
 
 	@Override

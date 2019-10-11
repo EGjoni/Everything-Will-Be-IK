@@ -46,7 +46,7 @@ public abstract class AbstractArmature implements Saveable {
 	protected AbstractAxes tempWorkingAxes;
 	protected ArrayList<AbstractBone> bones = new ArrayList<AbstractBone>();
 	protected HashMap<String, AbstractBone> tagBoneMap = new HashMap<String, AbstractBone>();
-	protected HashMap<AbstractBone, SegmentedArmature> boneSegmentMap = new HashMap<>();
+	protected HashMap<AbstractBone, SegmentedArmature> boneSegmentMap = new HashMap<AbstractBone, SegmentedArmature>();
 	protected AbstractBone rootBone;
 	public SegmentedArmature segmentedArmature;
 	//public StrandedArmature strandedArmature;
@@ -363,7 +363,7 @@ public abstract class AbstractArmature implements Saveable {
 				armature.alignSimulationAxesToBones();
 
 				iterations = iterations == -1 ? IKIterations : iterations;
-				dampening = dampening == -1? this.dampening : dampening;
+				//dampening = dampening == -1? this.dampening : dampening;
 				stabilizationPasses = stabilizationPasses == -1 ? this.defaultStabilizingPassCount : stabilizationPasses; 
 
 				for(int i = 0; i<iterations; i++) {			
@@ -429,27 +429,28 @@ public abstract class AbstractArmature implements Saveable {
 		//lastDebugBone = null;
 		AbstractBone startFrom = debug && lastDebugBone != null ? lastDebugBone :  chain.segmentTip;		
 		AbstractBone stopAfter = chain.segmentRoot;
+		
 		AbstractBone currentBone = startFrom;
-		if(chain.isTipPinned()) { //if the tip is pinned, it should have already been oriented before this function was called.
-			if(currentBone == stopAfter)
-				currentBone = null; 			
-			else {
-				if(chain.segmentTip.getIKPin().getSubtargetCount() == 1) {
+		if(chain.isTipPinned() && chain.segmentTip.getIKPin().getDepthFalloff() == 0d) { //if the tip is pinned, it should have already been oriented before this function was called.
+						
+				//if(chain.segmentTip.getIKPin().getSubtargetCount() == 1) {
 					//alignSegmentTipOrientationFor(chain, dampening);
-					currentBone = currentBone.getParent();
-				}
+					//currentBone = currentBone.getParent();
+				//}
+				//if(currentBone == stopAfter)
+				//currentBone = null; 
 				//currentBone = currentBone.getParent();
-			}
+			
 		}
 
 		if(debug && chain.simulatedBones.size() < 2) {
 
 		} else {	
-			alignSegmentTipOrientationsFor(chain, dampening);
+			/*if(chain.isTipPinned() && chain.segmentTip.getIKPin().getDepthFalloff() == 0d)
+				alignSegmentTipOrientationsFor(chain, dampening);*/
 			//System.out.print("---------");
 			while(currentBone != null) {			
 				if(!currentBone.getIKOrientationLock()) {
-
 					chain.updateOptimalRotationToPinnedDescendants(currentBone, dampening, false, stabilizationPasses);
 				} 
 				if(currentBone == stopAfter) currentBone = null;
@@ -478,7 +479,9 @@ public abstract class AbstractArmature implements Saveable {
 		ArrayList<SegmentedArmature> pinnedTips = chain.pinnedDescendants;
 
 		for(SegmentedArmature tipChain : pinnedTips) {
-			alignSegmentTipOrientationFor(tipChain, dampening);
+			AbstractIKPin pin = tipChain.segmentTip.getIKPin();
+			if(!(pin.getDepthFalloff() != 0 && tipChain.childSegments.size() >0)) 
+				alignSegmentTipOrientationFor(tipChain, dampening);
 		}
 	}
 

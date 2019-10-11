@@ -45,8 +45,10 @@ public class EWBIKLoader {
 	
 	public void setMode(int mode) {
 		currentMode = mode;
-		if(currentMode == SINGLE) 
+		if(currentMode == SINGLE)  
 			floatBackedLoader = new FloatBackedLoader();
+		else 
+			doubleBackedLoader = new DoubleBackedLoader();
 	}
 	
 	/**
@@ -120,13 +122,17 @@ public class EWBIKLoader {
 
 
 	public void updateArmatureSegments() {
-			floatBackedLoader.updateArmatureSegments(); 
+		if(floatBackedLoader != null)
+			floatBackedLoader.updateArmatureSegments();
+		if(doubleBackedLoader != null)
 			doubleBackedLoader.updateArmatureSegments();
 	}
 
 
 	public void clearCurrentLoadObjects() {
+		if(floatBackedLoader != null)
 			floatBackedLoader.clearCurrentLoadObjects(); 
+		if(doubleBackedLoader != null)
 			doubleBackedLoader.clearCurrentLoadObjects();
 	}
 

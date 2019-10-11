@@ -386,12 +386,17 @@ public class QCP {
 		int i;
 		for (i = 1; i < (max_iterations+1); ++i) {
 			float oldg = mxEigenV;
-			float x2 = mxEigenV * mxEigenV;
-			float b = (x2 + c2) * mxEigenV;
-			float a = b + c1;
-			float delta = ((a * mxEigenV + c0) / (2.0f * x2 * mxEigenV + b + a));
+			//float x2 = mxEigenV * mxEigenV;
+			//float b = (x2 + c2) * mxEigenV;
+			//float a = b + c1;
+			//float delta0 = ((a * mxEigenV + c0) / (2.0f * x2 * mxEigenV + b + a));			
+			//float delta = (((x2 + c2)*mxEigenV + c1)*mxEigenV + c0) / ((4*x2 + 2*c2)*mxEigenV + c1);
+			//float delta2 = (c0 + (c1 + (c2 +x2)*mxEigenV)*mxEigenV) / (c1 + (2*c2 + 4*x2)*mxEigenV);
+			float Y = 1f/mxEigenV;
+			float Y2 = Y*Y;
+			float delta = ((((Y*c0 + c1)*Y + c2)*Y2 + 1) / ((Y*c1 + 2*c2)*Y2*Y + 4));
 			mxEigenV -= delta;
-
+			
 			if (MathUtils.abs(mxEigenV - oldg) < MathUtils.abs(eval_prec * mxEigenV))
 				break;
 		}
@@ -444,7 +449,7 @@ public class QCP {
 			float q2 = -a21 * a3344_4334 + a23 * a3144_4134 - a24 * a3143_4133;
 			float q3 = a21 * a3244_4234 - a22 * a3144_4134 + a24 * a3142_4132;
 			float q4 = -a21 * a3243_4233 + a22 * a3143_4133 - a23 * a3142_4132;
-
+			
 			float qsqr = q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4;
 
 			/*
@@ -487,12 +492,15 @@ public class QCP {
 					}
 				}
 			}
-			return new Rot(q1, q2, q3, q4, true);
+			//prenormalize the result to avoid floating point errors. 
+			float min = q1;
+			min = q2 < min ? q2 : min; 
+			min = q3 < min ? q3: min;
+			min = q4 < min ? q4 : min; 
+			
+			return new Rot(q1/min, q2/min, q3/min, q4/min, true);
 		}
 	}
-
-
-
 
 	public float getRmsd(SGVec_3f[] fixed, SGVec_3f[] moved) {
 		set(moved, fixed);

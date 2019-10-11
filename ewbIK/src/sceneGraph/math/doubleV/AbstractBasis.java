@@ -262,8 +262,8 @@ public abstract class AbstractBasis {
 	
 	public <V extends Vec3d<?>> void setToGlobalOf(V input, V output) {
 		rotation.applyTo(input, output);
-		output.add(this.translate); 	
-	}
+		output.add(this.translate);		
+ 	}
 	
 	
 	public <V extends Vec3d<?>> void translateBy(V transBy) {
