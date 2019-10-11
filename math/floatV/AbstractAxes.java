@@ -934,8 +934,12 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 	}
 	@Override
 	public void makeSaveable(SaveManager saveManager) {
-		// TODO Auto-generated method stub
-		
+		saveManager.addToSaveState(this);
+		forEachDependent(				  
+				(ad) -> {
+					if(Saveable.class.isAssignableFrom(ad.get().getClass()))
+							((Saveable)ad.get()).makeSaveable(saveManager);
+				});		
 	}
 	
 	/**

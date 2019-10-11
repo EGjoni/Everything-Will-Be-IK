@@ -359,12 +359,12 @@ public final class MathUtils {
 		return (float)Math.sqrt(f);
 	}
 
-	public static float asin(float sqrt) {
-		return (float)Math.asin(sqrt);
+	public static float asin(float sin) {
+		return (float)Math.asin(sin);
 	}
 	
-	public static float acos(float sqrt) {
-		return (float)Math.acos(sqrt);
+	public static float acos(float cos) {
+		return (float)Math.acos(cos);
 	}
 	
 	public static float toDegrees(float radians) {

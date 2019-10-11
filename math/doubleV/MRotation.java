@@ -98,7 +98,7 @@ public class MRotation {
 			try {
 				throw new Exception("Zero Norm for Rotation defining vector");
 			} catch (Exception e) {
-				e.printStackTrace();
+				e.printStackTrace(System.out);
 			}
 		}
 
@@ -127,7 +127,7 @@ public class MRotation {
 				throw new Exception("Zero Norm for Rotation Axis");
 			} catch (MathIllegalArgumentException e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				e.printStackTrace(System.out);
 			}
 		}
 
@@ -274,7 +274,7 @@ public class MRotation {
 				throw new Exception("Closest Orthogonal Has Negative Determinant");
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				e.printStackTrace(System.out);
 			}
 		}
 
@@ -333,7 +333,7 @@ public class MRotation {
 			try {
 				throw new Exception("Closest Orthogonal Has Negative Determinant");
 			} catch (Exception e) {
-				e.printStackTrace();
+				e.printStackTrace(System.out);
 			}
 		}
 
@@ -754,7 +754,7 @@ public class MRotation {
 			try {
 				throw new Exception("Zero Norm");
 			} catch (Exception e) {
-				e.printStackTrace();
+				e.printStackTrace(System.out);
 			}
 		}
 
@@ -827,7 +827,7 @@ public class MRotation {
 					throw new CardanEulerSingularityException(true);
 				} catch (CardanEulerSingularityException e) {
 					// TODO Auto-generated catch block
-					e.printStackTrace();
+					e.printStackTrace(System.out);
 				}
 			}
 			return new double[] {
@@ -849,7 +849,7 @@ public class MRotation {
 				try {
 					throw new CardanEulerSingularityException(true);
 				} catch (CardanEulerSingularityException e) {
-					e.printStackTrace();
+					e.printStackTrace(System.out);
 				}
 			}
 			return new double[] {
@@ -871,7 +871,7 @@ public class MRotation {
 				try {
 					throw new CardanEulerSingularityException(true);
 				} catch (CardanEulerSingularityException e) {
-					e.printStackTrace();
+					e.printStackTrace(System.out);
 				}
 			}
 			return new double[] {
@@ -893,7 +893,7 @@ public class MRotation {
 				try {
 					throw new CardanEulerSingularityException(true);
 				} catch (CardanEulerSingularityException e) {
-					e.printStackTrace();
+					e.printStackTrace(System.out);
 				}
 			}
 			return new double[] {
@@ -915,7 +915,7 @@ public class MRotation {
 				try {
 					throw new CardanEulerSingularityException(true);
 				} catch (CardanEulerSingularityException e) {
-					e.printStackTrace();
+					e.printStackTrace(System.out);
 				}
 			}
 			return new double[] {
@@ -937,7 +937,7 @@ public class MRotation {
 				try {
 					throw new CardanEulerSingularityException(true);
 				} catch (CardanEulerSingularityException e) {
-					e.printStackTrace();
+					e.printStackTrace(System.out);
 				}
 			}
 			return new double[] {
@@ -959,7 +959,7 @@ public class MRotation {
 				try {
 					throw new CardanEulerSingularityException(true);
 				} catch (CardanEulerSingularityException e) {
-					e.printStackTrace();
+					e.printStackTrace(System.out);
 				}
 			}
 			return new double[] {
@@ -981,7 +981,7 @@ public class MRotation {
 				try {
 					throw new CardanEulerSingularityException(true);
 				} catch (CardanEulerSingularityException e) {
-					e.printStackTrace();
+					e.printStackTrace(System.out);
 				}
 			}
 			return new double[] {
@@ -1003,7 +1003,7 @@ public class MRotation {
 				try {
 					throw new CardanEulerSingularityException(true);
 				} catch (CardanEulerSingularityException e) {
-					e.printStackTrace();
+					e.printStackTrace(System.out);
 				}
 			}
 			return new double[] {
@@ -1025,7 +1025,7 @@ public class MRotation {
 				try {
 					throw new CardanEulerSingularityException(true);
 				} catch (CardanEulerSingularityException e) {
-					e.printStackTrace();
+					e.printStackTrace(System.out);
 				}
 			}
 			return new double[] {
@@ -1047,7 +1047,7 @@ public class MRotation {
 				try {
 					throw new CardanEulerSingularityException(true);
 				} catch (CardanEulerSingularityException e) {
-					e.printStackTrace();
+					e.printStackTrace(System.out);
 				}
 			}
 			return new double[] {
@@ -1069,7 +1069,7 @@ public class MRotation {
 				try {
 					throw new CardanEulerSingularityException(true);
 				} catch (CardanEulerSingularityException e) {
-					e.printStackTrace();
+					e.printStackTrace(System.out);
 				}
 			}
 			return new double[] {
@@ -1478,7 +1478,7 @@ public class MRotation {
 			try {
 				throw new Exception("Zero Norm");
 			} catch (Exception e) {
-				e.printStackTrace();
+				e.printStackTrace(System.out);
 			}
 		}
 
@@ -1495,7 +1495,7 @@ public class MRotation {
 			try {
 				throw new Exception("Zero Norm for Rotation defining vector");
 			} catch (Exception e) {
-				e.printStackTrace();
+				e.printStackTrace(System.out);
 			}
 		}
 
@@ -1529,7 +1529,7 @@ public class MRotation {
 			try {
 				throw new Exception("Zero Norm for Rotation defining vector");
 			} catch (Exception e) {
-				e.printStackTrace();
+				e.printStackTrace(System.out);
 			}
 		}
 
@@ -1636,7 +1636,7 @@ public class MRotation {
 		try {
 			throw new Exception("Failed to converge on orthogonal matrix after 10 iterations");
 		} catch (Exception e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 		}  
 		return null;
 	}

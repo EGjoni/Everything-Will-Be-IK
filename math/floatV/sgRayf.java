@@ -350,15 +350,17 @@ public class sgRayf implements CanLoad {
 
 
 /**
- * scale the ray outward in both directions by a large amount. (900000)
+ *  adds the specified length to the ray in both directions.
  */
-	public void elongate() {
-		sgRayf reverseRay = new sgRayf(this.p2.copy(), this.p1.copy()); 
-		sgRayf result = this.getRayScaledTo(900000); 
-		reverseRay = reverseRay.getRayScaledTo(900000);
-		result.p1 = reverseRay.p2.copy();
-		this.p1.set(result.p1); 
-		this.p2.set(result.p2);
+	public void elongate(float amt) {
+		Vec3f midPoint = p1.addCopy(p2).multCopy(0.5f);
+		Vec3f p1Heading = p1.subCopy(midPoint);
+		Vec3f p2Heading = p2.subCopy(midPoint);
+		Vec3f p1Add = (Vec3f) p1Heading.copy().normalize().mult(amt);
+		Vec3f p2Add = (Vec3f) p2Heading.copy().normalize().mult(amt);
+		
+		this.p1.set((Vec3f)p1Heading.addCopy(p1Add).addCopy(midPoint)); 
+		this.p2.set((Vec3f)p2Heading.addCopy(p2Add).addCopy(midPoint));
 	}
 
 	public sgRayf copy() {
@@ -822,7 +824,10 @@ public class sgRayf implements CanLoad {
 		h.set(0f,0f,0f);
 		h =  (V) h.sub(rp1);  // h=r.o-c.M
 		float lf = e.dot(h);                      // lf=e.h
-		float s = MathUtils.pow(radius, 2)-h.dot(h)+MathUtils.pow(lf, 2);   // s=r^2-h^2+lf^2
+		float radpow = radius*radius; 
+		float hdh = h.magSq(); 
+		float lfpow =lf*lf;
+		float s = radpow - hdh +lfpow;   // s=r^2-h^2+lf^2
 		if (s < 0.0) return 0;                    // no intersection points ?
 		s = MathUtils.sqrt(s);                              // s=sqrt(r^2-h^2+lf^2)
 
@@ -834,9 +839,9 @@ public class sgRayf implements CanLoad {
 			} 
 		}else result = 2;                          // 2 intersection points
 
-		S1.set(e.multCopy(lf-s));  
+		S1.set(e.multCopy((float)lf-s));  
 		S1.add(rp1); // S1=A+e*(lf-s)
-		S2.set(e.multCopy(lf+s));  
+		S2.set(e.multCopy((float)lf+s));  
 		S2.add(rp1); // S2=A+e*(lf+s)
 
 		// only for testing
