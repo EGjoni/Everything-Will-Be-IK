@@ -46,8 +46,6 @@ public final class FloatBackedLoader extends LoadManager{
 	public HashMap<String, JSONObject>	    	IKPinJSONObjects 		= new HashMap<>(); 
 
 
-	public static ArrayList<Saveable> allLoadedObjects = new ArrayList<>();
-
 	public boolean fileCorruptionDetected = false; 
 
 	private String tempLoadDirectory;	
@@ -115,10 +113,6 @@ public final class FloatBackedLoader extends LoadManager{
 			s.notifyOfLoadCompletion();
 		
 		updateArmatureSegments();
-		
-		for(Saveable s: allLoadedObjects) 
-			s.notifyOfLoadCompletion();
-		
 
 		System.gc();
 		

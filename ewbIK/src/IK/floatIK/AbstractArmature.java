@@ -21,7 +21,6 @@ import java.nio.channels.SeekableByteChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import IK.floatIK.AbstractIKPin;
 import IK.floatIK.SegmentedArmature;
 import IK.floatIK.SegmentedArmature.WorkingBone;
 import asj.LoadManager;
@@ -31,10 +30,10 @@ import asj.data.JSONObject;
 import data.EWBIKLoader;
 import data.EWBIKSaver;
 import math.floatV.AbstractAxes;
+import math.floatV.MathUtils;
 import math.floatV.Rot;
 import math.floatV.SGVec_3f;
 import math.floatV.Vec3f;
-import math.floatV.MathUtils;
 
 
 /**
@@ -48,7 +47,7 @@ public abstract class AbstractArmature implements Saveable {
 	protected AbstractAxes tempWorkingAxes;
 	protected ArrayList<AbstractBone> bones = new ArrayList<AbstractBone>();
 	protected HashMap<String, AbstractBone> tagBoneMap = new HashMap<String, AbstractBone>();
-	protected HashMap<AbstractBone, SegmentedArmature> boneSegmentMap = new HashMap<>();
+	protected HashMap<AbstractBone, SegmentedArmature> boneSegmentMap = new HashMap<AbstractBone, SegmentedArmature>();
 	protected AbstractBone rootBone;
 	public SegmentedArmature segmentedArmature;
 	//public StrandedArmature strandedArmature;
@@ -76,7 +75,7 @@ public abstract class AbstractArmature implements Saveable {
 	 * @param name A human readable name for this armature
 	 */
 	public AbstractArmature(AbstractAxes inputOrigin, String name) {
-		
+
 		this.localAxes = (AbstractAxes) inputOrigin; 
 		this.tempWorkingAxes = localAxes.getGlobalCopy();
 		this.tag = name;
@@ -106,12 +105,12 @@ public abstract class AbstractArmature implements Saveable {
 	}
 
 	protected abstract void initializeRootBone(AbstractArmature armature, 
-			 Vec3f<?> tipHeading,  Vec3f<?> rollHeading, 
+			Vec3f<?> tipHeading,  Vec3f<?> rollHeading, 
 			String inputTag, 
 			float boneHeight, 
 			AbstractBone.frameType coordinateType);
 
-	
+
 	/**
 	 * The default number of iterations to run over this armature whenever IKSolver() is called. 
 	 * The higher this value, the more likely the Armature is to have converged on a solution when 
@@ -120,6 +119,7 @@ public abstract class AbstractArmature implements Saveable {
 	 */
 	public void setDefaultIterations(int iter) {
 		this.IKIterations = iter;
+		updateArmatureSegments();
 	}
 
 	/**
@@ -177,7 +177,7 @@ public abstract class AbstractArmature implements Saveable {
 	protected void addToBoneList(AbstractBone abstractBone) {
 		if(!bones.contains(abstractBone)) {
 			bones.add(abstractBone);
-			tagBoneMap.put(abstractBone.tag, abstractBone);
+			tagBoneMap.put(abstractBone.getTag(), abstractBone);
 		}
 	}
 
@@ -245,7 +245,7 @@ public abstract class AbstractArmature implements Saveable {
 		recursivelyUpdateBoneSegmentMapFrom(segmentedArmature);
 		SegmentedArmature.recursivelyCreateHeadingArraysFor(segmentedArmature);
 	}
-	
+
 	private void recursivelyUpdateBoneSegmentMapFrom(SegmentedArmature startFrom) {
 		for(AbstractBone b: startFrom.segmentBoneList) {
 			boneSegmentMap.put(b, startFrom);
@@ -358,30 +358,32 @@ public abstract class AbstractArmature implements Saveable {
 
 	public void iteratedImprovedSolver(AbstractBone startFrom, float dampening, int iterations, int stabilizationPasses) {
 		SegmentedArmature armature = boneSegmentMap.get(startFrom);
+		
+	
 		if(armature != null) {
 			SegmentedArmature pinnedRootChain = armature.getPinnedRootChainFromHere();
 			armature = pinnedRootChain == null ? armature.getAncestorSegmentContaining(rootBone) : pinnedRootChain;
 			if(armature != null && armature.pinnedDescendants.size() > 0) {
 				armature.alignSimulationAxesToBones();
-				
+
 				iterations = iterations == -1 ? IKIterations : iterations;
-				dampening = dampening == -1? this.dampening : dampening;
-				stabilizationPasses = stabilizationPasses == -1 ? this.defaultStabilizingPassCount : stabilizationPasses; 
-				
+				float totalIterations = iterations; 
+				//dampening = dampening == -1? this.dampening : dampening;
+				stabilizationPasses = stabilizationPasses == -1 ? this.defaultStabilizingPassCount : stabilizationPasses; 				
 				for(int i = 0; i<iterations; i++) {			
 					if(!armature.isBasePinned() ) {
 						//alignSegmentTipOrientationsFor(armature, dampening);		
-						armature.updateOptimalRotationToPinnedDescendants(armature.segmentRoot, MathUtils.PI, true, stabilizationPasses);
+						armature.updateOptimalRotationToPinnedDescendants(armature.segmentRoot, MathUtils.PI, true, stabilizationPasses, i, totalIterations);
 						armature.setProcessed(false);
 						for(SegmentedArmature s : armature.childSegments) {
-							groupedRecursiveSegmentSolver(s, dampening, stabilizationPasses);		
+							groupedRecursiveSegmentSolver(s, dampening, stabilizationPasses, i, totalIterations);	
 						}
 					} else {
-						groupedRecursiveSegmentSolver(armature, dampening, stabilizationPasses);		
+						groupedRecursiveSegmentSolver(armature, dampening, stabilizationPasses, i, totalIterations);		
 					}
 					//outwardRecursiveSegmentSolver(armature, dampening);
 					//alignSegmentTipOrientationsFor(armature, dampening);
-					
+
 				}
 				armature.recursivelyAlignBonesToSimAxesFrom(armature.segmentRoot);
 				recursivelyNotifyBonesOfCompletedIKSolution(armature);
@@ -390,12 +392,12 @@ public abstract class AbstractArmature implements Saveable {
 
 	}
 
-	public void groupedRecursiveSegmentSolver(SegmentedArmature startFrom, float dampening, int stabilizationPasses) {	
-		recursiveSegmentSolver(startFrom, dampening, stabilizationPasses);
+	public void groupedRecursiveSegmentSolver(SegmentedArmature startFrom, float dampening, int stabilizationPasses, int iteration, float totalIterations) {	
+		recursiveSegmentSolver(startFrom, dampening, stabilizationPasses, iteration, totalIterations);
 		for(SegmentedArmature a : startFrom.pinnedDescendants) {
 			for(SegmentedArmature c : a.childSegments) {
 				//alignSegmentTipOrientationsFor(startFrom, dampening);
-				groupedRecursiveSegmentSolver(c, dampening, stabilizationPasses);
+				groupedRecursiveSegmentSolver(c, dampening, stabilizationPasses, iteration, totalIterations);
 			}
 		}
 		//alignSegmentTipOrientationsFor(startFrom, dampening);
@@ -405,16 +407,16 @@ public abstract class AbstractArmature implements Saveable {
 	 * tips down to its pinned root. 
 	 * @param armature
 	 */
-	public void recursiveSegmentSolver(SegmentedArmature armature, float dampening, int stabilizationPasses) {
+	public void recursiveSegmentSolver(SegmentedArmature armature, float dampening, int stabilizationPasses, int iteration, float totalIterations) {
 		if(armature.childSegments == null && !armature.isTipPinned()) {
 			return; 
 		} else if(!armature.isTipPinned()) {
 			for(SegmentedArmature c: armature.childSegments) {			
-				recursiveSegmentSolver(c, dampening, stabilizationPasses);
+				recursiveSegmentSolver(c, dampening, stabilizationPasses, iteration, totalIterations);
 				c.setProcessed(true);
 			}
 		} 		
-		QCPSolver(armature, dampening, false, stabilizationPasses);			
+		QCPSolver(armature, dampening, false, stabilizationPasses, iteration, totalIterations);			
 	}
 
 	boolean debug = true;
@@ -424,35 +426,38 @@ public abstract class AbstractArmature implements Saveable {
 			SegmentedArmature chain, 
 			float dampening,
 			boolean inverseWeighting,
-			int stabilizationPasses) {
+			int stabilizationPasses,
+			int iteration,
+			float totalIterations) {
 
 		debug =false;
 
 		//lastDebugBone = null;
 		AbstractBone startFrom = debug && lastDebugBone != null ? lastDebugBone :  chain.segmentTip;		
 		AbstractBone stopAfter = chain.segmentRoot;
+		
 		AbstractBone currentBone = startFrom;
-		if(chain.isTipPinned()) { //if the tip is pinned, it should have already been oriented before this function was called.
-			if(currentBone == stopAfter)
-				currentBone = null; 			
-			else {
-				if(chain.segmentTip.getIKPin().getSubtargetCount() == 1) {
+		if(chain.isTipPinned() && chain.segmentTip.getIKPin().getDepthFalloff() == 0f) { //if the tip is pinned, it should have already been oriented before this function was called.
+						
+				//if(chain.segmentTip.getIKPin().getSubtargetCount() == 1) {
 					//alignSegmentTipOrientationFor(chain, dampening);
-					currentBone = currentBone.getParent();
-				}
+					//currentBone = currentBone.getParent();
+				//}
+				//if(currentBone == stopAfter)
+				//currentBone = null; 
 				//currentBone = currentBone.getParent();
-			}
+			
 		}
 
 		if(debug && chain.simulatedBones.size() < 2) {
 
 		} else {	
-			alignSegmentTipOrientationsFor(chain, dampening);
+			/*if(chain.isTipPinned() && chain.segmentTip.getIKPin().getDepthFalloff() == 0f)
+				alignSegmentTipOrientationsFor(chain, dampening);*/
 			//System.out.print("---------");
 			while(currentBone != null) {			
 				if(!currentBone.getIKOrientationLock()) {
-				
-					chain.updateOptimalRotationToPinnedDescendants(currentBone, dampening, false, stabilizationPasses);
+					chain.updateOptimalRotationToPinnedDescendants(currentBone, dampening, false, stabilizationPasses, iteration, totalIterations);
 				} 
 				if(currentBone == stopAfter) currentBone = null;
 				else currentBone = currentBone.getParent();
@@ -465,7 +470,7 @@ public abstract class AbstractArmature implements Saveable {
 		}
 	}
 
-	
+
 	void rootwardlyUpdateFalloffCacheFrom(AbstractBone forBone) {
 		SegmentedArmature current = boneSegmentMap.get(forBone);
 		while(current != null) {
@@ -510,7 +515,7 @@ public abstract class AbstractArmature implements Saveable {
 	float debugMag = 5f; 
 	SGVec_3f lastTargetPos = new SGVec_3f(); 
 
-	
+
 	/**
 	 * currently unused
 	 * @param enabled
@@ -545,7 +550,7 @@ public abstract class AbstractArmature implements Saveable {
 	public void setPerformanceMonitor(boolean state) {
 		monitorPerformance = state;
 	}
-	
+
 	public class PerformanceStats {
 		int timedCalls = 0;
 		int benchmarkWindow = 60;
@@ -605,7 +610,10 @@ public abstract class AbstractArmature implements Saveable {
 	@Override
 	public void makeSaveable(SaveManager saveManager) {
 		saveManager.addToSaveState(this);
-		this.localAxes().makeSaveable(saveManager); 
+		if(this.localAxes().getParentAxes() != null )
+			this.localAxes().getParentAxes().makeSaveable(saveManager);
+		else 
+			this.localAxes().makeSaveable(saveManager); 
 		this.rootBone.makeSaveable(saveManager);
 	}
 
@@ -624,11 +632,15 @@ public abstract class AbstractArmature implements Saveable {
 
 
 	public void loadFromJSONObject(JSONObject j, LoadManager l) {
-		this.localAxes = l.getObjectFor(AbstractAxes.class, j, "localAxes");
-		this.rootBone = l.getObjectFor(AbstractBone.class, j, "rootBone");
-		this.IKIterations =  j.getInt("defaultIterations");
-		this.dampening = j.getFloat("dampening");
-		this.tag = j.getString("tag");
+		try {
+			this.localAxes = l.getObjectFor(AbstractAxes.class, j, "localAxes");
+			this.rootBone = l.getObjectFor(AbstractBone.class, j, "rootBone");
+			this.IKIterations =  j.getInt("defaultIterations");
+			this.dampening = j.getFloat("dampening");
+			this.tag = j.getString("tag");
+		} catch(Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 

@@ -341,7 +341,9 @@ public class SegmentedArmature {
 			AbstractBone forBone, 
 			double dampening,
 			boolean translate,
-			int stabilizationPasses) {
+			int stabilizationPasses,
+			int iteration,
+			double totalIterations) {
 
 		WorkingBone sb = simulatedBones.get(forBone);
 		AbstractAxes thisBoneAxes = sb.simLocalAxes;
@@ -355,16 +357,6 @@ public class SegmentedArmature {
 			newDampening = Math.PI;
 		}
 
-		if(sb.springy) {
-			if(dampening != -1) {
-				double returnfullness = ((AbstractKusudama)forBone.getConstraint()).getReturnfullness();
-				double cosHalfAngle = Math.cos(forBone.getStiffness()*dampening*0.5d*returnfullness);		
-				forBone.setAxesToReturnfulled(thisBoneAxes, sb.simConstraintAxes, cosHalfAngle);
-			} else {
-				forBone.setAxesToReturnfulled(thisBoneAxes, sb.simConstraintAxes, sb.cosHalfReturnFullnessDampened);
-			}
-		}
-
 
 		updateTargetHeadings(localizedTargetHeadings, weights, thisBoneAxes);
 		upateTipHeadings(localizedTipHeadings, thisBoneAxes);		
@@ -373,6 +365,8 @@ public class SegmentedArmature {
 		QCP qcpConvergenceCheck = new QCP(MathUtils.DOUBLE_ROUNDING_ERROR, MathUtils.DOUBLE_ROUNDING_ERROR);
 		double newRMSD = 999999d;
 
+		
+		
 		if(stabilizationPasses > 0)
 			bestRMSD = getManualMSD(localizedTipHeadings, localizedTargetHeadings, weights);
 
@@ -384,15 +378,34 @@ public class SegmentedArmature {
 					localizedTipHeadings, 
 					localizedTargetHeadings, 
 					weights, 
-					qcpConvergenceCheck);	
+					qcpConvergenceCheck,
+					iteration,
+					totalIterations);	
+
 			if(stabilizationPasses > 0) {
 				//newDampening = dampening == -1 ? sb.forBone.parentArmature.dampening 
 				upateTipHeadings(localizedTipHeadings, thisBoneAxes);		
 				newRMSD = getManualMSD(localizedTipHeadings, localizedTargetHeadings, weights);
+				
 
-				if(bestRMSD >= newRMSD) {
+				if(bestRMSD >= newRMSD) {				
+					if(sb.springy) {
+						if(dampening != -1 || totalIterations != sb.forBone.parentArmature.getDefaultIterations()) {
+							double returnfullness = ((AbstractKusudama)sb.forBone.getConstraint()).getPainfullness();
+							double dampenedAngle = sb.forBone.getStiffness()*dampening*returnfullness;
+							double totaliterationssq = totalIterations*totalIterations;
+							double scaledDampenedAngle = dampenedAngle*((totaliterationssq-(iteration * iteration))/totaliterationssq);
+							double cosHalfAngle = Math.cos(0.5*scaledDampenedAngle);		
+							sb.forBone.setAxesToReturnfulled(sb.simLocalAxes, sb.simConstraintAxes, cosHalfAngle, scaledDampenedAngle);
+						} else {
+							sb.forBone.setAxesToReturnfulled(sb.simLocalAxes, sb.simConstraintAxes, sb.cosHalfReturnfullnessDampened[iteration], sb.halfReturnfullnessDampened[iteration]);
+						}
+						upateTipHeadings(localizedTipHeadings, thisBoneAxes);		
+						newRMSD = getManualMSD(localizedTipHeadings, localizedTargetHeadings, weights);
+					}
 					bestOrientation.set(thisBoneAxes.getGlobalMBasis().rotation.rotation);
 					bestRMSD = newRMSD;		
+					
 					//if(i>0) 
 					//System.out.println("inner retired after " + i + " attempts.");
 					break;				
@@ -418,13 +431,16 @@ public class SegmentedArmature {
 			SGVec_3d[] localizedTipHeadings,
 			SGVec_3d[] localizedTargetHeadings, 
 			double[] weights,
-			QCP qcpOrientationAligner) {
+			QCP qcpOrientationAligner,
+			int iteration,
+			double totalIterations) {
 
 		qcpOrientationAligner.setMaxIterations(10);		
 		Rot qcpRot =  qcpOrientationAligner.weightedSuperpose(localizedTipHeadings, localizedTargetHeadings, weights, translate);
 
 		SGVec_3d translateBy = qcpOrientationAligner.getTranslation();
 		double boneDamp = sb.cosHalfDampen; 
+				
 		if(dampening != -1) {
 			boneDamp = dampening;
 			qcpRot.rotation.clampToAngle(boneDamp);
@@ -432,9 +448,13 @@ public class SegmentedArmature {
 			qcpRot.rotation.clampToQuadranceAngle(boneDamp);
 		}	
 		sb.simLocalAxes.rotateBy(qcpRot);
+		
+		sb.simLocalAxes.updateGlobal();	
+		
 		sb.forBone.setAxesToSnapped(sb.simLocalAxes, sb.simConstraintAxes, boneDamp);
 		sb.simLocalAxes.translateByGlobal(translateBy);
-		sb.simConstraintAxes.translateByGlobal(translateBy);
+		sb.simConstraintAxes.translateByGlobal(translateBy);		
+		
 	}
 
 
@@ -717,7 +737,8 @@ public class SegmentedArmature {
 		AbstractAxes simLocalAxes;
 		AbstractAxes simConstraintAxes;
 		double cosHalfDampen = 0d; 
-		double cosHalfReturnFullnessDampened = 0d;
+		double cosHalfReturnfullnessDampened[];
+		double halfReturnfullnessDampened[];
 		boolean springy = false;
 
 		public WorkingBone(AbstractBone toSimulate) {
@@ -729,9 +750,9 @@ public class SegmentedArmature {
 			double dampening = forBone.getParent() == null ? MathUtils.PI : predamp * defaultDampening;					
 			cosHalfDampen = Math.cos(dampening/ 2d);
 			AbstractKusudama k = ((AbstractKusudama)forBone.getConstraint());
-			if( k != null && k.getReturnfullness() != 0d) {
+			if( k != null && k.getPainfullness() != 0d) {
 				springy = true;
-				cosHalfReturnFullnessDampened = Math.cos(((dampening*k.getReturnfullness())/2d));
+				populateReturnDampeningIterationArray(k);				
 			} else {
 				springy = false;
 			}
@@ -743,11 +764,30 @@ public class SegmentedArmature {
 			double dampening = forBone.getParent() == null ? MathUtils.PI : predamp * defaultDampening;					
 			cosHalfDampen = Math.cos(dampening/ 2d);
 			AbstractKusudama k = ((AbstractKusudama)forBone.getConstraint());
-			if( k != null && k.getReturnfullness() != 0d) {
+			if( k != null && k.getPainfullness() != 0d) {
 				springy = true;
-				cosHalfReturnFullnessDampened = Math.cos(((dampening*k.getReturnfullness())/2d));
+				populateReturnDampeningIterationArray(k);				
 			} else {
 				springy = false;
+			}
+		}
+		
+		public void populateReturnDampeningIterationArray(AbstractKusudama k) {
+			double predamp = 1d-forBone.getStiffness();
+			double defaultDampening = forBone.parentArmature.dampening;
+			double dampening = forBone.getParent() == null ? MathUtils.PI : predamp * defaultDampening;			
+			double iterations = forBone.parentArmature.getDefaultIterations();
+			double returnfullness = k.getPainfullness(); 
+			double falloff = 0.2;
+			halfReturnfullnessDampened = new double[(int)iterations];
+			cosHalfReturnfullnessDampened = new double[(int)iterations];
+			double iterationspow = Math.pow(iterations, falloff*iterations*returnfullness);  
+			for(double i=0; i< iterations; i++) {				
+				double iterationScalar = ((iterationspow) - Math.pow(i,falloff*iterations*returnfullness))/(iterationspow);
+				double iterationReturnClamp = iterationScalar*returnfullness*dampening; 
+				double cosIterationReturnClamp = Math.cos(iterationReturnClamp/2d); 
+				halfReturnfullnessDampened[(int)i] = iterationReturnClamp;
+				cosHalfReturnfullnessDampened[(int)i] = cosIterationReturnClamp;
 			}
 		}
 	}

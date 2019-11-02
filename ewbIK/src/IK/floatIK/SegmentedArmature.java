@@ -24,7 +24,6 @@ import java.util.WeakHashMap;
 
 import IK.PerfTimer;
 import math.floatV.AbstractAxes;
-import math.floatV.MRotation;
 import math.floatV.MathUtils;
 import math.floatV.QCP;
 import math.floatV.Rot;
@@ -179,18 +178,30 @@ public class SegmentedArmature {
 				weightArray.add(innerWeightArray);
 				byte modeCode = pin.getModeCode();
 				innerWeightArray.add(pin.getPinWeight()*currentFalloff);
+				float maxPinWeight = 0f;
+				if((modeCode & AbstractIKPin.XDir) != 0)
+					maxPinWeight = MathUtils.max(maxPinWeight, pin.getXPriority());					
+				if((modeCode & AbstractIKPin.YDir) != 0) 
+					maxPinWeight = MathUtils.max(maxPinWeight, pin.getYPriority());				
+				if((modeCode & AbstractIKPin.ZDir) != 0)
+					maxPinWeight = MathUtils.max(maxPinWeight, pin.getZPriority());
+
+				if(maxPinWeight == 0f) maxPinWeight = 1f;
+
+				maxPinWeight = 1f;
+
 				if((modeCode & AbstractIKPin.XDir) != 0) {
-					float subTargetWeight = pin.getPinWeight() * pin.getXPriority()*currentFalloff;
+					float subTargetWeight = pin.getPinWeight() * (pin.getXPriority()/maxPinWeight)*currentFalloff;
 					innerWeightArray.add(subTargetWeight);
 					innerWeightArray.add(subTargetWeight);
 				}
 				if((modeCode & AbstractIKPin.YDir) != 0) {
-					float subTargetWeight = pin.getPinWeight() * pin.getYPriority()*currentFalloff;
+					float subTargetWeight = pin.getPinWeight() * (pin.getYPriority()/maxPinWeight)*currentFalloff;
 					innerWeightArray.add(subTargetWeight);
 					innerWeightArray.add(subTargetWeight);
 				}
 				if((modeCode & AbstractIKPin.ZDir) != 0) {
-					float subTargetWeight = pin.getPinWeight() * pin.getZPriority()*currentFalloff;
+					float subTargetWeight = pin.getPinWeight() * (pin.getZPriority()/maxPinWeight)*currentFalloff;
 					innerWeightArray.add(subTargetWeight);
 					innerWeightArray.add(subTargetWeight);
 				}
@@ -330,7 +341,9 @@ public class SegmentedArmature {
 			AbstractBone forBone, 
 			float dampening,
 			boolean translate,
-			int stabilizationPasses) {
+			int stabilizationPasses,
+			int iteration,
+			float totalIterations) {
 
 		WorkingBone sb = simulatedBones.get(forBone);
 		AbstractAxes thisBoneAxes = sb.simLocalAxes;
@@ -344,6 +357,7 @@ public class SegmentedArmature {
 			newDampening = MathUtils.PI;
 		}
 
+
 		updateTargetHeadings(localizedTargetHeadings, weights, thisBoneAxes);
 		upateTipHeadings(localizedTipHeadings, thisBoneAxes);		
 
@@ -351,10 +365,12 @@ public class SegmentedArmature {
 		QCP qcpConvergenceCheck = new QCP(MathUtils.FLOAT_ROUNDING_ERROR, MathUtils.FLOAT_ROUNDING_ERROR);
 		float newRMSD = 999999f;
 
+		
+		
 		if(stabilizationPasses > 0)
 			bestRMSD = getManualMSD(localizedTipHeadings, localizedTargetHeadings, weights);
 
-		
+
 		for(int i=0; i<stabilizationPasses + 1; i++) {
 			updateOptimalRotationToPinnedDescendants(
 					sb, newDampening, 
@@ -362,15 +378,34 @@ public class SegmentedArmature {
 					localizedTipHeadings, 
 					localizedTargetHeadings, 
 					weights, 
-					qcpConvergenceCheck);	
+					qcpConvergenceCheck,
+					iteration,
+					totalIterations);	
+
 			if(stabilizationPasses > 0) {
 				//newDampening = dampening == -1 ? sb.forBone.parentArmature.dampening 
 				upateTipHeadings(localizedTipHeadings, thisBoneAxes);		
 				newRMSD = getManualMSD(localizedTipHeadings, localizedTargetHeadings, weights);
+				
 
-				if(bestRMSD >= newRMSD) {
+				if(bestRMSD >= newRMSD) {				
+					if(sb.springy) {
+						if(dampening != -1 || totalIterations != sb.forBone.parentArmature.getDefaultIterations()) {
+							float returnfullness = ((AbstractKusudama)sb.forBone.getConstraint()).getPainfullness();
+							float dampenedAngle = sb.forBone.getStiffness()*dampening*returnfullness;
+							float totaliterationssq = totalIterations*totalIterations;
+							float scaledDampenedAngle = dampenedAngle*((totaliterationssq-(iteration * iteration))/totaliterationssq);
+							float cosHalfAngle = MathUtils.cos(0.5f*scaledDampenedAngle);		
+							sb.forBone.setAxesToReturnfulled(sb.simLocalAxes, sb.simConstraintAxes, cosHalfAngle, scaledDampenedAngle);
+						} else {
+							sb.forBone.setAxesToReturnfulled(sb.simLocalAxes, sb.simConstraintAxes, sb.cosHalfReturnfullnessDampened[iteration], sb.halfReturnfullnessDampened[iteration]);
+						}
+						upateTipHeadings(localizedTipHeadings, thisBoneAxes);		
+						newRMSD = getManualMSD(localizedTipHeadings, localizedTargetHeadings, weights);
+					}
 					bestOrientation.set(thisBoneAxes.getGlobalMBasis().rotation.rotation);
 					bestRMSD = newRMSD;		
+					
 					//if(i>0) 
 					//System.out.println("inner retired after " + i + " attempts.");
 					break;				
@@ -396,13 +431,16 @@ public class SegmentedArmature {
 			SGVec_3f[] localizedTipHeadings,
 			SGVec_3f[] localizedTargetHeadings, 
 			float[] weights,
-			QCP qcpOrientationAligner) {
+			QCP qcpOrientationAligner,
+			int iteration,
+			float totalIterations) {
 
 		qcpOrientationAligner.setMaxIterations(10);		
-		Rot qcpRot = qcpOrientationAligner.weightedSuperpose(localizedTipHeadings, localizedTargetHeadings, weights, translate);
-	
-		SGVec_3f translateBy = qcpOrientationAligner.getTranslation().toVec3f();
+		Rot qcpRot =  qcpOrientationAligner.weightedSuperpose(localizedTipHeadings, localizedTargetHeadings, weights, translate);
+
+		SGVec_3f translateBy = qcpOrientationAligner.getTranslation();
 		float boneDamp = sb.cosHalfDampen; 
+				
 		if(dampening != -1) {
 			boneDamp = dampening;
 			qcpRot.rotation.clampToAngle(boneDamp);
@@ -410,9 +448,13 @@ public class SegmentedArmature {
 			qcpRot.rotation.clampToQuadranceAngle(boneDamp);
 		}	
 		sb.simLocalAxes.rotateBy(qcpRot);
+		
+		sb.simLocalAxes.updateGlobal();	
+		
 		sb.forBone.setAxesToSnapped(sb.simLocalAxes, sb.simConstraintAxes, boneDamp);
 		sb.simLocalAxes.translateByGlobal(translateBy);
-		sb.simConstraintAxes.translateByGlobal(translateBy);
+		sb.simConstraintAxes.translateByGlobal(translateBy);		
+		
 	}
 
 
@@ -695,6 +737,9 @@ public class SegmentedArmature {
 		AbstractAxes simLocalAxes;
 		AbstractAxes simConstraintAxes;
 		float cosHalfDampen = 0f; 
+		float cosHalfReturnfullnessDampened[];
+		float halfReturnfullnessDampened[];
+		boolean springy = false;
 
 		public WorkingBone(AbstractBone toSimulate) {
 			forBone = toSimulate;
@@ -704,6 +749,13 @@ public class SegmentedArmature {
 			float defaultDampening = forBone.parentArmature.dampening;
 			float dampening = forBone.getParent() == null ? MathUtils.PI : predamp * defaultDampening;					
 			cosHalfDampen = MathUtils.cos(dampening/ 2f);
+			AbstractKusudama k = ((AbstractKusudama)forBone.getConstraint());
+			if( k != null && k.getPainfullness() != 0f) {
+				springy = true;
+				populateReturnDampeningIterationArray(k);				
+			} else {
+				springy = false;
+			}
 		}
 
 		public void updateCosDampening() {
@@ -711,6 +763,32 @@ public class SegmentedArmature {
 			float defaultDampening = forBone.parentArmature.dampening;
 			float dampening = forBone.getParent() == null ? MathUtils.PI : predamp * defaultDampening;					
 			cosHalfDampen = MathUtils.cos(dampening/ 2f);
+			AbstractKusudama k = ((AbstractKusudama)forBone.getConstraint());
+			if( k != null && k.getPainfullness() != 0f) {
+				springy = true;
+				populateReturnDampeningIterationArray(k);				
+			} else {
+				springy = false;
+			}
+		}
+		
+		public void populateReturnDampeningIterationArray(AbstractKusudama k) {
+			float predamp = 1f-forBone.getStiffness();
+			float defaultDampening = forBone.parentArmature.dampening;
+			float dampening = forBone.getParent() == null ? MathUtils.PI : predamp * defaultDampening;			
+			float iterations = forBone.parentArmature.getDefaultIterations();
+			float returnfullness = k.getPainfullness(); 
+			float falloff = 0.2f;
+			halfReturnfullnessDampened = new float[(int)iterations];
+			cosHalfReturnfullnessDampened = new float[(int)iterations];
+			float iterationspow = MathUtils.pow(iterations, falloff*iterations*returnfullness);  
+			for(float i=0; i< iterations; i++) {				
+				float iterationScalar = ((iterationspow) - MathUtils.pow(i,falloff*iterations*returnfullness))/(iterationspow);
+				float iterationReturnClamp = iterationScalar*returnfullness*dampening; 
+				float cosIterationReturnClamp = MathUtils.cos(iterationReturnClamp/2f); 
+				halfReturnfullnessDampened[(int)i] = iterationReturnClamp;
+				cosHalfReturnfullnessDampened[(int)i] = cosIterationReturnClamp;
+			}
 		}
 	}
 

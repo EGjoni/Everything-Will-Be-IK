@@ -313,6 +313,12 @@ public abstract class AbstractIKPin implements Saveable {
 		saveJSON.setString("forBone", forBone.getIdentityHash());
 		saveJSON.setBoolean("isEnabled", this.isEnabled());
 		saveJSON.setFloat("pinWeight", this.pinWeight);
+		JSONObject priorities = new JSONObject();
+		priorities.setFloat("x", xPriority);
+		priorities.setFloat("y", yPriority);
+		priorities.setFloat("z", zPriority);
+		saveJSON.setFloat("depthFalloff", depthFalloff);
+		saveJSON.setJSONObject("priorities", priorities);
 		return saveJSON;
 	}
 	
@@ -322,9 +328,22 @@ public abstract class AbstractIKPin implements Saveable {
 		this.isEnabled = j.getBoolean("isEnabled"); 
 		this.pinWeight = j.getFloat("pinWeight");
 		this.forBone = (AbstractBone) l.getObjectFromClassMaps(AbstractBone.class, j.getString("forBone")); 
-		
+		if(j.hasKey("priorities")) {
+			JSONObject priorities = j.getJSONObject("priorities");
+			xPriority = priorities.getFloat("x"); 
+			yPriority = priorities.getFloat("y");
+			zPriority = priorities.getFloat("z");
+		}
+		if(j.hasKey("depthFalloff")) {
+			this.depthFalloff = j.getFloat("depthFalloff");
+		}	
 	}
 
+	@Override 
+	public void notifyOfLoadCompletion() {
+		this.setTargetPriorities(xPriority, yPriority, zPriority);
+		this.setDepthFalloff(depthFalloff);
+	}
 	
 	@Override
 	public void notifyOfSaveIntent(SaveManager saveManager) {

@@ -483,6 +483,12 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 			((AbstractKusudama)constraints).setAxesToSnapped(toSet, limitingAxes, cosHalfAngleDampen);
 		}
 	}
+	
+	public void setAxesToReturnfulled(AbstractAxes toSet, AbstractAxes limitingAxes, float cosHalfAngleDampen, float angleDampen) {
+		if(constraints != null && AbstractKusudama.class.isAssignableFrom(constraints.getClass())) {
+			((AbstractKusudama)constraints).setAxesToReturnfulled(toSet, limitingAxes, cosHalfAngleDampen, angleDampen);
+		}
+	}
 
 
 	public void setPin_(SGVec_3f pin) {
@@ -730,7 +736,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 		this.updateSegmentedArmature();	
 	}
 
-	protected abstract AbstractIKPin createAndReturnPinAtOrigin(Vec3f<?> origin);
+	protected abstract AbstractIKPin createAndReturnPinOnAxes(AbstractAxes a);
 
 
 	/**
@@ -738,7 +744,11 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	 */
 	public void enablePin() {
 		//System.out.println("pinning");
-		if(pin == null) pin = createAndReturnPinAtOrigin(this.getBase_());
+		if(pin == null) {
+			AbstractAxes pinAxes = this.localAxes().getGlobalCopy();
+			pinAxes.setParent(this.parentArmature.localAxes().getParentAxes());
+			pin = createAndReturnPinOnAxes(pinAxes);
+		}
 		pin.enable();
 		//System.out.println("clearing children");
 		freeChildren.clear(); 
@@ -762,7 +772,12 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	 */
 
 	public void enablePin_(Vec3f<?> pinTo) {
-		if(pin == null) pin = createAndReturnPinAtOrigin(pinTo);
+		if(pin == null) {
+			AbstractAxes pinAxes = this.localAxes().getGlobalCopy();
+			pinAxes.setParent(this.parentArmature.localAxes().getParentAxes());
+			pinAxes.translateTo(pinTo);
+			pin = createAndReturnPinOnAxes(pinAxes);
+		}
 		else pin.translateTo_(pinTo);
 		pin.enable();
 		freeChildren.clear(); 
@@ -1102,6 +1117,9 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 		for(AbstractBone b : this.children) {
 			b.makeSaveable(saveManager);
 		}
+		if(this.getConstraint() != null) {
+			this.getConstraint().makeSaveable(saveManager);
+		}
 	}
 
 
@@ -1123,6 +1141,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 		for(AbstractBone b : this.children) {
 			b.attachToParent(this);
 		}
+		this.parentArmature.addToBoneList(this);
 	}
 
 	@Override

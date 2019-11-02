@@ -106,7 +106,7 @@ public class EWBIKLoader {
 			Class<? extends IK.floatIK.Constraint> KusudamaClass, 
 			Class<? extends IK.floatIK.AbstractLimitCone>  LimitConeClass, 
 			Class<? extends IK.floatIK.AbstractIKPin> IKPinClass) {
-		currentMode = SINGLE;
+		setMode(SINGLE);
 		File selection = new File(filepath);
 		JSONObject loadFile = StringFuncs.loadJSONObject(selection);
 		clearCurrentLoadObjects();

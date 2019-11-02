@@ -484,9 +484,9 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 		}
 	}
 	
-	public void setAxesToReturnfulled(AbstractAxes toSet, AbstractAxes limitingAxes, double cosHalfAngleDampen) {
+	public void setAxesToReturnfulled(AbstractAxes toSet, AbstractAxes limitingAxes, double cosHalfAngleDampen, double angleDampen) {
 		if(constraints != null && AbstractKusudama.class.isAssignableFrom(constraints.getClass())) {
-			((AbstractKusudama)constraints).setAxesToReturnfulled(toSet, limitingAxes, cosHalfAngleDampen);
+			((AbstractKusudama)constraints).setAxesToReturnfulled(toSet, limitingAxes, cosHalfAngleDampen, angleDampen);
 		}
 	}
 
@@ -1102,6 +1102,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 
 		thisBone.setDouble("boneHeight", this.getBoneHeight());
 		thisBone.setDouble("stiffness", this.getStiffness());
+		thisBone.setString("tag", this.getTag());
 
 		return thisBone; 
 	}
@@ -1141,6 +1142,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 		for(AbstractBone b : this.children) {
 			b.attachToParent(this);
 		}
+		this.parentArmature.addToBoneList(this);
 	}
 
 	@Override
