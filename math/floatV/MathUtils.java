@@ -118,7 +118,7 @@ public final class MathUtils {
 	/** Returns the cosine in radians from a lookup table. */
 	static public float cos (float radians) {
 		//System.out.println("delta : " + ((float)Math.cos(radians) -Math.sin(radians + HALF_PI)));
-		return  (float)Math.sin(radians + HALF_PI); //(float)Math.cos(radians);//sin(radians - 11f);
+		return  (float)Math.cos(radians);//sin(radians - 11f);
 	}
 
 

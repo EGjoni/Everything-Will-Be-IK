@@ -109,10 +109,6 @@ public class MRotation {
 		q1 = coeff * axis.x;
 		q2 = coeff * axis.y;
 		q3 = coeff * axis.z;
-		
-		if(Float.isNaN(q0) || Float.isNaN(q1) || Float.isNaN(q2) || Float.isNaN(q3)|| !(Float.isFinite(q0) && Float.isFinite(q1) && Float.isFinite(q2) && Float.isFinite(q3))) {
-			System.out.println("errror");
-		}
 	}
 
 	/**
@@ -142,10 +138,6 @@ public class MRotation {
 		q1 = coeff * newAxis.x;
 		q2 = coeff * newAxis.y;
 		q3 = coeff * newAxis.z;
-		
-		if(Float.isNaN(q0) || Float.isNaN(q1) || Float.isNaN(q2) || Float.isNaN(q3)|| !(Float.isFinite(q0) && Float.isFinite(q1) && Float.isFinite(q2) && Float.isFinite(q3))) {
-			System.out.println("errror");
-		}
 	}
 
 	/**
@@ -167,10 +159,6 @@ public class MRotation {
 			q1 = inverseCoeff * q1;
 			q2 = inverseCoeff * q2;
 			q3 = inverseCoeff * q3;
-		}
-		
-		if(Float.isNaN(q0) || Float.isNaN(q1) || Float.isNaN(q2) || Float.isNaN(q3)|| !(Float.isFinite(q0) && Float.isFinite(q1) && Float.isFinite(q2) && Float.isFinite(q3))) {
-			System.out.println("errror");
 		}
 	}
 
@@ -209,11 +197,6 @@ public class MRotation {
 			q1*= compositeCoeff;
 			q2*= compositeCoeff;
 			q3*= compositeCoeff;
-		}
-		
-		if(Float.isNaN(q0) || Float.isNaN(q1) || Float.isNaN(q2) || Float.isNaN(q3)
-			|| !(Float.isFinite(q0) && Float.isFinite(q1) && Float.isFinite(q2) && Float.isFinite(q3))) {
-			System.out.println("errror");
 		}
 	}
 	
@@ -300,9 +283,7 @@ public class MRotation {
 		q1 = quat[1];
 		q2 = quat[2];
 		q3 = quat[3];
-		if(Float.isNaN(q0) || Float.isNaN(q1) || Float.isNaN(q2) || Float.isNaN(q3)|| !(Float.isFinite(q0) && Float.isFinite(q1) && Float.isFinite(q2) && Float.isFinite(q3))) {
-			System.out.println("errror");
-		}
+
 	}
 
 	/** Build a rotation from a 3X3 matrix.
@@ -361,9 +342,7 @@ public class MRotation {
 		q1 = quat[1];
 		q2 = quat[2];
 		q3 = quat[3];
-		if(Float.isNaN(q0) || Float.isNaN(q1) || Float.isNaN(q2) || Float.isNaN(q3)|| !(Float.isFinite(q0) && Float.isFinite(q1) && Float.isFinite(q2) && Float.isFinite(q3))) {
-			System.out.println("errror");
-		}
+
 	}
 
 	/** Build the rotation that transforms a pair of vector into another pair.
@@ -538,10 +517,6 @@ public class MRotation {
 		q1 = quat[1];
 		q2 = quat[2];
 		q3 = quat[3];*/
-		
-		if(Float.isNaN(q0) || Float.isNaN(q1) || Float.isNaN(q2) || Float.isNaN(q3)|| !(Float.isFinite(q0) && Float.isFinite(q1) && Float.isFinite(q2) && Float.isFinite(q3))) {
-			System.out.println("errror");
-		}
 
 	}
 
@@ -589,9 +564,6 @@ public class MRotation {
 			q3 = coeff * q.z;
 		}
 
-		if(Float.isNaN(q0) || Float.isNaN(q1) || Float.isNaN(q2) || Float.isNaN(q3)|| !(Float.isFinite(q0) && Float.isFinite(q1) && Float.isFinite(q2) && Float.isFinite(q3))) {
-			System.out.println("errror");
-		}
 	}
 
 	/** Build a rotation from three Cardan or Euler elementary rotations.
@@ -621,10 +593,6 @@ public class MRotation {
 		q1 = composed.q1;
 		q2 = composed.q2;
 		q3 = composed.q3;
-		
-		if(Float.isNaN(q0) || Float.isNaN(q1) || Float.isNaN(q2) || Float.isNaN(q3)|| !(Float.isFinite(q0) && Float.isFinite(q1) && Float.isFinite(q2) && Float.isFinite(q3))) {
-			System.out.println("errror");
-		}
 	}
 
 

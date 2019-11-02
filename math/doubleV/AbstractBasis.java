@@ -1,5 +1,6 @@
 package math.doubleV;
 
+
 import asj.*;
 import asj.*;
 import asj.data.*;
@@ -261,8 +262,12 @@ public abstract class AbstractBasis {
 	
 	
 	public <V extends Vec3d<?>> void setToGlobalOf(V input, V output) {
+		try {
 		rotation.applyTo(input, output);
-		output.add(this.translate);		
+		output.add(this.translate);
+		} catch(Exception e) {
+			e.printStackTrace();
+		}
  	}
 	
 	
