@@ -316,8 +316,7 @@ public class AxesExample extends AbstractAxes {
 						toSGVec(global_input)
 						)
 				)
-			);
-		
+			);		
 	}
 	
 	public ExampleVector getRawGlobalOf(ExampleVector local_input){
