@@ -19,7 +19,7 @@ It relies on a novel (I'm still writing an explainer) highly stable generalizati
 </ul>
 </br>
 
-The code is quite fast and suitable for realtime use in most graphics applications. A fully constrained humanoid torso effectored at the hips, hands and head (simultaneously trying to reach all four corresponding targets in position and orientation) will usually solve in under a millisecond.  
+The code is quite fast and suitable for realtime use in most graphics applications. A fully constrained humanoid torso effectored at the hips, hands and head (simultaneously trying to reach all four corresponding targets in position and orientation) will solve in well under a millisecond (roughly 0.2 milliseconds on an 8 year old mid-level consumer grade CPU). But further optimizations are likely still possible with data-structure tweaks.
 </br>
 </br>
 Please let me know if you find bugs you can't fix. Please commit back changes for any bugs you do fix. 
