@@ -22,4 +22,3 @@ outFile=$2
 -e 's/FastMath\./MathUtils\./g' \
 -e 's/Math\./MathUtils\./g' \
 -e 's/Quaternion/Quaternionf/g' $inFile > $outFile
-

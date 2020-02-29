@@ -13,16 +13,15 @@ import IK.floatIK.AbstractBone;
 import IK.floatIK.AbstractIKPin;
 import IK.floatIK.AbstractKusudama;
 import IK.floatIK.AbstractLimitCone;
-import sceneGraph.math.floatV.AbstractAxes;
-import sceneGraph.math.floatV.MRotation;
-import sceneGraph.math.floatV.Rot;
-import sceneGraph.math.floatV.SGVec_3f;
-import sceneGraph.math.floatV.sgRayf;
-import sceneGraph.math.doubleV.SGVec_3d;
-import sceneGraph.math.doubleV.sgRayd;
+import asj.SaveManager;
+import asj.Saveable;
+import asj.data.JSONArray;
+import asj.data.JSONObject;
+import asj.data.StringFuncs;
+import math.floatV.AbstractAxes;
 
 
-public class FloatBackedSaver implements SaveManager{
+public class FloatBackedSaver extends SaveManager{
 
 	WeakHashMap<Saveable, Boolean> saveables = new WeakHashMap<Saveable, Boolean>();
 
@@ -138,149 +137,4 @@ public class FloatBackedSaver implements SaveManager{
 
 		//p.saveJSONObject(fileContent, location);
 	}
-
-	
-	public  JSONObject hashMapToJSON(HashMap<?, ?> hm) {
-
-		Collection<?> keys = hm.keySet();
-		Iterator<?> keyI = keys.iterator();
-		JSONObject result = new JSONObject();
-
-		while(keyI.hasNext()) {
-			Object k = keyI.next();
-			try {
-				if(k != null) {
-					String ks = null;
-					//JSONObject kj = null;
-					//JSONArray ka = null;
-
-					Class<?> kc = k.getClass();
-
-					if (kc == Integer.class)
-						ks = ((Integer)k).toString();
-					else if (kc == Long.class)
-						ks = ((Long)k).toString();
-					else if (kc == Float.class)
-						ks = ((Float)k).toString();
-					else if(kc == Double.class) 
-						ks = ((Double)k).toString();				
-					else if (kc == Boolean.class)
-						ks = ((Boolean)k).toString();
-					else if(Saveable.class.isAssignableFrom(kc))
-						ks = ((Saveable)k).getIdentityHash();
-					else if(String.class.isAssignableFrom(kc)) 
-						ks = (String)k;
-					else
-						ks = Integer.toString(System.identityHashCode(k));
-
-					if(hm.get(k) != null) {
-						Class<?> vc = hm.get(k).getClass();		 
-						Object v = hm.get(k);
-
-						if(vc == ArrayList.class)
-							result.setJSONArray(ks, arrayListToJSONArray((ArrayList<?>)v));
-						else if (vc.isArray()) 
-							result.setJSONArray(ks, primitiveArrayToJSONArray(v));
-						else if(vc.isAssignableFrom(SGVec_3d.class))
-							result.setJSONArray(ks, ((SGVec_3f)v).toJSONArray());
-						else if(vc.isAssignableFrom(SGVec_3d.class))
-							result.setJSONArray(ks, ((SGVec_3f)v).toJSONArray());
-						else if(vc == Rot.class) 
-							result.setJSONArray(ks, ((Rot)v).toJsonArray());
-						else if(vc == MRotation.class) 
-							result.setJSONArray(ks, (new Rot((MRotation)v)).toJsonArray());						
-						else if(vc.isAssignableFrom(sgRayd.class)) 
-							result.setJSONObject(ks, ((sgRayd)v).toJSON());			
-						else if(vc == Integer.class)
-							result.setInt(ks, (Integer)hm.get(k));
-						else if(vc == Long.class)
-							result.setLong(ks, (Long)hm.get(k));
-						else if(vc == Float.class)
-							result.setFloat(ks, (Float)hm.get(k));
-						else if(vc == Double.class) 
-							result.setDouble(ks, (Double)hm.get(k));					
-						else if(vc == Boolean.class)
-							result.setBoolean(ks, (Boolean)hm.get(k));
-						else if(vc == String.class)
-							result.setString(ks, (String)hm.get(k));						
-						else if(vc == HashMap.class) {
-							result.setJSONObject(ks, hashMapToJSON(((HashMap)v)));					
-						}
-						else 
-							result.setString(ks, ((Saveable)hm.get(k)).getIdentityHash());
-					}
-				}
-			}catch(Exception e) {
-				e.printStackTrace(System.out);
-				int debug =0; 
-
-			}
-
-
-		}
-
-		return result;
-
-	}
-
-
-	public  JSONArray arrayListToJSONArray(ArrayList<?> al) {
-		JSONArray result = new JSONArray(); 
-
-		for(int i = 0; i<al.size(); i++) {
-			Object o = al.get(i);
-			Class c = o.getClass();
-			if(o!= null) {
-
-				if(c == Integer.class)
-					result.append((Integer)o);
-				else if (c == Float.class) 
-					result.append((Float)o);
-				else if (c == Double.class) 
-					result.append((Double)o);
-				else if(c == Boolean.class)
-					result.append((Boolean)o);
-				else if(c.isAssignableFrom(SGVec_3d.class)) 
-					result.append(((SGVec_3d)o).toJSONArray());
-				else if(c.isAssignableFrom(SGVec_3f.class)) 
-					result.append(((SGVec_3f)o).toJSONArray());
-				else if(c.isAssignableFrom(sgRayd.class)) 
-					result.append(((sgRayd)o).toJSON());
-				else if(c.isAssignableFrom(sgRayf.class)) 
-					result.append(((sgRayf)o).toJSON());
-				else if(c == Rot.class) 
-					result.append(((Rot)o).toJsonArray());
-				else if(c == MRotation.class) 
-					result.append((new Rot((MRotation)o)).toJsonArray());				
-				else if(Saveable.class.isAssignableFrom(c))
-					result.append(((Saveable)o).getIdentityHash());
-				else
-					result.append(System.identityHashCode(o));
-			}
-		}
-
-		return result;
-	}
-
-	public  JSONArray primitiveArrayToJSONArray(Object a) {
-		JSONArray result = null; 
-
-		if(a instanceof int[] || a instanceof Integer[]) 
-			result = new JSONArray(new IntList((int[])a));
-		else if (a instanceof float[] || a instanceof Float[])
-			result = new JSONArray(new FloatList((float[]) a)); 
-		else if(a instanceof String[]) 
-			result = new JSONArray(new StringList((String[]) a));
-		else if(a instanceof boolean[]) {
-			boolean[] array = (boolean[])a;
-			result = new JSONArray();
-			for(int i =0; i< array.length; i++) {
-				result.append(array[i]);
-			}
-		}
-
-
-		return result;
-	}
-
 }

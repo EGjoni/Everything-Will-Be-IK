@@ -14,12 +14,12 @@
  * limitations under the License.
  ******************************************************************************/
 
-package sceneGraph.math.doubleV;
+package math.doubleV;
 
 import java.util.Random;
 
-import IK.doubleIK.G;
-import sceneGraph.math.RandomXS128;
+import math.RandomXS128;
+
 
 /** Utility and fast math functions.
 *
@@ -151,7 +151,29 @@ public final class MathUtils {
 		return 1 | (random.nextInt() >> 31);
 	}
 
-
+	
+	public static int max(int a, int b) {
+		return a > b ? a : b;
+	}
+	public static int min(int a, int b) {
+		return a > b ? b : a;
+	}
+	
+	public static  double max(double a, double b) {
+		return a > b ? a : b;
+	}
+	public static double min(double a, double b) {
+		return a > b ? b : a;
+	}
+	
+	public static float max(float a, float b) {
+		return a > b ? a : b;
+	}
+	public static float min(float a, float b) {
+		return a > b ? b : a;
+	}
+	
+	
 	// ---
 
 	/** Returns the next power of two. Returns the specified value if the value is already a power of two. */

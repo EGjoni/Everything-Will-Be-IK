@@ -19,29 +19,29 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 package IK.floatIK;
 import java.util.ArrayList;
 
+import com.sun.org.apache.xalan.internal.xsltc.compiler.Template;
+
 import IK.IKExceptions;
 import IK.IKExceptions.NullParentForBoneException;
+import IK.floatIK.AbstractBone;
 import IK.floatIK.AbstractIKPin;
 import IK.floatIK.Constraint;
-import IK.floatIK.AbstractBone;
-import IK.floatIK.AbstractArmature;
-import data.CanLoad;
+import IK.floatIK.SegmentedArmature.WorkingBone;
 import data.EWBIKLoader;
 import data.EWBIKSaver;
-import data.JSONArray;
-import data.JSONObject;
-import data.LoadManager;
-import data.SaveManager;
-import data.Saveable;
-import sceneGraph.*;
-import sceneGraph.math.floatV.AbstractAxes;
-import sceneGraph.math.floatV.MRotation;
-import sceneGraph.math.floatV.Rot;
-import sceneGraph.math.floatV.RotationOrder;
-import sceneGraph.math.floatV.SGVec_3f;
-import sceneGraph.math.floatV.Vec3f;
-import sceneGraph.math.floatV.sgRayf;
-import sceneGraph.numerical.Precision.CardanEulerSingularityException;
+import math.floatV.AbstractAxes;
+import math.floatV.MRotation;
+import math.floatV.MathUtils;
+import math.floatV.Rot;
+import math.floatV.RotationOrder;
+import math.floatV.SGVec_3f;
+import math.floatV.Vec3f;
+import math.floatV.sgRayf;
+import asj.LoadManager;
+import asj.SaveManager;
+import asj.Saveable;
+import asj.data.JSONArray;
+import asj.data.JSONObject;
 
 
 /**
@@ -49,7 +49,7 @@ import sceneGraph.numerical.Precision.CardanEulerSingularityException;
  *
  */
 public abstract class AbstractBone implements Saveable, Comparable<AbstractBone> {
-	
+
 	public static enum frameType {GLOBAL, RELATIVE};
 
 	public AbstractArmature parentArmature;
@@ -73,7 +73,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	protected boolean orientationLock = false;
 	protected float stiffnessScalar = 0f;
 	public int ancestorCount = 0;
-	
+
 	/**
 	 * 
 	 * @param par the parent bone for this bone
@@ -85,26 +85,27 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	 * @throws NullParentForBoneException
 	 */
 
-	public AbstractBone (AbstractBone par, //parent bone
-			SGVec_3f tipHeading, //the orienational heading of this bone (global vs relative coords specified in coordinateType)
-			SGVec_3f rollHeading, //axial rotation heading of the bone (it's z-axis) 
+	public <V extends Vec3f<?>> AbstractBone (
+			AbstractBone par, //parent bone
+			V tipHeading, //the orienational heading of this bone (global vs relative coords specified in coordinateType)
+			V rollHeading, //axial rotation heading of the bone (it's z-axis) 
 			String inputTag,	 //some user specified name for the bone, if desired 
 			float inputBoneHeight, //bone length 
 			frameType coordinateType							
 			) throws NullParentForBoneException {
-		
+
 		this.lastRotation = new Rot(MRotation.IDENTITY);
 		if(par != null) {
-			if(this.tag == null || this.tag == "") {
+			if(inputTag == null || inputTag == "") {
 				this.tag = Integer.toString(System.identityHashCode(this));			
 			} else this.tag = inputTag;
 			this.boneHeight = inputBoneHeight;
 
 			sgRayf tipHeadingRay = new sgRayf(par.getTip_(), tipHeading);
 			sgRayf rollHeadingRay = new sgRayf(par.getTip_(), rollHeading);
-			SGVec_3f tempTip = new SGVec_3f(); 
-			SGVec_3f tempRoll = new SGVec_3f(); 
-			SGVec_3f tempX = new SGVec_3f(); 
+			Vec3f<?> tempTip = tipHeading.copy(); tempTip.set(0,0,0); 
+			Vec3f<?> tempRoll =rollHeading.copy(); tempRoll.set(0,0,0); 
+			Vec3f<?>tempX = tempRoll.copy(); tempX.set(0,0,0); 
 
 			if(coordinateType == frameType.GLOBAL) {
 				tempTip = tipHeadingRay.heading();
@@ -121,7 +122,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 			//TODO: this commented out one is correct. Using old version test chirality code. 
 			tempRoll = tempX.crossCopy(tempTip); 
 			//tempRoll = tempTip.crossCopy(tempX);
-			
+
 			tempX.normalize();
 			tempTip.normalize();
 			tempRoll.normalize();
@@ -134,7 +135,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 			generateAxes(parent.getTip_(), tempX, tempTip, tempRoll);
 			//this.localAxes.orthoNormalize(true);
 			localAxes.setParent(parent.localAxes);
-			
+
 			previousOrientation = localAxes.attachedCopy(true);
 
 			majorRotationAxes = parent.localAxes().getGlobalCopy(); 
@@ -151,7 +152,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 
 	}
 
-	
+
 	/**
 	 * 
 	 * @param par the parent bone to which this bone is attached. 
@@ -171,9 +172,11 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 
 		this.lastRotation = new Rot(MRotation.IDENTITY);
 		if(par != null) {
-			if(this.tag == null || this.tag == "") {
+			if(inputTag == null || inputTag == "") {
 				this.tag = Integer.toString(System.identityHashCode(this));			
-			} else this.tag = inputTag;
+			} else {
+				this.tag = inputTag;
+			}
 			this.boneHeight = inputBoneHeight;
 
 			AbstractAxes tempAxes = par.localAxes().getGlobalCopy();
@@ -202,8 +205,8 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 		}
 
 	}
-	
-	
+
+
 	private void updateAncestorCount() {
 		int countedAncestors = 0;
 		AbstractBone currentBone = this.parent;
@@ -213,7 +216,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 		}
 		setAncestorCount(countedAncestors);
 	}
-	
+
 	/**updates the ancestor count for this bone, and 
 	 * sets the ancestor count of all child bones 
 	 * to this bone's ancestor count +1;
@@ -225,37 +228,27 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 			b.setAncestorCount(this.ancestorCount +1);
 		}
 	}
-	
-	/** 
-	 * Creates a new bone of specified length emerging from the parentBone. 
-	 * The new bone extends in the same exact direction as the parentBone. 
-	 * You can then manipulate its orientation using something like 
-	 * rotAboutFrameX(), rotAboutFrameY(), or rotAboutFrameZ().
-	 * You can also change its frame of rotation using setFrameOfRotation(Axes rotationFrame);
-	 * 
-	 * @param par the parent bone to which this bone is attached. 
-	 * @param inputTag some user specified name for the bone, if desired
-	 * @param inputBoneHeight bone length 
-	 */ 
+
+
 
 	public AbstractBone (AbstractBone par, 
-			SGVec_3f tipHeading, 
-			SGVec_3f rollHeading, 
+			Vec3f<?> tipHeading, 
+			Vec3f<?> rollHeading, 
 			String inputTag, 
 			frameType coordinateType) 
 					throws NullParentForBoneException {
-		
+
 		this.lastRotation = new Rot(MRotation.IDENTITY);
 		if(par != null) {
-			if(this.tag == null || this.tag == "") {
+			if(inputTag == null || inputTag == "") {
 				this.tag = Integer.toString(System.identityHashCode(this));			
 			} else this.tag = inputTag;
 
 			sgRayf tipHeadingRay = new sgRayf(par.getTip_(), tipHeading);
 			sgRayf rollHeadingRay = new sgRayf(par.getTip_(), rollHeading);
-			SGVec_3f tempTip = new SGVec_3f(); 
-			SGVec_3f tempRoll = rollHeading.copy();
-			SGVec_3f tempX = new SGVec_3f(); 
+			Vec3f<?> tempTip = tipHeading.copy(); 
+			Vec3f<?> tempRoll = rollHeading.copy();
+			Vec3f<?> tempX = new SGVec_3f(); 
 
 			if(coordinateType == frameType.GLOBAL) {
 				tempTip = tipHeadingRay.heading();
@@ -270,10 +263,8 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 			tempX = tempTip.crossCopy(tempRoll);
 			//TODO: this commented out one is correct. Using old version test chirality code. 
 			tempRoll = tempX.crossCopy(tempTip); 
-			//tempRoll = tempTip.crossCopy(tempX); 
-			
-			
-			
+			//tempRoll = tempTip.crossCopy(tempX); 		
+
 			tempX.normalize();
 			tempTip.normalize();
 			tempRoll.normalize();
@@ -284,25 +275,8 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 			parentArmature.addToBoneList(this);
 
 			generateAxes(parent.getTip_(), tempX, tempTip, tempRoll);
-			if(localAxes.getGlobalChirality() != this.parent.localAxes().getGlobalChirality()) {
-			//	localAxes.scaleXBy(-1f);
-			}
-			//this.localAxes.orthoNormalize(true);
-			//System.out.println("parent tip: " + this.parent.getTip());
-			//System.out.println("this orig prePar: " + localAxes.origin());
-			//System.out.println("yHead prePar" + this.localAxes.y().heading());
-			//System.out.println("preAdoption reflectionY: " + (float)localAxes.localMBasis.reflectionMatrix.m11);
+
 			localAxes.setParent(parent.localAxes);			
-			SGVec_3f shearY = new SGVec_3f(); this.localAxes.localMBasis.setToShearYBase(shearY);
-			//System.out.println("postAdoption reflectionY: " + (float)localAxes.localMBasis.reflectionMatrix.m11);
-			//System.out.println("postAdoption ShearY " + shearY.toVec3f());
-			
-			//System.out.println("\n\n new bone shearScale Global = \n " );
-			//System.out.println(localAxes.globalMBasis.getShearScaleMatrix());
-			
-			//System.out.println("yHead postPar: " + this.localAxes.y().heading());
-			//System.out.println("postpar orig: " + localAxes.origin());
-			
 			previousOrientation = localAxes.attachedCopy(true);
 
 			majorRotationAxes = parent.localAxes().getGlobalCopy(); 
@@ -320,12 +294,12 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	}
 
 
-	protected abstract void generateAxes(SGVec_3f origin, SGVec_3f x, SGVec_3f y, SGVec_3f z);
+	protected abstract void generateAxes(Vec3f<?> origin, Vec3f<?> x, Vec3f<?> y, Vec3f<?> z);
 
 	public AbstractBone (
 			AbstractArmature parArma, 
-			SGVec_3f tipHeading, 
-			SGVec_3f rollHeading, 
+			Vec3f<?> tipHeading, 
+			Vec3f<?> rollHeading, 
 			String inputTag, 
 			float inputBoneHeight, 
 			frameType coordinateType) 
@@ -333,16 +307,16 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 
 		this.lastRotation = new Rot(MRotation.IDENTITY);
 		if(parArma != null) {
-			if(this.tag == null || this.tag == "") {
+			if(inputTag == null || inputTag == "") {
 				this.tag = Integer.toString(System.identityHashCode(this));			
 			} else this.tag = inputTag;
 
 			sgRayf tipHeadingRay = new sgRayf(parArma.localAxes.origin_(), tipHeading);
 			tipHeadingRay.getRayScaledTo(inputBoneHeight);
 			sgRayf rollHeadingRay = new sgRayf(parArma.localAxes.origin_(), rollHeading);
-			SGVec_3f tempTip = new SGVec_3f(); 
-			SGVec_3f tempRoll = new SGVec_3f(); 
-			SGVec_3f tempX = new SGVec_3f(); 
+			Vec3f<?> tempTip = tipHeading.copy(); 
+			Vec3f<?> tempRoll = rollHeading.copy(); 
+			Vec3f<?> tempX = tempTip.copy(); 
 
 			if(coordinateType == frameType.GLOBAL) {
 				tempTip = tipHeadingRay.heading();
@@ -358,7 +332,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 			//TODO: this commented out one is correct. Using old version test chirality code. 
 			tempRoll = tempX.crossCopy(tempTip); 
 			//tempRoll = tempTip.crossCopy(tempX);  
-			
+
 			tempX.normalize();
 			tempTip.normalize();
 			tempRoll.normalize();
@@ -370,7 +344,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 			//this.localAxes.orthoNormalize(true);
 			localAxes.setParent(parentArmature.localAxes);
 			previousOrientation = localAxes.attachedCopy(true);
-			
+
 			majorRotationAxes = parentArmature.localAxes().getGlobalCopy(); 
 			majorRotationAxes.setParent(parentArmature.localAxes());
 
@@ -388,23 +362,23 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	}
 
 	public AbstractBone (AbstractArmature parArma, 
-			SGVec_3f tipHeading, 
-			SGVec_3f rollHeading, 
+			Vec3f<?> tipHeading, 
+			Vec3f<?> rollHeading, 
 			String inputTag, 
 			frameType coordinateType) 
 					throws NullParentForBoneException {
 
 		this.lastRotation = new Rot(MRotation.IDENTITY);
 		if(parArma != null) {
-			if(this.tag == null || this.tag == "") {
+			if(inputTag == null || inputTag == "") {
 				this.tag = Integer.toString(System.identityHashCode(this));			
 			} else this.tag = inputTag;
 
 			sgRayf tipHeadingRay = new sgRayf(parArma.localAxes.origin_(), tipHeading);
 			sgRayf rollHeadingRay = new sgRayf(parArma.localAxes.origin_(), rollHeading);
-			SGVec_3f tempTip = new SGVec_3f(); 
-			SGVec_3f tempRoll = new SGVec_3f(); 
-			SGVec_3f tempX = new SGVec_3f(); 
+			Vec3f<?> tempTip = tipHeading.copy(); 
+			Vec3f<?> tempRoll = rollHeading.copy(); 
+			Vec3f<?> tempX = rollHeading.copy();
 
 			if(coordinateType == frameType.GLOBAL) {
 				tempTip = tipHeadingRay.heading();
@@ -420,7 +394,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 			//TODO: this commented out one is correct. Using old version test chirality code. 
 			tempRoll = tempX.crossCopy(tempTip); 
 			//tempRoll = tempTip.crossCopy(tempX);
-			
+
 			tempX.normalize();
 			tempTip.normalize();
 			tempRoll.normalize();
@@ -435,7 +409,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 
 			majorRotationAxes = parentArmature.localAxes().getGlobalCopy(); 
 			majorRotationAxes.setParent(parent.localAxes);
-			
+
 			parentArmature.addToBoneList(this);
 			this.updateAncestorCount();
 			this.updateSegmentedArmature();
@@ -445,7 +419,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 		}
 
 	}
-	
+
 	public AbstractBone() {
 		this.lastRotation = new Rot(MRotation.IDENTITY);
 	}
@@ -457,7 +431,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 		this.boneHeight = boneJSON.getFloat("boneHeight");
 		this.tag = boneJSON.getString("tag");
 
-		
+
 		this.parentArmature = parArma;
 		parentArmature.addToBoneList(this);
 	}*/
@@ -465,38 +439,38 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	public AbstractBone getParent() {
 		return this.parent;
 	}
-	
+
 	public void attachToParent(AbstractBone inputParent) {
 		inputParent.addChild(this);
 		this.parent = inputParent;
 		this.updateAncestorCount();
 	}
 
-	
-	
+
+
 	public void solveIKFromHere() {
 		this.parentArmature.IKSolver(this);
 	}
-		
+
 
 	public void snapToConstraints() {
 		if(constraints != null) {		
 			constraints.snapToLimits();  
 		}
 	}	
-	
-	
-	
+
+
+
 	/**
 	 * Called whenever this bone's orientation has changed due to an Inverse Kinematics computation. 
 	 * This function is called only once per IK solve, not per iteration. Meaning one call to Solve IK **SHOULD NOT** 
 	 * results in  more than one call to each affected bone. 
 	 */
 	public void IKUpdateNotification() {
-		
-		
+
+
 	}
-	
+
 	/**same as snapToConstraints, but operates on user
 	 * supplied axes meant to correspond to the bone's 
 	 * localAxes and majorRotationAxes 
@@ -504,19 +478,19 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	 * you are unlikely to need to use this, and at the moment 
 	 * it presumes KusudamaExample constraints 
 	 */
-	public void setAxesToSnapped(AbstractAxes toSet, AbstractAxes limitingAxes) {
+	public void setAxesToSnapped(AbstractAxes toSet, AbstractAxes limitingAxes, float cosHalfAngleDampen) {
 		if(constraints != null && AbstractKusudama.class.isAssignableFrom(constraints.getClass())) {
-			((AbstractKusudama)constraints).setAxesToSnapped(toSet, limitingAxes);
+			((AbstractKusudama)constraints).setAxesToSnapped(toSet, limitingAxes, cosHalfAngleDampen);
 		}
 	}
 	
-	
-	public void softAxesToSoftSnap(AbstractAxes currentAxes, AbstractAxes desiredAxes) {
-		if(constraints != null) {		
-			((AbstractKusudama)constraints).snapToSoftLimits(currentAxes, desiredAxes, desiredAxes);
+	public void setAxesToReturnfulled(AbstractAxes toSet, AbstractAxes limitingAxes, float cosHalfAngleDampen, float angleDampen) {
+		if(constraints != null && AbstractKusudama.class.isAssignableFrom(constraints.getClass())) {
+			((AbstractKusudama)constraints).setAxesToReturnfulled(toSet, limitingAxes, cosHalfAngleDampen, angleDampen);
 		}
 	}
-	
+
+
 	public void setPin_(SGVec_3f pin) {
 		if(this.pin == null) {
 			this.enablePin_(pin);
@@ -525,14 +499,8 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 		}
 		//parentArmature.updateArmatureSegments();
 	}
-	
 
-	public SGVec_3f getPinPosition() {
-		if(pin == null) return null;
-		else return pin.getLocation_();
-	}
-	
-	
+
 	/**
 	 * @param newConstraint a constraint Object to add to this bone
 	 * @return the constraintObject that was just added
@@ -541,7 +509,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 		constraints = newConstraint;
 		return constraints;
 	}
-	
+
 	/**
 	 * 
 	 * @return this bone's constraint object.
@@ -562,20 +530,13 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 			this.localAxes().markDirty(); this.localAxes().updateGlobal();
 			AbstractAxes result =this.localAxes().getGlobalCopy();
 			this.getMajorRotationAxes().updateGlobal();
-			this.getMajorRotationAxes().globalMBasis.setToOrthoNormalLocalOf(result.globalMBasis, result.globalMBasis);
-			try {
-				return result.globalMBasis.rotation.rotation.getAngles(RotationOrder.XYZ);
-			} catch (CardanEulerSingularityException e) {
-				// TODO Auto-generated catch block
-				
-				e.printStackTrace();
-				return null;
-			}
+			this.getMajorRotationAxes().globalMBasis.setToLocalOf(result.globalMBasis, result.globalMBasis);
+			return result.globalMBasis.rotation.rotation.getAngles(RotationOrder.XYZ);
 		} else {
 			return null;
 		}
 	}
-	
+
 	/**
 	 * @return An Apache Commons Rotation object representing the rotation of this bone relative to its 
 	 * reference frame. The Rotation object is more versatile and robust than an array of angles. 
@@ -585,16 +546,16 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 		return (new Rot(this.majorRotationAxes.x_().heading(), this.majorRotationAxes.y_().heading(), 
 				this.localAxes().x_().heading(), this.localAxes().y_().heading()));
 	}
-	
+
 	/**
 	 * @return An Apache Commons Rotation object representing the rotation which transforms this 
 	 * BoneExample from its previous orientation to its current orientation. 
 	 */
-	
+
 	public Rot getRotationFromPrevious() {
 		return lastRotation;
 	}
-	
+
 	/** 
 	 * @return the reference frame representing this bone's previous orientation relative to
 	 * its parent.
@@ -609,7 +570,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	public void rotateBy(Rot rot) {
 		this.previousOrientation.alignLocalsTo(localAxes);
 		this.localAxes.rotateBy(rot);
-		
+
 		this.lastRotation.set(rot);
 	}
 
@@ -621,7 +582,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	public void rotAboutFrameX(float amt) {
 		rotAboutFrameX(amt, true);
 	}
-	
+
 	/**
 	 * rotates the bone about the major Y axis of rotation, 
 	 * obeying constraints by default
@@ -630,7 +591,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	public void rotAboutFrameY(float amt) {
 		rotAboutFrameY(amt, true);
 	}
-	
+
 	/**
 	 * rotates the bone about the major Z axis of rotation, 
 	 * obeying constraints by default
@@ -650,13 +611,15 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	 * @param obeyConstrants  whether or not this functions should obey constraints when rotating the bone
 	 */
 	public void rotAboutFrameX(float amt, boolean obeyConstraints) {
+		//localAxes().alignLocalsTo(previousOrientation);
 		previousOrientation.alignLocalsTo(localAxes);		
-		
+
+
 		Rot xRot = new Rot(majorRotationAxes.x_().heading(), amt); 
 		localAxes.rotateBy(xRot);
 
 		lastRotation.set(xRot);
-		
+
 		if(obeyConstraints) this.snapToConstraints();
 	}
 
@@ -667,12 +630,12 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	 */
 	public void rotAboutFrameY(float amt, boolean obeyConstraints) {
 		previousOrientation.alignLocalsTo(localAxes);	
-		
+
 		Rot yRot = new Rot(majorRotationAxes.y_().heading(), amt); 
 		localAxes.rotateBy(yRot);
 
 		lastRotation.set(yRot);
-		
+
 		if(obeyConstraints) this.snapToConstraints();
 	}
 
@@ -684,10 +647,10 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	 */
 	public void rotAboutFrameZ(float amt, boolean obeyConstraints) {
 		previousOrientation.alignLocalsTo(localAxes);	
-		
+
 		Rot zRot = new Rot(majorRotationAxes.z_().heading(), amt); 
 		localAxes.rotateBy(zRot);
-		
+
 		lastRotation.set(zRot);
 
 		if(obeyConstraints) this.snapToConstraints();
@@ -737,9 +700,14 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 			majorRotationAxes.translateTo(parent.getTip_());
 		}
 	}
-	
-	public AbstractAxes getMajorRotationAxes() {
-		return this.majorRotationAxes;
+
+	/**
+	 * Get the Axes relative to which this bone's rotations are defined. (If the bone has constraints, this will be the 
+	 * constraint Axes)
+	 * @return
+	 */	
+	public <A extends AbstractAxes> A getMajorRotationAxes() {
+		return (A) this.majorRotationAxes;
 	}
 
 	/**
@@ -767,16 +735,20 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 		pin.removalNotification(); 
 		this.updateSegmentedArmature();	
 	}
-	
-	protected abstract AbstractIKPin createAndReturnPinAtOrigin(SGVec_3f origin);
-	
-	
+
+	protected abstract AbstractIKPin createAndReturnPinOnAxes(AbstractAxes a);
+
+
 	/**
 	 * Enables an existing pin for this BoneExample. Or creates a pin for this bone at the bone's tip. 
 	 */
 	public void enablePin() {
 		//System.out.println("pinning");
-		if(pin == null) pin = createAndReturnPinAtOrigin(this.getBase_());
+		if(pin == null) {
+			AbstractAxes pinAxes = this.localAxes().getGlobalCopy();
+			pinAxes.setParent(this.parentArmature.localAxes().getParentAxes());
+			pin = createAndReturnPinOnAxes(pinAxes);
+		}
 		pin.enable();
 		//System.out.println("clearing children");
 		freeChildren.clear(); 
@@ -793,14 +765,19 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 		this.updateSegmentedArmature();	
 		//System.out.println("segment armature updated");
 	}
-	
+
 	/**
 	 * Creates a pin for this bone
 	 * @param pinTo the position of the pin in the coordinateFrame of the parentArmature.
 	 */
 
-	public void enablePin_(SGVec_3f pinTo) {
-		if(pin == null) pin = createAndReturnPinAtOrigin(pinTo);
+	public void enablePin_(Vec3f<?> pinTo) {
+		if(pin == null) {
+			AbstractAxes pinAxes = this.localAxes().getGlobalCopy();
+			pinAxes.setParent(this.parentArmature.localAxes().getParentAxes());
+			pinAxes.translateTo(pinTo);
+			pin = createAndReturnPinOnAxes(pinAxes);
+		}
 		else pin.translateTo_(pinTo);
 		pin.enable();
 		freeChildren.clear(); 
@@ -844,17 +821,14 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 		}
 		return childrenWithPinned;
 	}
-	
-	
+
+
 	public ArrayList<? extends AbstractBone> getMostImmediatelyPinnedDescendants() {
 		ArrayList<AbstractBone> mostImmediatePinnedDescendants = new ArrayList<AbstractBone>();
 		this.addSelfIfPinned(mostImmediatePinnedDescendants);
 		return mostImmediatePinnedDescendants;
 	}
 
-	public SGVec_3f pinnedTo() {
-		return pin.getLocation_();
-	}
 
 	public AbstractAxes getPinnedAxes() {
 		if(this.pin == null) return null;
@@ -870,7 +844,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 			}
 		}
 	}
-	
+
 	void notifyAncestorsOfPin(boolean updateSegments) {
 		if (this.parent != null) {
 			parent.addToEffectored(this);
@@ -936,11 +910,11 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	public String getTag() {
 		return this.tag;
 	}
-	public SGVec_3f getBase_() {
+	public Vec3f<?> getBase_() {
 		return localAxes.origin_().copy();
 	}
 
-	public SGVec_3f getTip_() { 		
+	public Vec3f<?> getTip_() { 		
 		return localAxes.y_().getScaledTo(boneHeight);
 	}
 
@@ -951,8 +925,8 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 			child.majorRotationAxes.translateTo(this.getTip_());
 		}
 	}  
-	
-	
+
+
 	/**
 	 * removes this BoneExample and any of its children from the armature.
 	 */
@@ -971,7 +945,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 		}
 		this.parentArmature.removeFromBoneList(this);
 	}
-	
+
 	/*adds this bone to the arrayList if inputBone is among its children*/
 	private void hasChild(ArrayList<AbstractBone> list, AbstractBone query) {
 		if(getChildren().contains(query)) 
@@ -988,7 +962,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	public float getBoneHeight() {
 		return this.boneHeight;
 	}
-	
+
 	public boolean hasPinnedDescendant() {
 		if(this.isPinned()) return true; 
 		else {
@@ -1001,14 +975,14 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 			}
 			return result;
 		}
-		
+
 	}
-	
+
 	public AbstractIKPin getIKPin() {
 		return this.pin;
 	}
-	
-	
+
+
 	/**
 	 * if set to true, the IK system will not rotate this bone
 	 * as it solves the IK chain. 
@@ -1017,7 +991,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	public void setIKOrientationLock(boolean val) {
 		this.orientationLock = val;
 	}
-	
+
 	public boolean getIKOrientationLock() {
 		return this.orientationLock;
 	}
@@ -1028,7 +1002,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 		}
 		//parentArmature.updateArmatureSegments();
 	}
-		
+
 
 	public void addFreeChild(AbstractBone bone) {		
 		if(this.freeChildren.indexOf(bone) == -1) {
@@ -1058,7 +1032,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	public void setChildren(ArrayList<? extends AbstractBone> children) {
 		this.children = (ArrayList<AbstractBone>) children;
 	}
-	
+
 	/**
 	 * The stiffness of a bone determines how much the IK solver should 
 	 * prefer to avoid rotating it if it can. A value of 0  means the solver will 
@@ -1072,10 +1046,27 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	public float getStiffness() {
 		return stiffnessScalar; 
 	}
-	
-	
+
+	/**
+	 * The stiffness of a bone determines how much the IK solver should 
+	 * prefer to avoid rotating it if it can. A value of 0  means the solver will 
+	 * rotate this bone as much as the overall dampening parameter will 
+	 * allow it to per iteration. A value of 0.5 means the solver will 
+	 * rotate it half as much as the dampening parameter will allow,
+	 * and a value of 1 effectively means the solver is not allowed 
+	 * to rotate this bone at all. 
+	 */
 	public void setStiffness(float stiffness) {
 		stiffnessScalar = stiffness;
+		if(parentArmature != null) {
+			SegmentedArmature s = parentArmature.boneSegmentMap.get(this);
+			if(s != null ) {
+				WorkingBone wb = s.simulatedBones.get(this);
+				if(wb != null) {
+					wb.updateCosDampening();
+				}
+			}
+		}
 	}
 
 	@Override
@@ -1083,8 +1074,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 		this.localAxes = (AbstractAxes) l.getObjectFromClassMaps(AbstractAxes.class, j.getString("localAxes"));
 		this.majorRotationAxes = (AbstractAxes) l.getObjectFromClassMaps(AbstractAxes.class, j.getString("majorRotationAxes"));
 		this.parentArmature = (AbstractArmature) l.getObjectFromClassMaps(AbstractArmature.class, j.getString("parentArmature")); 
-		l.arrayListFromJSONArray(j.getJSONArray("children"), this.children, this.getClass()); 		
-		this.setStiffness(j.getFloat("stiffness"));
+		l.arrayListFromJSONArray(j.getJSONArray("children"), this.children, this.getClass()); 
 		this.boneHeight = j.getFloat("boneHeight");
 		if(j.hasKey("stiffness")) 
 			this.setStiffness(j.getFloat("stiffness"));			
@@ -1094,30 +1084,30 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 			this.pin = (AbstractIKPin) l.getObjectFromClassMaps(AbstractIKPin.class, j.getString("IKPin"));
 		this.tag = j.getString("tag");
 	}
-	
+
 	@Override
 	public JSONObject getSaveJSON(SaveManager saveManager) {
 		JSONObject thisBone = new JSONObject();
-		thisBone.setString("identityHash",  this.getIdentityHash());
+		thisBone.setString("identityHash", this.getIdentityHash());
 		thisBone.setString("localAxes", this.localAxes.getIdentityHash());
 		thisBone.setString("majorRotationAxes", majorRotationAxes.getIdentityHash());
 		thisBone.setString("parentArmature",  ((Saveable) parentArmature).getIdentityHash());
 		JSONArray children = saveManager.arrayListToJSONArray(getChildren());
 		thisBone.setJSONArray("children", children);
 		if(constraints != null) {
-			thisBone.setString("constraints", ((AbstractKusudama)constraints).getIdentityHash());
+			thisBone.setString("constraints", constraints.getIdentityHash());
 		}
 		if(pin != null) 
 			thisBone.setString("IKPin", pin.getIdentityHash());
-		
+
 		thisBone.setFloat("boneHeight", this.getBoneHeight());
 		thisBone.setFloat("stiffness", this.getStiffness());
-		
+
 		return thisBone; 
 	}
-		
-	
-	
+
+
+
 	@Override
 	public void makeSaveable(SaveManager saveManager) {
 		saveManager.addToSaveState(this);
@@ -1127,6 +1117,22 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 		for(AbstractBone b : this.children) {
 			b.makeSaveable(saveManager);
 		}
+		if(this.getConstraint() != null) {
+			this.getConstraint().makeSaveable(saveManager);
+		}
+	}
+
+
+	@Override
+	public void notifyOfSaveIntent(SaveManager saveManager) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void notifyOfSaveCompletion(SaveManager saveManager) {
+		// TODO Auto-generated method stub
+
 	}
 
 	@Override
@@ -1135,18 +1141,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 		for(AbstractBone b : this.children) {
 			b.attachToParent(this);
 		}
-	}
-	
-	@Override
-	public void notifyOfSaveIntent(SaveManager saveManager) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void notifyOfSaveCompletion(SaveManager saveManager) {
-		// TODO Auto-generated method stub
-		
+		this.parentArmature.addToBoneList(this);
 	}
 
 	@Override
@@ -1158,11 +1153,15 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	@Override
 	public void setLoading(boolean loading) {
 		// TODO Auto-generated method stub
-		
+
 	}
-	
+
 	@Override 
 	public int compareTo(AbstractBone i) {
 		return this.ancestorCount - i.ancestorCount;
+	}
+
+	public String toString() {
+		return this.getTag();
 	}
 }

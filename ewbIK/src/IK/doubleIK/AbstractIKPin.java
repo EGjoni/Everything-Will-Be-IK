@@ -4,12 +4,16 @@ import java.util.ArrayList;
 
 import data.EWBIKLoader;
 import data.EWBIKSaver;
-import data.JSONObject;
-import data.LoadManager;
-import data.SaveManager;
-import data.Saveable;
-import sceneGraph.math.doubleV.AbstractAxes;
-import sceneGraph.math.doubleV.SGVec_3d;
+import math.doubleV.AbstractAxes;
+import math.doubleV.MathUtils;
+import math.doubleV.Rot;
+import math.doubleV.SGVec_3d;
+import math.doubleV.Vec3d;
+import math.doubleV.sgRayd;
+import asj.LoadManager;
+import asj.SaveManager;
+import asj.Saveable;
+import asj.data.JSONObject;
 
 public abstract class AbstractIKPin implements Saveable {
 	
@@ -19,10 +23,11 @@ public abstract class AbstractIKPin implements Saveable {
 	protected AbstractIKPin parentPin; 		
 	protected ArrayList<AbstractIKPin> childPins = new ArrayList<>();
 	double pinWeight  = 1;
-	short modeCode = 3; 
-	int subTargetCount = 3; 	
+	byte modeCode = 7; 
+	int subTargetCount = 4; 	
 	static final short XDir = 1, YDir = 2, ZDir = 4;
-	protected double xPriority =1d , yPriority =1d, zPriority = 0d;
+	protected double xPriority =1d , yPriority =1d, zPriority = 1d;
+	double depthFalloff= 0d;
 	
 	public AbstractIKPin() {}
 	
@@ -58,6 +63,41 @@ public abstract class AbstractIKPin implements Saveable {
 	}
 	
 	/**
+	 * Pins can be ultimate targets, or intermediary targets. 
+	 * By default, each pin is treated as an ultimate target, meaning 
+	 * any bones which are ancestors to that pin's end-effector 
+	 * are not aware of any pins wich are target of bones descending from that end effector. 
+	 * 
+	 * Changing this value makes ancestor bones aware, and also determines how much less
+	 * they care with each level down.  
+	 * 
+	 * Presuming all descendants of this pin have a falloff of 1, then:
+	 * A pin falloff of 0 on this pin means only this pin is reported to ancestors. 
+	 * A pin falloff of 1 on this pin means ancestors care about all descendant pins equally (after accounting for their pinWeight), 
+	 * regardless of how many levels down they are.
+	 * A pin falloff of 0.5 means each descendant pin is cared about half as much as its ancestor. 
+	 * 
+	 * With each level, the pin falloff of a descendant is taken account for each level.
+	 *  Meaning, if this pin has a falloff of 1, and its descendent has a falloff of 0.5
+	 *  then this pin will be reported with full weight, 
+	 *  it descendant will be reported with full weight, 
+	 *  the descendant of that pin will be reported with half weight. 
+	 *  the desecendant of that one's descendant will be reported with quarter weight.   
+	 * 
+	 * @param depth
+	 */
+	public void setDepthFalloff(double depth) {
+		this.depthFalloff = depth;		
+		this.forBone.parentArmature.rootwardlyUpdateFalloffCacheFrom(forBone);
+	}
+	
+	public double getDepthFalloff() {
+		return depthFalloff;
+	}
+	
+	
+	
+	/**
 	 * Sets  the priority of the orientation bases which effectors reaching for this target will and won't align with. 
 	 * If all are set to 0, then the target is treated as a simple position target. 
 	 * It's usually better to set at least on of these three values to 0, as giving a nonzero value to all three is most often redundant. 
@@ -86,6 +126,7 @@ public abstract class AbstractIKPin implements Saveable {
 		this.xPriority = xPriority;
 		this.yPriority = yPriority;
 		this.zPriority = zPriority;
+		this.forBone.parentArmature.rootwardlyUpdateFalloffCacheFrom(forBone);
 	}
 	
 	/**
@@ -95,7 +136,7 @@ public abstract class AbstractIKPin implements Saveable {
 		return subTargetCount;
 	}
 	
-	public short getModeCode() {
+	public byte getModeCode() {
 		return modeCode;
 	}
 	
@@ -121,7 +162,7 @@ public abstract class AbstractIKPin implements Saveable {
 	}
 	
 	public AbstractAxes getAxes() {
-		return axes; 
+		return axes;
 	}
 
 	/**
@@ -139,7 +180,7 @@ public abstract class AbstractIKPin implements Saveable {
 	 * translates the pin to the location specified in global coordinates
 	 * @param location
 	 */
-	public void translateTo_(SGVec_3d location) {
+	public void translateTo_(Vec3d<?> location) {
 		this.axes.translateTo(location);
 	}
 	
@@ -148,14 +189,14 @@ public abstract class AbstractIKPin implements Saveable {
 	 * (relative to any other Axes objects the pin may be parented to)
 	 * @param location
 	 */
-	public void translateBy_(SGVec_3d location) {
+	public void translateBy_(Vec3d<?> location) {
 		this.axes.translateTo(location);
 	}
 	
 	/**
 	 * @return the pin locationin global coordinates
 	 */
-	public SGVec_3d getLocation_() {
+	public Vec3d<?> getLocation_() {
 		return axes.origin_();
 	}
 	
@@ -255,6 +296,7 @@ public abstract class AbstractIKPin implements Saveable {
 	 */
 	public void setPinWeight(double weight) {
 		this.pinWeight = weight;
+		this.forBone.parentArmature.rootwardlyUpdateFalloffCacheFrom(forBone);
 	}
 	
 	@Override
@@ -271,6 +313,12 @@ public abstract class AbstractIKPin implements Saveable {
 		saveJSON.setString("forBone", forBone.getIdentityHash());
 		saveJSON.setBoolean("isEnabled", this.isEnabled());
 		saveJSON.setDouble("pinWeight", this.pinWeight);
+		JSONObject priorities = new JSONObject();
+		priorities.setDouble("x", xPriority);
+		priorities.setDouble("y", yPriority);
+		priorities.setDouble("z", zPriority);
+		saveJSON.setDouble("depthFalloff", depthFalloff);
+		saveJSON.setJSONObject("priorities", priorities);
 		return saveJSON;
 	}
 	
@@ -280,9 +328,22 @@ public abstract class AbstractIKPin implements Saveable {
 		this.isEnabled = j.getBoolean("isEnabled"); 
 		this.pinWeight = j.getDouble("pinWeight");
 		this.forBone = (AbstractBone) l.getObjectFromClassMaps(AbstractBone.class, j.getString("forBone")); 
-		
+		if(j.hasKey("priorities")) {
+			JSONObject priorities = j.getJSONObject("priorities");
+			xPriority = priorities.getDouble("x"); 
+			yPriority = priorities.getDouble("y");
+			zPriority = priorities.getDouble("z");
+		}
+		if(j.hasKey("depthFalloff")) {
+			this.depthFalloff = j.getDouble("depthFalloff");
+		}	
 	}
 
+	@Override 
+	public void notifyOfLoadCompletion() {
+		this.setTargetPriorities(xPriority, yPriority, zPriority);
+		this.setDepthFalloff(depthFalloff);
+	}
 	
 	@Override
 	public void notifyOfSaveIntent(SaveManager saveManager) {

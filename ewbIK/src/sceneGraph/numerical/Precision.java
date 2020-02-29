@@ -1,7 +1,7 @@
-package sceneGraph.numerical;
+package numerical;
 
 
-public class Precision {
+public final class Precision {
 
 	public static final double SAFE_MIN_DOUBLE;
     private static final long EXPONENT_OFFSET_DOUBLE = 1023l;
@@ -152,7 +152,7 @@ public class Precision {
     
 	
 	
-	public static class MathArithmeticException extends Exception {
+	public class MathArithmeticException extends Exception {
 
 		public MathArithmeticException(String zERO_NORM_FOR_ROTATION_DEFINING_VECTOR) {
 			// TODO Auto-generated constructor stub
@@ -160,9 +160,10 @@ public class Precision {
 		
 	}
 	
-public static class MathIllegalArgumentException extends Exception {
+public class MathIllegalArgumentException extends Exception {
 		public MathIllegalArgumentException(String zeroNormForRotationAxis) {
-	}
+		
+		}
 
 	}
 

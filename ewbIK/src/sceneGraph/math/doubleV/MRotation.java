@@ -3,28 +3,16 @@
  * but it is mutable. It is licensed under the Apache Commons License.
  */
 
-package sceneGraph.math.doubleV;
+package math.doubleV;
 
-import org.apache.commons.math3.*;
-import org.apache.commons.math3.exception.MathArithmeticException;
-import org.apache.commons.math3.exception.MathIllegalArgumentException;
-import org.apache.commons.math3.exception.ZeroException;
-import org.apache.commons.math3.exception.util.LocalizedFormats;
-import org.apache.commons.math3.geometry.euclidean.threed.CardanEulerSingularityException;
-import org.apache.commons.math3.geometry.euclidean.threed.NotARotationMatrixException;
-import org.apache.commons.math3.util.FastMath;
-import org.apache.commons.math3.util.Precision;
-
-import sceneGraph.math.floatV.SGVec_3f;
-
-
-
-
+import numerical.Precision;
+import numerical.Precision.*;
 
 public class MRotation {
 	public static final MRotation IDENTITY = new MRotation(1.0, 0.0, 0.0, 0.0, false);
 
 	/** Scalar coordinate of the quaternion. */
+
 	private double q0;
 
 	/** First coordinate of the vectorial part of the quaternion. */
@@ -61,13 +49,13 @@ public class MRotation {
 		this.q1 = q1; 
 		this.q2 = q2;
 		this.q3 = q3;
-		
+
 		if(needsNormalization) setToNormalized();
-		
-	
+
+
 
 	}
-	
+
 	/**
 	 * creates an identity rotation
 	 */
@@ -81,12 +69,13 @@ public class MRotation {
 	}
 
 
+
 	/** Build a rotation from an axis and an angle.
 	 * <p>We use the convention that angles are oriented according to
 	 * the effect of the rotation on vectors around the axis. That means
 	 * that if (i, j, k) is a direct frame and if we first provide +k as
 	 * the axis and &pi;/2 as the angle to this constructor, and then
-	 * {@link #applyTo(SGVec_3d ) apply} the instance to +i, we will get
+	 * {@link #applyTo(T ) apply} the instance to +i, we will get
 	 * +j.</p>
 	 * <p>Another way to represent our convention is to say that a rotation
 	 * of angle &theta; about the unit vector (x, y, z) is the same as the
@@ -102,42 +91,43 @@ public class MRotation {
 	 * @param angle rotation angle.
 	 * @exception MathIllegalArgumentException if the axis norm is zero
 	 */
-	public MRotation(SGVec_3d  axis, double angle) throws MathIllegalArgumentException {
+	public <V extends Vec3d<?>> MRotation(V axis, double angle)  {
 
 		double norm = axis.mag();
 		if (norm == 0) {
-			throw new MathIllegalArgumentException(LocalizedFormats.ZERO_NORM_FOR_ROTATION_AXIS);
+			try {
+				throw new Exception("Zero Norm for Rotation defining vector");
+			} catch (Exception e) {
+				e.printStackTrace(System.out);
+			}
 		}
 
 		double halfAngle = -0.5 * angle;					
-		double coeff = MathUtils.sin(halfAngle) / norm;
-		
-		
-		double atanTest = MathUtils.atan2(7, 9);
-		
-		q0 = MathUtils.cos (halfAngle);
+		double coeff = Math.sin(halfAngle) / norm;
+
+		q0 = Math.cos (halfAngle);
 		q1 = coeff * axis.x;
 		q2 = coeff * axis.y;
 		q3 = coeff * axis.z;
-
 	}
-	
+
 	/**
 	 * modify this rotation to have the specified axis, 
 	 * without changing the angle.  
 	 *
 	 * @param angle
+	 * @throws Exception 
 	 */
-	public void setAxis(SGVec_3d  newAxis) {
-		
+	public <T extends SGVec_3d> void setAxis(T  newAxis) throws Exception {
+
 		double angle = this.getAngle();
 		double norm = newAxis.mag();
 		if (norm == 0) {
 			try {
-				throw new MathIllegalArgumentException(LocalizedFormats.ZERO_NORM_FOR_ROTATION_AXIS);
+				throw new Exception("Zero Norm for Rotation Axis");
 			} catch (MathIllegalArgumentException e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				e.printStackTrace(System.out);
 			}
 		}
 
@@ -149,30 +139,151 @@ public class MRotation {
 		q2 = coeff * newAxis.y;
 		q3 = coeff * newAxis.z;
 	}
-	
+
 	/**
 	 * modify this rotation to have the specified angle, 
 	 * without changing the axis.  
 	 *
 	 * @param angle
 	 */
-	public void setAngle(double newAngle) {
-		
-		SGVec_3d  axis = getAxis();
-		double norm = axis.mag();
-		if (norm == 0) {
-			throw new MathIllegalArgumentException(LocalizedFormats.ZERO_NORM_FOR_ROTATION_AXIS);
+	public void setAngle(double newAngle) {		
+		double squaredSine = q1 * q1 + q2 * q2 + q3 * q3;
+		if(squaredSine != 0) {
+			double halfAngle = -0.5 * newAngle;
+			double cosHalfAngle = Math.cos(halfAngle);
+
+			double inverseCoeff = Math.sqrt(((1d-(cosHalfAngle*cosHalfAngle))/squaredSine));
+			inverseCoeff = newAngle < 0 ? -inverseCoeff : inverseCoeff;
+
+			q0 = q0<0 ? -cosHalfAngle : cosHalfAngle;
+			q1 = inverseCoeff * q1;
+			q2 = inverseCoeff * q2;
+			q3 = inverseCoeff * q3;
+		}
+	}
+
+	/**
+	 * Modify this rotation to have the specified cos(angle/2) representation, 
+	 * without changing the axis.  
+	 *
+	 * @param angle
+	 */
+	public void setQuadranceAngle(double cosHalfAngle) {
+		double squaredSine = q1 * q1 + q2 * q2 + q3 * q3;		
+		if(squaredSine != 0) {			
+			double inverseCoeff = Math.sqrt(((1-(cosHalfAngle*cosHalfAngle))/squaredSine));
+			//inverseCoeff = cosHalfAngle < 0 ? -inverseCoeff : inverseCoeff;
+			q0 = q0<0 ? -cosHalfAngle : cosHalfAngle;
+			q1 = inverseCoeff * q1;
+			q2 = inverseCoeff * q2;
+			q3 = inverseCoeff * q3;		
+		}
+	}
+
+
+	public void clampToAngle(double angle) {
+		double cosHalfAngle = Math.cos(0.5*angle);
+		clampToQuadranceAngle(cosHalfAngle);
+	}
+
+	public void clampToQuadranceAngle(double cosHalfAngle) {
+		double newCoeff = 1d-(cosHalfAngle*cosHalfAngle);
+		double currentCoeff =q1 * q1 + q2 * q2 + q3 * q3;
+		if(newCoeff>currentCoeff) 
+			return;
+		else {
+			q0 = q0<0 ? -cosHalfAngle : cosHalfAngle;
+			double compositeCoeff = Math.sqrt(newCoeff / currentCoeff); 
+			q1*= compositeCoeff;
+			q2*= compositeCoeff;
+			q3*= compositeCoeff;
+		}
+	}
+	
+	
+	
+	/** Build a rotation from a 3X3 given as a 1d array with 9 elements, 
+	 * or 4x4 matrix given as a 1d array with 16 elements. 
+	 * This constructor will detect the appropriate case based on the length 
+	 * of the input array. 
+	 * Input array should be in column major order, so, for a 3x3 matrix, the
+	 * indices correspond as follows: <br/> 
+	 * 0, 3, 6 <br/>  
+	 * 1, 4, 7 <br/> 
+	 * 2, 5, 8 <br/>
+	 *
+	 *And for a 4x4 matrix the indices are: 
+	 * <br/> 
+	 * 0,  4,  8,  12 <br/>  
+	 * 1,  5,  9,  13 <br/> 
+	 * 2,  6, 10, 14 <br/>
+ 	 * 3,  7, 11, 15 <br/>
+	 *
+	 *
+	 * <p>Rotation matrices are orthogonal matrices, i.e. unit matrices
+	 * (which are matrices for which m.m<sup>T</sup> = I) with real
+	 * coefficients. The module of the determinant of unit matrices is
+	 * 1, among the orthogonal 3X3 matrices, only the ones having a
+	 * positive determinant (+1) are rotation matrices.</p>
+	 * <p>When a rotation is defined by a matrix with truncated values
+	 * (typically when it is extracted from a technical sheet where only
+	 * four to five significant digits are available), the matrix is not
+	 * orthogonal anymore. This constructor handles this case
+	 * transparently by using a copy of the given matrix and applying a
+	 * correction to the copy in order to perfect its orthogonality. If
+	 * the Frobenius norm of the correction needed is above the given
+	 * threshold, then the matrix is considered to be too far from a
+	 * true rotation matrix and an exception is thrown.<p>
+	 * @param m rotation matrix
+	 * @param is4x4 set to true if passing in a 4x4 matrix. 
+	 * @param threshold convergence threshold for the iterative
+	 * orthogonality correction (convergence is reached when the
+	 * difference between two steps of the Frobenius norm of the
+	 * correction is below this threshold)
+	 * @exception NotARotationMatrixException if the matrix is not a 3X3
+	 * matrix, or if it cannot be transformed into an orthogonal matrix
+	 * with the given threshold, or if the determinant of the resulting
+	 * orthogonal matrix is negative
+	 */
+	public MRotation(double[] m, double threshold)
+			throws NotARotationMatrixException {
+
+		// dimension check
+		if ((m.length != 9 || m.length != 16)) {
+			throw new NotARotationMatrixException(
+					LocalizedFormats.ROTATION_MATRIX_DIMENSIONS,
+					m.length);
+		}
+
+		double[][] im = new double[3][3];
+		if(m.length == 9) {
+			im[0][0] = m[0]; im[0][1] = m[0];  im[0][2] = m[0];
+			im[0][0] = m[0]; im[0][1] = m[0];  im[0][2] = m[0];
+			im[0][0] = m[0]; im[0][1] = m[0];  im[0][2] = m[0];
 		}
 		
-		
-		double halfAngle = -0.5 * newAngle;
-		double coeff = Math.sin(halfAngle) / norm;
+		// compute a "close" orthogonal matrix
+		double[][] ort = orthogonalizeMatrix(im, threshold);
 
-		q0 = Math.cos (halfAngle);
-		q1 = coeff * axis.x;
-		q2 = coeff * axis.y;
-		q3 = coeff * axis.z;
-		
+		// check the sign of the determinant
+		double det = ort[0][0] * (ort[1][1] * ort[2][2] - ort[2][1] * ort[1][2]) -
+				ort[1][0] * (ort[0][1] * ort[2][2] - ort[2][1] * ort[0][2]) +
+				ort[2][0] * (ort[0][1] * ort[1][2] - ort[1][1] * ort[0][2]);
+		if (det < 0.0) {
+			try {
+				throw new Exception("Closest Orthogonal Has Negative Determinant");
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace(System.out);
+			}
+		}
+
+		double[] quat = mat2quat(ort);
+		q0 = quat[0];
+		q1 = quat[1];
+		q2 = quat[2];
+		q3 = quat[3];
+
 	}
 
 	/** Build a rotation from a 3X3 matrix.
@@ -219,9 +330,11 @@ public class MRotation {
 				ort[1][0] * (ort[0][1] * ort[2][2] - ort[2][1] * ort[0][2]) +
 				ort[2][0] * (ort[0][1] * ort[1][2] - ort[1][1] * ort[0][2]);
 		if (det < 0.0) {
-			throw new NotARotationMatrixException(
-					LocalizedFormats.CLOSEST_ORTHOGONAL_MATRIX_HAS_NEGATIVE_DETERMINANT,
-					det);
+			try {
+				throw new Exception("Closest Orthogonal Has Negative Determinant");
+			} catch (Exception e) {
+				e.printStackTrace(System.out);
+			}
 		}
 
 		double[] quat = mat2quat(ort);
@@ -248,127 +361,126 @@ public class MRotation {
 	 * @exception MathArithmeticException if the norm of one of the vectors is zero,
 	 * or if one of the pair is degenerated (i.e. the vectors of the pair are colinear)
 	 */
-	public MRotation(SGVec_3d u1, SGVec_3d u2, SGVec_3d v1, SGVec_3d v2)
-			throws MathArithmeticException {
+	public <V extends Vec3d<?>> MRotation(V u1, V u2, V v1, V v2) {
 
-		 // norms computation
-		  double u1u1 = u1.dot(u1);
-		  double u2u2 = u2.dot(u2);
-		  double v1v1 = v1.dot(v1);
-		  double v2v2 = v2.dot(v2);
-		  if ((u1u1 == 0) || (u2u2 == 0) || (v1v1 == 0) || (v2v2 == 0)) {
-		    throw new IllegalArgumentException("zero norm for rotation defining vector");
-		  }
+		// norms computation
+		double u1u1 = u1.dot(u1);
+		double u2u2 = u2.dot(u2);
+		double v1v1 = v1.dot(v1);
+		double v2v2 = v2.dot(v2);
+		if ((u1u1 == 0) || (u2u2 == 0) || (v1v1 == 0) || (v2v2 == 0)) {
+			throw new IllegalArgumentException("zero norm for rotation defining vector");
+		}
 
-		  double u1x = u1.x;
-		  double u1y = u1.y;
-		  double u1z = u1.z;
+		double u1x = u1.x;
+		double u1y = u1.y;
+		double u1z = u1.z;
 
-		  double u2x = u2.x;
-		  double u2y = u2.y;
-		  double u2z = u2.z;
+		double u2x = u2.x;
+		double u2y = u2.y;
+		double u2z = u2.z;
 
-		  // normalize v1 in order to have (v1'|v1') = (u1|u1)
-		  double coeff = (double)Math.sqrt (u1u1 / v1v1);
-		  double v1x   = coeff * v1.x;
-		  double v1y   = coeff * v1.y;
-		  double v1z   = coeff * v1.z;
-		  v1 = new SGVec_3d(v1x, v1y, v1z);
+		// normalize v1 in order to have (v1'|v1') = (u1|u1)
+		double coeff = (double)Math.sqrt (u1u1 / v1v1);
+		double v1x   = coeff * v1.x;
+		double v1y   = coeff * v1.y;
+		double v1z   = coeff * v1.z;
+		SGVec_3d va1 = new SGVec_3d(v1x, v1y, v1z);
 
-		  // adjust v2 in order to have (u1|u2) = (v1|v2) and (v2'|v2') = (u2|u2)
-		  double u1u2   = u1.dot(u2);
-		  double v1v2   = v1.dot(v2);
-		  double coeffU = u1u2 / u1u1;
-		  double coeffV = v1v2 / u1u1;
-		  double beta   = (double)Math.sqrt((u2u2 - u1u2 * coeffU) / (v2v2 - v1v2 * coeffV));
-		  double alpha  = coeffU - beta * coeffV;
-		  double v2x    = alpha * v1x + beta * v2.x;
-		  double v2y    = alpha * v1y + beta * v2.y;
-		  double v2z    = alpha * v1z + beta * v2.z;
-		  v2 = new SGVec_3d(v2x, v2y, v2z);
+		// adjust v2 in order to have (u1|u2) = (v1|v2) and (v2'|v2') = (u2|u2)
+		double u1u2   = u1.dot(u2);
+		double va1v2   = va1.dot(v2);
+		double coeffU = u1u2 / u1u1;
+		double coeffV = va1v2 / u1u1;
+		double beta   = (double)Math.sqrt((u2u2 - u1u2 * coeffU) / (v2v2 - va1v2 * coeffV));
+		double alpha  = coeffU - beta * coeffV;
+		double v2x    = alpha * v1x + beta * v2.x;
+		double v2y    = alpha * v1y + beta * v2.y;
+		double v2z    = alpha * v1z + beta * v2.z;
+		V va2 = (V) v2.copy(); va2.set(v2x, v2y, v2z);
 
-		  // preliminary computation (we use explicit formulation instead
-		  // of relying on the Vector3D class in order to avoid building lots
-		  // of temporary objects)
-		  SGVec_3d uRef = u1;
-		  SGVec_3d vRef = v1;
-		  double dx1 = v1x - u1.x;
-		  double dy1 = v1y - u1.y;
-		  double dz1 = v1z - u1.z;
-		  double dx2 = v2x - u2.x;
-		  double dy2 = v2y - u2.y;
-		  double dz2 = v2z - u2.z;
-		  SGVec_3d k = new SGVec_3d(dy1 * dz2 - dz1 * dy2,
-		                            dz1 * dx2 - dx1 * dz2,
-		                            dx1 * dy2 - dy1 * dx2);
-		  double c = k.x * (u1y * u2z - u1z * u2y) +
-		             k.y * (u1z * u2x - u1x * u2z) +
-		             k.z * (u1x * u2y - u1y * u2x);
+		// preliminary computation (we use explicit formulation instead
+		// of relying on the Vector3D class in order to avoid building lots
+		// of temporary objects)
+		V uRef = u1;
+		V vRef = (V) va1;
+		double dx1 = v1x - u1.x;
+		double dy1 = v1y - u1.y;
+		double dz1 = v1z - u1.z;
+		double dx2 = v2x - u2.x;
+		double dy2 = v2y - u2.y;
+		double dz2 = v2z - u2.z;
+		SGVec_3d k = new SGVec_3d(dy1 * dz2 - dz1 * dy2,
+				dz1 * dx2 - dx1 * dz2,
+				dx1 * dy2 - dy1 * dx2);
+		double c = k.x * (u1y * u2z - u1z * u2y) +
+				k.y * (u1z * u2x - u1x * u2z) +
+				k.z * (u1x * u2y - u1y * u2x);
 
-		  if (Math.abs(c) <= MathUtils.DOUBLE_ROUNDING_ERROR) {
-		    // the (q1, q2, q3) vector is in the (u1, u2) plane
-		    // we try other vectors
-			 SGVec_3d u3 = u1.crossCopy(u2);
-			 SGVec_3d v3 = v1.crossCopy(v2);
-		    double u3x  = u3.x;
-		    double u3y  = u3.y;
-		    double u3z  = u3.z;
-		    double v3x  = v3.x;
-		    double v3y  = v3.y;
-		    double v3z  = v3.z;
+		if (Math.abs(c) <= MathUtils.DOUBLE_ROUNDING_ERROR) {
+			// the (q1, q2, q3) vector is in the (u1, u2) plane
+			// we try other vectors
+			V u3 = (V) u1.crossCopy(u2);
+			SGVec_3d v3 = va1.crossCopy(va2);
+			double u3x  = u3.x;
+			double u3y  = u3.y;
+			double u3z  = u3.z;
+			double v3x  = v3.x;
+			double v3y  = v3.y;
+			double v3z  = v3.z;
 
-		    double dx3 = v3x - u3x;
-		    double dy3 = v3y - u3y;
-		    double dz3 = v3z - u3z;
-		    k = new SGVec_3d(dy1 * dz3 - dz1 * dy3,
-		                     dz1 * dx3 - dx1 * dz3,
-		                     dx1 * dy3 - dy1 * dx3);
-		    c = k.x * (u1y * u3z - u1z * u3y) +
-		        k.y * (u1z * u3x - u1x * u3z) +
-		        k.z * (u1x * u3y - u1y * u3x);
+			double dx3 = v3x - u3x;
+			double dy3 = v3y - u3y;
+			double dz3 = v3z - u3z;
+			k = new SGVec_3d(dy1 * dz3 - dz1 * dy3,
+					dz1 * dx3 - dx1 * dz3,
+					dx1 * dy3 - dy1 * dx3);
+			c = k.x * (u1y * u3z - u1z * u3y) +
+					k.y * (u1z * u3x - u1x * u3z) +
+					k.z * (u1x * u3y - u1y * u3x);
 
-		    if (Math.abs(c) <= MathUtils.DOUBLE_ROUNDING_ERROR) {
-		      // the (q1, q2, q3) vector is aligned with u1:
-		      // we try (u2, u3) and (v2, v3)
-		      k = new SGVec_3d(dy2 * dz3 - dz2 * dy3,
-		                       dz2 * dx3 - dx2 * dz3,
-		                       dx2 * dy3 - dy2 * dx3);
-		      c = k.x * (u2y * u3z - u2z * u3y) +
-		          k.y * (u2z * u3x - u2x * u3z) +
-		          k.z * (u2x * u3y - u2y * u3x);
+			if (Math.abs(c) <= MathUtils.DOUBLE_ROUNDING_ERROR) {
+				// the (q1, q2, q3) vector is aligned with u1:
+				// we try (u2, u3) and (v2, v3)
+				k = new SGVec_3d(dy2 * dz3 - dz2 * dy3,
+						dz2 * dx3 - dx2 * dz3,
+						dx2 * dy3 - dy2 * dx3);
+				c = k.x * (u2y * u3z - u2z * u3y) +
+						k.y * (u2z * u3x - u2x * u3z) +
+						k.z * (u2x * u3y - u2y * u3x);
 
-		      if (Math.abs(c) <= MathUtils.DOUBLE_ROUNDING_ERROR) {
-		        // the (q1, q2, q3) vector is aligned with everything
-		        // this is really the identity rotation
-		        q0 = 1.0f;
-		        q1 = 0.0f;
-		        q2 = 0.0f;
-		        q3 = 0.0f;
-		        return;
-		      }
+				if (Math.abs(c) <= MathUtils.DOUBLE_ROUNDING_ERROR) {
+					// the (q1, q2, q3) vector is aligned with everything
+					// this is really the identity rotation
+					q0 = 1.0f;
+					q1 = 0.0f;
+					q2 = 0.0f;
+					q3 = 0.0f;
+					return;
+				}
 
-		      // we will have to use u2 and v2 to compute the scalar part
-		      uRef = u2;
-		      vRef = v2;
+				// we will have to use u2 and v2 to compute the scalar part
+				uRef = u2;
+				vRef = va2;
 
-		    }
+			}
 
-		  }
+		}
 
-		  // compute the vectorial part
-		  c = (double) Math.sqrt(c);
-		  double inv = (double)1.0 / (c + c);
-		  q1 = inv * k.x;
-		  q2 = inv * k.y;
-		  q3 = inv * k.z;
+		// compute the vectorial part
+		c = (double) Math.sqrt(c);
+		double inv = (double)1.0 / (c + c);
+		q1 = inv * k.x;
+		q2 = inv * k.y;
+		q3 = inv * k.z;
 
-		  // compute the scalar part
-		   k = new SGVec_3d(uRef.y * q3 - uRef.z * q2,
-		                    uRef.z * q1 - uRef.x * q3,
-		                    uRef.x * q2 - uRef.y * q1);
-		   c = k.dot(k);
-		  q0 = vRef.dot(k) / (c + c);
-		
+		// compute the scalar part
+		k = new SGVec_3d(uRef.y * q3 - uRef.z * q2,
+				uRef.z * q1 - uRef.x * q3,
+				uRef.x * q2 - uRef.y * q1);
+		c = k.dot(k);
+		q0 = vRef.dot(k) / (c + c);
+
 		/*// build orthonormalized base from u1, u2
 		// this fails when vectors are null or colinear, which is forbidden to define a rotation
 		final SGVec_3d u3 = u1.crossCopy(u2).normalize();
@@ -419,11 +531,16 @@ public class MRotation {
 	 * @param v desired image of u by the rotation
 	 * @exception MathArithmeticException if the norm of one of the vectors is zero
 	 */
-	public MRotation(SGVec_3d u, SGVec_3d v) throws MathArithmeticException {
+	public <V extends Vec3d<?>> MRotation(V u, V v) {
 
 		double normProduct = u.mag() * v.mag();
 		if (normProduct == 0) {
-			throw new MathArithmeticException(LocalizedFormats.ZERO_NORM_FOR_ROTATION_DEFINING_VECTOR);
+			//throw new MathArithmeticException(LocalizedFormats.ZERO_NORM_FOR_ROTATION_DEFINING_VECTOR);
+			this.q0 = 1d;
+			this.q1= 0d;
+			this.q2 =0d;
+			this.q3=0d;
+			return;
 		}
 
 		double dot = u.dot(v);
@@ -431,7 +548,7 @@ public class MRotation {
 		if (dot < ((2.0e-15 - 1.0) * normProduct)) {
 			// special case u = -v: we select a PI angle rotation around
 			// an arbitrary vector orthogonal to u
-			SGVec_3d w = u.getOrthogonal();
+			V w = (V) u.getOrthogonal();
 			q0 = 0.0;
 			q1 = -w.x;
 			q2 = -w.y;
@@ -441,7 +558,7 @@ public class MRotation {
 			// the shortest possible rotation: axis orthogonal to this plane
 			q0 = Math.sqrt(0.5 * (1.0 + dot / normProduct));
 			double coeff = 1.0 / (2.0 * q0 * normProduct);
-			SGVec_3d q = v.crossCopy(u);
+			V q = (V) v.crossCopy(u);
 			q1 = coeff * q.x;
 			q2 = coeff * q.y;
 			q3 = coeff * q.z;
@@ -466,18 +583,20 @@ public class MRotation {
 	 * @param alpha2 angle of the second elementary rotation
 	 * @param alpha3 angle of the third elementary rotation
 	 */
-	public MRotation(RotationOrder order,
+	public  MRotation(RotationOrder order,
 			double alpha1, double alpha2, double alpha3) {
-		MRotation r1 = new MRotation((SGVec_3d ) order.getA1(), alpha1);
-		MRotation r2 = new MRotation((SGVec_3d ) order.getA2(), alpha2);
-		MRotation r3 = new MRotation((SGVec_3d ) order.getA3(), alpha3);
+		MRotation r1 = new MRotation(order.getA1(), alpha1);
+		MRotation r2 = new MRotation(order.getA2(), alpha2);
+		MRotation r3 = new MRotation(order.getA3(), alpha3);
 		MRotation composed = r1.applyTo(r2.applyTo(r3));
 		q0 = composed.q0;
 		q1 = composed.q1;
 		q2 = composed.q2;
 		q3 = composed.q3;
 	}
-	
+
+
+
 	/**
 	 * @return a copy of this MRotation
 	 */
@@ -557,6 +676,15 @@ public class MRotation {
 		return new MRotation(-q0, q1, q2, q3, false);
 	}
 
+
+	/** 
+	 * sets the values of the given rotation equal to the inverse of this rotation
+	 * @param storeIN
+	 */
+	public void revert(MRotation storeIn) {
+		storeIn.set(-q0, q1, q2, q3, true);
+	}
+
 	/** Get the scalar coordinate of the quaternion.
 	 * @return scalar coordinate of the quaternion
 	 */
@@ -587,7 +715,7 @@ public class MRotation {
 
 	/** Get the normalized axis of the rotation.
 	 * @return normalized axis of the rotation
-	 * @see #Rotation(SGVec_3d , double)
+	 * @see #Rotation(T , double)
 	 */
 	public SGVec_3d getAxis() {
 		double squaredSine = q1 * q1 + q2 * q2 + q3 * q3;
@@ -601,11 +729,33 @@ public class MRotation {
 		return new SGVec_3d(q1 * inverse, q2 * inverse, q3 * inverse);
 	}
 
+	/** Get the normalized axis of the rotation.
+	 * @return normalized axis of the rotation
+	 * @see #Rotation(T , double)
+	 */
+	public <T extends Vec3d<?>> void setToAxis(T v) {
+		double squaredSine = q1 * q1 + q2 * q2 + q3 * q3;
+		if (squaredSine == 0) {
+			v.set(1, 0, 0);
+			return;
+		} else if (q0 < 0) {
+			double inverse = 1 / Math.sqrt(squaredSine);
+			v.set(q1 * inverse, q2 * inverse, q3 * inverse);
+			return;
+		}
+		double inverse = -1 / Math.sqrt(squaredSine);
+		v.set(q1 * inverse, q2 * inverse, q3 * inverse);
+	}
+
 
 	public MRotation getInverse() {
 		final double squareNorm = q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3;
-		if (squareNorm < Precision.SAFE_MIN) {
-			throw new ZeroException(LocalizedFormats.NORM, squareNorm);
+		if (squareNorm < Precision.SAFE_MIN_DOUBLE) {
+			try {
+				throw new Exception("Zero Norm");
+			} catch (Exception e) {
+				e.printStackTrace(System.out);
+			}
 		}
 
 		return new MRotation(q0 / squareNorm,
@@ -618,14 +768,14 @@ public class MRotation {
 
 	/** Get the angle of the rotation.
 	 * @return angle of the rotation (between 0 and &pi;)
-	 * @see #Rotation(SGVec_3d , double)
+	 * @see #Rotation(T , double)
 	 */
 	public double getAngle() {
-		if ((q0 < -0.1) || (q0 > 0.1)) {
+		if ((q0 < -0.1) || (q0 > 0.1)) {			
 			return 2 * Math.asin(Math.sqrt(q1 * q1 + q2 * q2 + q3 * q3));
 		} else if (q0 < 0) {
 			return 2 * Math.acos(-q0);
-		}
+		}		
 		return 2 * Math.acos(q0);
 	}
 
@@ -661,20 +811,24 @@ public class MRotation {
 	 * @exception CardanEulerSingularityException if the rotation is
 	 * singular with respect to the angles set specified
 	 */
-	public double[] getAngles(RotationOrder order)
-			throws CardanEulerSingularityException {
+	public double[] getAngles(RotationOrder order) {
 
 		if (order == RotationOrder.XYZ) {
 
-			// r (SGVec_3d .plusK) coordinates are :
+			// r (T .plusK) coordinates are :
 			//  sin (theta), -cos (theta) sin (phi), cos (theta) cos (phi)
-			// (-r) (SGVec_3d .plusI) coordinates are :
+			// (-r) (T .plusI) coordinates are :
 			// cos (psi) cos (theta), -sin (psi) cos (theta), sin (theta)
 			// and we can choose to have theta in the interval [-PI/2 ; +PI/2]
 			SGVec_3d v1 = applyTo(RotationOrder.Z);
 			SGVec_3d v2 = applyInverseTo(RotationOrder.X);
 			if  ((v2.z < -0.9999999999) || (v2.z > 0.9999999999)) {
-				throw new CardanEulerSingularityException(true);
+				try {
+					throw new CardanEulerSingularityException(true);
+				} catch (CardanEulerSingularityException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace(System.out);
+				}
 			}
 			return new double[] {
 					Math.atan2(-(v1.y), v1.z),
@@ -684,15 +838,19 @@ public class MRotation {
 
 		} else if (order == RotationOrder.XZY) {
 
-			// r (SGVec_3d .plusJ) coordinates are :
+			// r (T .plusJ) coordinates are :
 			// -sin (psi), cos (psi) cos (phi), cos (psi) sin (phi)
-			// (-r) (SGVec_3d .plusI) coordinates are :
+			// (-r) (T .plusI) coordinates are :
 			// cos (theta) cos (psi), -sin (psi), sin (theta) cos (psi)
 			// and we can choose to have psi in the interval [-PI/2 ; +PI/2]
 			SGVec_3d v1 = applyTo(RotationOrder.X);
 			SGVec_3d v2 = applyInverseTo(RotationOrder.Y);
 			if ((v2.y < -0.9999999999) || (v2.y > 0.9999999999)) {
-				throw new CardanEulerSingularityException(true);
+				try {
+					throw new CardanEulerSingularityException(true);
+				} catch (CardanEulerSingularityException e) {
+					e.printStackTrace(System.out);
+				}
 			}
 			return new double[] {
 					Math.atan2(v1.z, v1.y),
@@ -702,15 +860,19 @@ public class MRotation {
 
 		} else if (order == RotationOrder.YXZ) {
 
-			// r (SGVec_3d .plusK) coordinates are :
+			// r (T .plusK) coordinates are :
 			//  cos (phi) sin (theta), -sin (phi), cos (phi) cos (theta)
-			// (-r) (SGVec_3d .plusJ) coordinates are :
+			// (-r) (T .plusJ) coordinates are :
 			// sin (psi) cos (phi), cos (psi) cos (phi), -sin (phi)
 			// and we can choose to have phi in the interval [-PI/2 ; +PI/2]
 			SGVec_3d v1 = applyTo(RotationOrder.Z);
 			SGVec_3d v2 = applyInverseTo(RotationOrder.Y);
 			if ((v2.z < -0.9999999999) || (v2.z > 0.9999999999)) {
-				throw new CardanEulerSingularityException(true);
+				try {
+					throw new CardanEulerSingularityException(true);
+				} catch (CardanEulerSingularityException e) {
+					e.printStackTrace(System.out);
+				}
 			}
 			return new double[] {
 					Math.atan2(v1.x, v1.z),
@@ -720,15 +882,19 @@ public class MRotation {
 
 		} else if (order == RotationOrder.YZX) {
 
-			// r (SGVec_3d .plusI) coordinates are :
+			// r (T .plusI) coordinates are :
 			// cos (psi) cos (theta), sin (psi), -cos (psi) sin (theta)
-			// (-r) (SGVec_3d .plusJ) coordinates are :
+			// (-r) (T .plusJ) coordinates are :
 			// sin (psi), cos (phi) cos (psi), -sin (phi) cos (psi)
 			// and we can choose to have psi in the interval [-PI/2 ; +PI/2]
 			SGVec_3d v1 = applyTo(RotationOrder.X);
 			SGVec_3d v2 = applyInverseTo(RotationOrder.Y);
 			if ((v2.x < -0.9999999999) || (v2.x > 0.9999999999)) {
-				throw new CardanEulerSingularityException(true);
+				try {
+					throw new CardanEulerSingularityException(true);
+				} catch (CardanEulerSingularityException e) {
+					e.printStackTrace(System.out);
+				}
 			}
 			return new double[] {
 					Math.atan2(-(v1.z), v1.x),
@@ -738,15 +904,19 @@ public class MRotation {
 
 		} else if (order == RotationOrder.ZXY) {
 
-			// r (SGVec_3d .plusJ) coordinates are :
+			// r (T .plusJ) coordinates are :
 			// -cos (phi) sin (psi), cos (phi) cos (psi), sin (phi)
-			// (-r) (SGVec_3d .plusK) coordinates are :
+			// (-r) (T .plusK) coordinates are :
 			// -sin (theta) cos (phi), sin (phi), cos (theta) cos (phi)
 			// and we can choose to have phi in the interval [-PI/2 ; +PI/2]
 			SGVec_3d v1 = applyTo(RotationOrder.Y);
 			SGVec_3d v2 = applyInverseTo(RotationOrder.Z);
 			if ((v2.y < -0.9999999999) || (v2.y > 0.9999999999)) {
-				throw new CardanEulerSingularityException(true);
+				try {
+					throw new CardanEulerSingularityException(true);
+				} catch (CardanEulerSingularityException e) {
+					e.printStackTrace(System.out);
+				}
 			}
 			return new double[] {
 					Math.atan2(-(v1.x), v1.y),
@@ -756,15 +926,19 @@ public class MRotation {
 
 		} else if (order == RotationOrder.ZYX) {
 
-			// r (SGVec_3d .plusI) coordinates are :
+			// r (T .plusI) coordinates are :
 			//  cos (theta) cos (psi), cos (theta) sin (psi), -sin (theta)
-			// (-r) (SGVec_3d .plusK) coordinates are :
+			// (-r) (T .plusK) coordinates are :
 			// -sin (theta), sin (phi) cos (theta), cos (phi) cos (theta)
 			// and we can choose to have theta in the interval [-PI/2 ; +PI/2]
 			SGVec_3d v1 = applyTo(RotationOrder.X);
 			SGVec_3d v2 = applyInverseTo(RotationOrder.Z);
 			if ((v2.x < -0.9999999999) || (v2.x > 0.9999999999)) {
-				throw new CardanEulerSingularityException(true);
+				try {
+					throw new CardanEulerSingularityException(true);
+				} catch (CardanEulerSingularityException e) {
+					e.printStackTrace(System.out);
+				}
 			}
 			return new double[] {
 					Math.atan2(v1.y, v1.x),
@@ -774,15 +948,19 @@ public class MRotation {
 
 		} else if (order == RotationOrder.XYX) {
 
-			// r (SGVec_3d .plusI) coordinates are :
+			// r (T .plusI) coordinates are :
 			//  cos (theta), sin (phi1) sin (theta), -cos (phi1) sin (theta)
-			// (-r) (SGVec_3d .plusI) coordinates are :
+			// (-r) (T .plusI) coordinates are :
 			// cos (theta), sin (theta) sin (phi2), sin (theta) cos (phi2)
 			// and we can choose to have theta in the interval [0 ; PI]
 			SGVec_3d v1 = applyTo(RotationOrder.X);
 			SGVec_3d v2 = applyInverseTo(RotationOrder.X);
 			if ((v2.x < -0.9999999999) || (v2.x > 0.9999999999)) {
-				throw new CardanEulerSingularityException(false);
+				try {
+					throw new CardanEulerSingularityException(true);
+				} catch (CardanEulerSingularityException e) {
+					e.printStackTrace(System.out);
+				}
 			}
 			return new double[] {
 					Math.atan2(v1.y, -v1.z),
@@ -792,15 +970,19 @@ public class MRotation {
 
 		} else if (order == RotationOrder.XZX) {
 
-			// r (SGVec_3d .plusI) coordinates are :
+			// r (T .plusI) coordinates are :
 			//  cos (psi), cos (phi1) sin (psi), sin (phi1) sin (psi)
-			// (-r) (SGVec_3d .plusI) coordinates are :
+			// (-r) (T .plusI) coordinates are :
 			// cos (psi), -sin (psi) cos (phi2), sin (psi) sin (phi2)
 			// and we can choose to have psi in the interval [0 ; PI]
 			SGVec_3d v1 = applyTo(RotationOrder.X);
 			SGVec_3d v2 = applyInverseTo(RotationOrder.X);
 			if ((v2.x < -0.9999999999) || (v2.x > 0.9999999999)) {
-				throw new CardanEulerSingularityException(false);
+				try {
+					throw new CardanEulerSingularityException(true);
+				} catch (CardanEulerSingularityException e) {
+					e.printStackTrace(System.out);
+				}
 			}
 			return new double[] {
 					Math.atan2(v1.z, v1.y),
@@ -810,15 +992,19 @@ public class MRotation {
 
 		} else if (order == RotationOrder.YXY) {
 
-			// r (SGVec_3d .plusJ) coordinates are :
+			// r (T .plusJ) coordinates are :
 			//  sin (theta1) sin (phi), cos (phi), cos (theta1) sin (phi)
-			// (-r) (SGVec_3d .plusJ) coordinates are :
+			// (-r) (T .plusJ) coordinates are :
 			// sin (phi) sin (theta2), cos (phi), -sin (phi) cos (theta2)
 			// and we can choose to have phi in the interval [0 ; PI]
 			SGVec_3d v1 = applyTo(RotationOrder.Y);
 			SGVec_3d v2 = applyInverseTo(RotationOrder.Y);
 			if ((v2.y < -0.9999999999) || (v2.y > 0.9999999999)) {
-				throw new CardanEulerSingularityException(false);
+				try {
+					throw new CardanEulerSingularityException(true);
+				} catch (CardanEulerSingularityException e) {
+					e.printStackTrace(System.out);
+				}
 			}
 			return new double[] {
 					Math.atan2(v1.x, v1.z),
@@ -828,15 +1014,19 @@ public class MRotation {
 
 		} else if (order == RotationOrder.YZY) {
 
-			// r (SGVec_3d .plusJ) coordinates are :
+			// r (T .plusJ) coordinates are :
 			//  -cos (theta1) sin (psi), cos (psi), sin (theta1) sin (psi)
-			// (-r) (SGVec_3d .plusJ) coordinates are :
+			// (-r) (T .plusJ) coordinates are :
 			// sin (psi) cos (theta2), cos (psi), sin (psi) sin (theta2)
 			// and we can choose to have psi in the interval [0 ; PI]
 			SGVec_3d v1 = applyTo(RotationOrder.Y);
 			SGVec_3d v2 = applyInverseTo(RotationOrder.Y);
 			if ((v2.y < -0.9999999999) || (v2.y > 0.9999999999)) {
-				throw new CardanEulerSingularityException(false);
+				try {
+					throw new CardanEulerSingularityException(true);
+				} catch (CardanEulerSingularityException e) {
+					e.printStackTrace(System.out);
+				}
 			}
 			return new double[] {
 					Math.atan2(v1.z, -v1.x),
@@ -846,15 +1036,19 @@ public class MRotation {
 
 		} else if (order == RotationOrder.ZXZ) {
 
-			// r (SGVec_3d .plusK) coordinates are :
+			// r (T .plusK) coordinates are :
 			//  sin (psi1) sin (phi), -cos (psi1) sin (phi), cos (phi)
-			// (-r) (SGVec_3d .plusK) coordinates are :
+			// (-r) (T .plusK) coordinates are :
 			// sin (phi) sin (psi2), sin (phi) cos (psi2), cos (phi)
 			// and we can choose to have phi in the interval [0 ; PI]
 			SGVec_3d v1 = applyTo(RotationOrder.Z);
 			SGVec_3d v2 = applyInverseTo(RotationOrder.Z);
 			if ((v2.z < -0.9999999999) || (v2.z > 0.9999999999)) {
-				throw new CardanEulerSingularityException(false);
+				try {
+					throw new CardanEulerSingularityException(true);
+				} catch (CardanEulerSingularityException e) {
+					e.printStackTrace(System.out);
+				}
 			}
 			return new double[] {
 					Math.atan2(v1.x, -v1.y),
@@ -864,15 +1058,19 @@ public class MRotation {
 
 		} else { // last possibility is ZYZ
 
-			// r (SGVec_3d .plusK) coordinates are :
+			// r (T .plusK) coordinates are :
 			//  cos (psi1) sin (theta), sin (psi1) sin (theta), cos (theta)
-			// (-r) (SGVec_3d .plusK) coordinates are :
+			// (-r) (T .plusK) coordinates are :
 			// -sin (theta) cos (psi2), sin (theta) sin (psi2), cos (theta)
 			// and we can choose to have theta in the interval [0 ; PI]
 			SGVec_3d v1 = applyTo(RotationOrder.Z);
 			SGVec_3d v2 = applyInverseTo(RotationOrder.Z);
 			if ((v2.z < -0.9999999999) || (v2.z > 0.9999999999)) {
-				throw new CardanEulerSingularityException(false);
+				try {
+					throw new CardanEulerSingularityException(true);
+				} catch (CardanEulerSingularityException e) {
+					e.printStackTrace(System.out);
+				}
 			}
 			return new double[] {
 					Math.atan2(v1.y, v1.x),
@@ -884,10 +1082,31 @@ public class MRotation {
 
 	}
 
-	/** Get the 3X3 matrix corresponding to the instance
+	/** Get an array representing the 3X3 matrix corresponding to this rotation instance
+	 * Indices are in column major order. In other words 
+	 * <br/> 
+	 * 0, 3, 6 <br/>  
+	 * 1, 4, 7 <br/> 
+	 * 2, 5, 8 <br/>
 	 * @return the matrix corresponding to the instance
 	 */
-	public Matrix3d getMatrix() {
+	public double[] getMatrix3Val() {
+
+		// create the matrix
+		double[] values = new double[9];
+		setToMatrix3Val(values);
+		return values;
+	}
+
+	/** set input to the 3X3 matrix corresponding to the instance 
+	 *  Indices are in column major order. In other words 
+	 * <br/> 
+	 * 0, 3, 6 <br/>  
+	 * 1, 4, 7 <br/> 
+	 * 2, 5, 8 <br/>
+	 * @return the matrix corresponding to the instance
+	 */
+	public void setToMatrix3Val(double[] storeIn) {
 
 		// products
 		double q0q0  = q0 * q0;
@@ -902,47 +1121,46 @@ public class MRotation {
 		double q3q3  = q3 * q3;
 
 		// create the matrix
-		double[] values = new double[9];  
-		values[Matrix3d.M00] = 2.0 * (q0q0 + q1q1) - 1.0;
-		values[Matrix3d.M10] = 2.0 * (q1q2 - q0q3);
-		values[Matrix3d.M20] = 2.0 * (q1q3 + q0q2);
+		storeIn[0] = 2.0 * (q0q0 + q1q1) - 1.0;
+		storeIn[1] = 2.0 * (q1q2 - q0q3);
+		storeIn[2] = 2.0 * (q1q3 + q0q2);
 
-		values[Matrix3d.M01] = 2.0 * (q1q2 + q0q3);
-		values[Matrix3d.M11] = 2.0 * (q0q0 + q2q2) - 1.0;
-		values[Matrix3d.M21] = 2.0 * (q2q3 - q0q1);
+		storeIn[3] = 2.0 * (q1q2 + q0q3);
+		storeIn[4] = 2.0 * (q0q0 + q2q2) - 1.0;
+		storeIn[5] = 2.0 * (q2q3 - q0q1);
 
-		values[Matrix3d.M02] = 2.0 * (q1q3 - q0q2);
-		values[Matrix3d.M12] = 2.0 * (q2q3 + q0q1);
-		values[Matrix3d.M22] = 2.0 * (q0q0 + q3q3) - 1.0;
-		
-				
-		Matrix3d result = new Matrix3d(values); 
-		/*double[][] m = new double[3][];
-		m[0] = new double[3];
-		m[1] = new double[3];
-		m[2] = new double[3];
+		storeIn[6] = 2.0 * (q1q3 - q0q2);
+		storeIn[7] = 2.0 * (q2q3 + q0q1);
+		storeIn[8] = 2.0 * (q0q0 + q3q3) - 1.0;
 
-		m [0][0] = 2.0 * (q0q0 + q1q1) - 1.0;
-		m [1][0] = 2.0 * (q1q2 - q0q3);
-		m [2][0] = 2.0 * (q1q3 + q0q2);
-
-		m [0][1] = 2.0 * (q1q2 + q0q3);
-		m [1][1] = 2.0 * (q0q0 + q2q2) - 1.0;
-		m [2][1] = 2.0 * (q2q3 - q0q1);
-
-		m [0][2] = 2.0 * (q1q3 - q0q2);
-		m [1][2] = 2.0 * (q2q3 + q0q1);
-		m [2][2] = 2.0 * (q0q0 + q3q3) - 1.0;*/
-
-		return result;
 	}
-	
+
+	/**
+	 *  Get an array representing the 4X4 matrix corresponding to this rotation instance. 
+	 * Indices are in column major order. In other words 
+	 *<br/> 
+	 * 0,  4,  8,  12 <br/>  
+	 * 1,  5,  9,  13 <br/> 
+	 * 2,  6, 10, 14 <br/>
+ 	 * 3,  7, 11, 15 <br/>
+	 * */
 	public double[] toMatrix4Val() {
 		double[] result = new double[16]; 
-		return toMatrix4Val(result); 
+		return toMatrix4Val(result, false); 
 	}
-	
-	public double[] toMatrix4Val(double[] storeIn) {
+
+	/**
+	 *  Get an array representing the 4X4 matrix corresponding to this rotation instance. 
+	 * Indices are in column major order. In other words 
+	 * <br/> 
+	 * 0,  4,  8,  12 <br/>  
+	 * 1,  5,  9,  13 <br/> 
+	 * 2,  6, 10, 14 <br/>
+ 	 * 3,  7, 11, 15 <br/>
+	 * @param storeIn the array to storevalues in. 
+	 * @param zeroOut if true, will zero out any elements in the matrix not corresponding to this rotation. 
+	 * */
+	public double[] toMatrix4Val(double[] storeIn, boolean zeroOut) {
 		double q0q0  = q0 * q0;
 		double q0q1  = q0 * q1;
 		double q0q2  = q0 * q2;
@@ -955,19 +1173,30 @@ public class MRotation {
 		double q3q3  = q3 * q3;
 
 		// create the matrix
-		storeIn[Matrix4d.M00] = 2.0 * (q0q0 + q1q1) - 1.0;
-		storeIn[Matrix4d.M10] = 2.0 * (q1q2 - q0q3);
-		storeIn[Matrix4d.M20] = 2.0 * (q1q3 + q0q2);
+		storeIn[0] = 2.0 * (q0q0 + q1q1) - 1.0;
+		storeIn[1] = 2.0 * (q1q2 - q0q3);
+		storeIn[2] = 2.0 * (q1q3 + q0q2);
 
-		storeIn[Matrix4d.M01] = 2.0 * (q1q2 + q0q3);
-		storeIn[Matrix4d.M11] = 2.0 * (q0q0 + q2q2) - 1.0;
-		storeIn[Matrix4d.M21] = 2.0 * (q2q3 - q0q1);
+		storeIn[4] = 2.0 * (q1q2 + q0q3);
+		storeIn[5] = 2.0 * (q0q0 + q2q2) - 1.0;
+		storeIn[6] = 2.0 * (q2q3 - q0q1);
 
-		storeIn[Matrix4d.M02] = 2.0 * (q1q3 - q0q2);
-		storeIn[Matrix4d.M12] = 2.0 * (q2q3 + q0q1);
-		storeIn[Matrix4d.M22] = 2.0 * (q0q0 + q3q3) - 1.0;
-		storeIn[Matrix4d.M33] = 1.0;
-		
+
+		storeIn[8] = 2.0 * (q1q3 - q0q2);
+		storeIn[9] = 2.0 * (q2q3 + q0q1);
+		storeIn[10] = 2.0 * (q0q0 + q3q3) - 1.0;
+		storeIn[15] = 1.0;
+
+		if(zeroOut) {
+			storeIn[3] = 0.0;
+			storeIn[7] = 0.0;
+			storeIn[11] = 0.0;
+			storeIn[12] = 0.0;
+			storeIn[13] = 0.0;
+			storeIn[14] = 0.0;
+			
+		}
+
 		return storeIn;
 	}
 
@@ -975,90 +1204,90 @@ public class MRotation {
 	 * @param u vector to apply the rotation to
 	 * @return a new vector which is the image of u by the rotation
 	 */
-	public SGVec_3d applyTo(SGVec_3d u) {
+	public <T extends SGVec_3d> T applyTo(T u) {
 
 		double x = u.x;
 		double y = u.y;
 		double z = u.z;
 
 		double s = q1 * x + q2 * y + q3 * z;
-
-		return new SGVec_3d(2 * (q0 * (x * q0 - (q2 * z - q3 * y)) + s * q1) - x,
+		T result = (T) u.copy();
+		result.set(2 * (q0 * (x * q0 - (q2 * z - q3 * y)) + s * q1) - x,
 				2 * (q0 * (y * q0 - (q3 * x - q1 * z)) + s * q2) - y,
 				2 * (q0 * (z * q0 - (q1 * y - q2 * x)) + s * q3) - z);
-
+		return result;
 	}
-	
-	
-     /** Multiplies the instance by a scalar.
-     *
-     * @param alpha Scalar factor.
-     * @return a scaled quaternion.
-     */
-    public MRotation multiply(final double alpha) {
-        return new MRotation(alpha * q0,
-                              alpha * q1,
-                              alpha * q2,
-                              alpha * q3);
-    }
 
-     
-     /** Returns the Hamilton product of the instance by a quaternion.
-      *
-      * @param q Quaternion.
-      * @return the product of this instance with {@code q}, in that order.
-      */
-     public MRotation multiply(final MRotation q) {
-         return multiply(this, q);
-     }
-     
-     public static MRotation multiply(final MRotation q1, final MRotation q2) {
-       // Components of the first quaternion.
-       final double q1a = q1.getQ0();
-       final double q1b = q1.getQ1();
-       final double q1c = q1.getQ2();
-       final double q1d = q1.getQ3();
-   
-       // Components of the second quaternion.
-       final double q2a = q2.getQ0();
-       final double q2b = q2.getQ1();
-       final double q2c = q2.getQ2();
-       final double q2d = q2.getQ3();
-   
-       // Components of the product.
-       final double w = q1a * q2a - q1b * q2b - q1c * q2c - q1d * q2d;
-       final double x = q1a * q2b + q1b * q2a + q1c * q2d - q1d * q2c;
-       final double y = q1a * q2c - q1b * q2d + q1c * q2a + q1d * q2b;
-       final double z = q1a * q2d + q1b * q2c - q1c * q2b + q1d * q2a;
-   
-       return new MRotation(w, x, y, z);
-   }
-    
-    
-     /** Computes the dot-product of two quaternions.
-     *
-     * @param q1 Quaternion.
-     * @param q2 Quaternion.
-     * @return the dot product of {@code q1} and {@code q2}.
-     */
-    public static double dotProduct(final MRotation q1,
-                                    final MRotation q2) {
-        return q1.getQ0() * q2.getQ0() +
-            q1.getQ1() * q2.getQ1() +
-            q1.getQ2() * q2.getQ2() +
-            q1.getQ3() * q2.getQ3();
-    }
-    
-    /**
-     * Computes the dot-product of the instance by a quaternion.
-     *
-     * @param q Quaternion.
-     * @return the dot product of this instance and {@code q}.
-     */
-    public double dotProduct(final MRotation q) {
-        return dotProduct(this, q);
-    }
-     
+
+	/** Multiplies the instance by a scalar.
+	 *
+	 * @param alpha Scalar factor.
+	 * @return a scaled quaternion.
+	 */
+	public MRotation multiply(final double alpha) {
+		return new MRotation(alpha * q0,
+				alpha * q1,
+				alpha * q2,
+				alpha * q3);
+	}
+
+
+	/** Returns the Hamilton product of the instance by a quaternion.
+	 *
+	 * @param q Quaternion.
+	 * @return the product of this instance with {@code q}, in that order.
+	 */
+	public MRotation multiply(final MRotation q) {
+		return multiply(this, q);
+	}
+
+	public static MRotation multiply(final MRotation q1, final MRotation q2) {
+		// Components of the first quaternion.
+		final double q1a = q1.getQ0();
+		final double q1b = q1.getQ1();
+		final double q1c = q1.getQ2();
+		final double q1d = q1.getQ3();
+
+		// Components of the second quaternion.
+		final double q2a = q2.getQ0();
+		final double q2b = q2.getQ1();
+		final double q2c = q2.getQ2();
+		final double q2d = q2.getQ3();
+
+		// Components of the product.
+		final double w = q1a * q2a - q1b * q2b - q1c * q2c - q1d * q2d;
+		final double x = q1a * q2b + q1b * q2a + q1c * q2d - q1d * q2c;
+		final double y = q1a * q2c - q1b * q2d + q1c * q2a + q1d * q2b;
+		final double z = q1a * q2d + q1b * q2c - q1c * q2b + q1d * q2a;
+
+		return new MRotation(w, x, y, z);
+	}
+
+
+	/** Computes the dot-product of two quaternions.
+	 *
+	 * @param q1 Quaternion.
+	 * @param q2 Quaternion.
+	 * @return the dot product of {@code q1} and {@code q2}.
+	 */
+	public static double dotProduct(final MRotation q1,
+			final MRotation q2) {
+		return q1.getQ0() * q2.getQ0() +
+				q1.getQ1() * q2.getQ1() +
+				q1.getQ2() * q2.getQ2() +
+				q1.getQ3() * q2.getQ3();
+	}
+
+	/**
+	 * Computes the dot-product of the instance by a quaternion.
+	 *
+	 * @param q Quaternion.
+	 * @return the dot product of this instance and {@code q}.
+	 */
+	public double dotProduct(final MRotation q) {
+		return dotProduct(this, q);
+	}
+
 	/** Apply the rotation to a vector stored in an array.
 	 * @param in an array with three items which stores vector to rotate
 	 * @param out an array with three items to put result to (it can be the same
@@ -1082,7 +1311,7 @@ public class MRotation {
 	 * @param u vector to apply the inverse of the rotation to
 	 * @return a new vector which such that u is its image by the rotation
 	 */
-	public SGVec_3d applyInverseTo(SGVec_3d u) {
+	public <T extends SGVec_3d> T applyInverseTo(T u) {
 
 		double x = u.x;
 		double y = u.y;
@@ -1091,9 +1320,11 @@ public class MRotation {
 		double s = q1 * x + q2 * y + q3 * z;
 		double m0 = -q0;
 
-		return new SGVec_3d(2 * (m0 * (x * m0 - (q2 * z - q3 * y)) + s * q1) - x,
+		T result = (T) u.copy();
+		result.set(2 * (m0 * (x * m0 - (q2 * z - q3 * y)) + s * q1) - x,
 				2 * (m0 * (y * m0 - (q3 * x - q1 * z)) + s * q2) - y,
 				2 * (m0 * (z * m0 - (q1 * y - q2 * x)) + s * q3) - z);
+		return result;
 
 	}
 
@@ -1192,6 +1423,13 @@ public class MRotation {
 				false);
 	}
 
+	
+	public MRotation setToConjugate() {
+		q1 = -q1;
+		q2 = -q2;
+		q3 = -q3;		
+		return this;
+	}
 
 	public void set(double q0, double q1, double q2, double q3,
 			boolean needsNormalization) {
@@ -1200,57 +1438,65 @@ public class MRotation {
 		this.q1 = q1;
 		this.q2 = q2;
 		this.q3 = q3;
-		
+
 		if(needsNormalization) setToNormalized();
 	}
-	
+
 	public void setToNormalized() {
-			// normalization preprocessing
-			double inv = 1.0 / Math.sqrt(q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3);
-			q0 *= inv;
-			q1 *= inv;
-			q2 *= inv;
-			q3 *= inv;
+		// normalization preprocessing
+		double inv = 1.0 / Math.sqrt(q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3);
+		q0 *= inv;
+		q1 *= inv;
+		q2 *= inv;
+		q3 *= inv;
 	}
 
-	
+
 	/**
 	 * Computes the norm of the quaternion.
 	 *
 	 * @return the norm.
 	 */
 	public double len() {
-	    return Math.sqrt(q0 * q0 +
-	                         q1 * q1 +
-	                         q2 * q2 +
-	                         q3 * q3);
+		return Math.sqrt(q0 * q0 +
+				q1 * q1 +
+				q2 * q2 +
+				q3 * q3);
 	}
 
 	/**
-	   * Computes the normalized quaternion (the versor of the instance).
-	   * The norm of the quaternion must not be zero.
-	   *
-	   * @return a normalized quaternion.
-	   * @throws ZeroException if the norm of the quaternion is zero.
-	   */
-	  public MRotation normalize() {
-	      final double norm = len();
-	
-	      if (norm < Precision.SAFE_MIN) {
-	          throw new ZeroException(LocalizedFormats.NORM, norm);
-	      }
-	
-	      return new MRotation(q0 / norm,
-	                            q1 / norm,
-	                            q2 / norm,
-	                            q3 / norm);
-	  }
+	 * Computes the normalized quaternion (the versor of the instance).
+	 * The norm of the quaternion must not be zero.
+	 *
+	 * @return a normalized quaternion.
+	 * @throws ZeroException if the norm of the quaternion is zero.
+	 */
+	public MRotation normalize() {
+		final double norm = len();
 
-	public void set(SGVec_3d u, SGVec_3d v) throws MathArithmeticException {
+		if (norm < Precision.SAFE_MIN_DOUBLE) {
+			try {
+				throw new Exception("Zero Norm");
+			} catch (Exception e) {
+				e.printStackTrace(System.out);
+			}
+		}
+
+		return new MRotation(q0 / norm,
+				q1 / norm,
+				q2 / norm,
+				q3 / norm);
+	}
+
+	public <V extends Vec3d<?>> void set(V u, V v) {
 
 		double normProduct = u.mag() * v.mag();
 		if (normProduct == 0) {
-			throw new MathArithmeticException(LocalizedFormats.ZERO_NORM_FOR_ROTATION_DEFINING_VECTOR);
+			try {
+				throw new Exception("Zero Norm for Rotation defining vector");
+			} catch (Exception e) {
+				e.printStackTrace(System.out);
+			}
 		}
 
 		double dot = u.dot(v);
@@ -1258,7 +1504,7 @@ public class MRotation {
 		if (dot < ((2.0e-15 - 1.0) * normProduct)) {
 			// special case u = -v: we select a PI angle rotation around
 			// an arbitrary vector orthogonal to u
-			SGVec_3d w = u.getOrthogonal();
+			V w = (V) u.getOrthogonal();
 			q0 = 0.0;
 			q1 = -w.x;
 			q2 = -w.y;
@@ -1268,7 +1514,7 @@ public class MRotation {
 			// the shortest possible rotation: axis orthogonal to this plane
 			q0 = Math.sqrt(0.5 * (1.0 + dot / normProduct));
 			double coeff = 1.0 / (2.0 * q0 * normProduct);
-			SGVec_3d q = v.crossCopy(u);
+			V q = (V) v.crossCopy(u);
 			q1 = coeff * q.x;
 			q2 = coeff * q.y;
 			q3 = coeff * q.z;
@@ -1276,11 +1522,15 @@ public class MRotation {
 
 	}
 
-	public void set(SGVec_3d  axis, double angle) throws MathIllegalArgumentException {
+	public <V extends Vec3d<?>> void set(V  axis, double angle) {
 
 		double norm = axis.mag();
 		if (norm == 0) {
-			throw new MathIllegalArgumentException(LocalizedFormats.ZERO_NORM_FOR_ROTATION_AXIS);
+			try {
+				throw new Exception("Zero Norm for Rotation defining vector");
+			} catch (Exception e) {
+				e.printStackTrace(System.out);
+			}
 		}
 
 		double halfAngle = -0.5 * angle;
@@ -1290,7 +1540,6 @@ public class MRotation {
 		q1 = coeff * axis.x;
 		q2 = coeff * axis.y;
 		q3 = coeff * axis.z;
-
 	}
 
 	/** Perfect orthogonality on a 3X3 matrix.
@@ -1303,8 +1552,7 @@ public class MRotation {
 	 * @exception NotARotationMatrixException if the matrix cannot be
 	 * orthogonalized with the given threshold after 10 iterations
 	 */
-	private double[][] orthogonalizeMatrix(double[][] m, double threshold)
-			throws NotARotationMatrixException {
+	private double[][] orthogonalizeMatrix(double[][] m, double threshold) {
 		double[] m0 = m[0];
 		double[] m1 = m[1];
 		double[] m2 = m[2];
@@ -1383,13 +1631,14 @@ public class MRotation {
 			x21 = o2[1];
 			x22 = o2[2];
 			fn  = fn1;
-
 		}
-
 		// the algorithm did not converge after 10 iterations
-		throw new NotARotationMatrixException(
-				LocalizedFormats.UNABLE_TO_ORTHOGONOLIZE_MATRIX,
-				i - 1);
+		try {
+			throw new Exception("Failed to converge on orthogonal matrix after 10 iterations");
+		} catch (Exception e) {
+			e.printStackTrace(System.out);
+		}  
+		return null;
 	}
 
 	/** Compute the <i>distance</i> between two rotations.
@@ -1420,14 +1669,15 @@ public class MRotation {
 		return r1.applyInverseTo(r2).getAngle();
 	}
 
-	
+
 	public boolean equalTo(MRotation m) {
-		return (this.q0 == m.getQ0() && this.q1 == m.getQ1() && this.q2 == m.getQ2() && this.q3 == m.getQ3());
+		return distance(this, m) < MathUtils.DOUBLE_ROUNDING_ERROR;
 	}
-	
+
 	public String toString() {
-		String result = "axis: " + getAxis().toSGVec3f().toString();
+		String result = "axis: " + getAxis().toVec3f().toString();
 		result += "\n angle : " + (float)Math.toDegrees(getAngle()) + " degrees " ;
+		result += "\n angle : " + (float)getAngle() + " radians " ;
 		return result;
 	}
 }

@@ -13,16 +13,24 @@ import IK.floatIK.AbstractBone;
 import IK.floatIK.AbstractIKPin;
 import IK.floatIK.AbstractKusudama;
 import IK.floatIK.AbstractLimitCone;
-import sceneGraph.math.doubleV.AbstractAxes;
-import sceneGraph.math.doubleV.MRotation;
-import sceneGraph.math.doubleV.Rot;
-import sceneGraph.math.doubleV.SGVec_3d;
-import sceneGraph.math.doubleV.sgRayd;
-import sceneGraph.math.floatV.SGVec_3f;
-import sceneGraph.math.floatV.sgRayf;
+import asj.SaveManager;
+import asj.Saveable;
+import asj.data.FloatList;
+import asj.data.IntList;
+import asj.data.JSONArray;
+import asj.data.JSONObject;
+import asj.data.StringFuncs;
+import asj.data.StringList;
+import math.doubleV.AbstractAxes;
+import math.doubleV.MRotation;
+import math.doubleV.Rot;
+import math.doubleV.SGVec_3d;
+import math.doubleV.sgRayd;
+import math.floatV.SGVec_3f;
+import math.floatV.sgRayf;
 
 
-public class DoubleBackedSaver implements SaveManager{
+public class DoubleBackedSaver extends SaveManager{
 
 	 WeakHashMap<Saveable, Boolean> saveables = new WeakHashMap<Saveable, Boolean>();
 
@@ -190,7 +198,7 @@ public class DoubleBackedSaver implements SaveManager{
 						else if(vc == MRotation.class) 
 							result.setJSONArray(ks, (new Rot((MRotation)v)).toJsonArray());						
 						else if(vc.isAssignableFrom(sgRayd.class)) 
-							result.setJSONObject(ks, ((sgRayd)v).toJSON());			
+							result.setJSONObject(ks, ((sgRayd)v).toJSONObject());			
 						else if(vc == Integer.class)
 							result.setInt(ks, (Integer)hm.get(k));
 						else if(vc == Long.class)
@@ -245,9 +253,9 @@ public class DoubleBackedSaver implements SaveManager{
 				else if(c.isAssignableFrom(SGVec_3f.class)) 
 					result.append(((SGVec_3f)o).toJSONArray());
 				else if(c.isAssignableFrom(sgRayd.class)) 
-					result.append(((sgRayd)o).toJSON());
+					result.append(((sgRayd)o).toJSONObject());
 				else if(c.isAssignableFrom(sgRayf.class)) 
-					result.append(((sgRayf)o).toJSON());
+					result.append(((sgRayf)o).toJSONObject());
 				else if(c == Rot.class) 
 					result.append(((Rot)o).toJsonArray());
 				else if(c == MRotation.class) 

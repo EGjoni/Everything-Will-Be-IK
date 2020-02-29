@@ -1,9 +1,13 @@
 package IK.doubleIK;
 
-import data.Saveable;
-import sceneGraph.math.Vec;
-import sceneGraph.math.doubleV.AbstractAxes;
-import sceneGraph.math.doubleV.SGVec_3d;
+import math.doubleV.AbstractAxes;
+import math.doubleV.Rot;
+import math.doubleV.SGVec_3d;
+import math.doubleV.Vec3d;
+import asj.LoadManager;
+import asj.SaveManager;
+import asj.Saveable;
+import asj.data.JSONObject;
 
 public interface Constraint extends Saveable{
 	
@@ -14,8 +18,8 @@ public interface Constraint extends Saveable{
 	
 	//returns true if the ray from the constraint origin to the globalPoint is within the constraint's limits
 	//false otherwise.
-	public boolean isInLimits_(SGVec_3d globalPoint);
-	public AbstractAxes limitingAxes();
+	public <V extends Vec3d<?>>boolean isInLimits_(V globalPoint);
+	public <A extends AbstractAxes> A limitingAxes();
 	
 	/**
 	 * @return a measure of the rotational freedom afforded by this constraint. 
@@ -26,5 +30,6 @@ public interface Constraint extends Saveable{
 	 * a bone cannot be in as defined by its representation as a point on the surface of a hypersphere. 
 	 */
 	public double getRotationalFreedom();
+	
 
 }

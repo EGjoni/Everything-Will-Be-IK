@@ -1,616 +1,128 @@
-/*
+package math.floatV;
 
-Copyright (c) 2016 Eron Gjoni
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and 
-associated documentation files (the "Software"), to deal in the Software without restriction, including 
-without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
-copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, 
-INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
-PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
-WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. 
-
- */
-
-package sceneGraph.math.floatV;
-
-
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.function.Consumer;
 
-import IK.floatIK.G;
-import data.JSONObject;
-import data.LoadManager;
-import data.SaveManager;
-import data.Saveable;
-import sceneGraph.math.floatV.AbstractAxes;
-import sceneGraph.math.floatV.Rot;
-import sceneGraph.math.floatV.SGVec_3f;
+import asj.LoadManager;
+import asj.SaveManager;
+import asj.Saveable;
+import asj.data.JSONObject;
 
 /**
  * @author Eron Gjoni
  */
-public abstract class AbstractAxes implements AxisDependancy, Saveable {
+public abstract class AbstractAxes implements AxisDependency, Saveable {
 	public static final int NORMAL = 0, IGNORE = 1, FORWARD = 2;
 	public static final int RIGHT = 1, LEFT = -1; 
 	public static final int X =0, Y=1, Z=2; 
 
 
-
-
-	/**
-	 * Each Axes needs to deal with an implicit stack of 
-	 * transforms the result from its sequence of ancestors. 
-	 * 
-	 * However, some axes need to remain orthonormal, while others 
-	 * need to obey their ancestor's non-orthonormal transformations. 
-	 * 
-	 * This creates all sort of ambiguities, and so to deal with them 
-	 * each axes object keeps track of its shape/position 
-	 * relative to its parent axes as if all ancestors had been orthonormal
-	 * as well as its shape/position relative to its parent axes as if 
-	 * all ancestors (including the parent) had not necessarily been orthonormal.  
-	 * 
-	 * the version that gets returned is the version that corresponds to whatever
-	 * orthonormality constraint the user has set on the axes. 
-	 * 
-	 * in terms of computation -- getting the global coordinates of a non-orthonormal basis 
-	 * is accomplished by getting its global coordinates relative to its non-orthonormal sequence of
-	 * ancestors. 
-	 * 
-	 * getting the global coordinates of an orthonormal basis is accomplished by getting is global 
-	 * coordinates relative to its orthonormal ancestors -- and then translating the basis so that 
-	 * its origin aligns with the origin of its non-orthonormal doppelganger. 
-	 * 
-	 * This scheme is somewhat arbitrary, however, it has a few desirable properties. 
-	 * 
-	 * 1) There is no ambiguity as to how to orthonormalize on a non-orthonormal basis. There simply
-	 * always exists an orthonormal basis, defined relative to another orthonormal basis up to the orthonormal root.
-	 * 
-	 * 2) Orthonormal bases will retain their position relative to non-orthonomal ancestors so as to minimize 
-	 * discrepancy between the orthonormal basis and its non-orthonormal doppelganger. This should appear 
-	 * to keep sibling nodes in nice relative positions to one another as ancestor nodes scale, regardless 
-	 * of whether all siblings are flagged as orthonormal or not. 
-	 */
-
-
 	public boolean debug = false;
+	//protected int globalChirality = RIGHT;
+	//protected int localChirality = RIGHT;
 
-	public Basis localMBasis; 
-	public Basis globalMBasis;
-	protected AbstractAxes parent = null;
+	public AbstractBasis localMBasis; 
+	public AbstractBasis globalMBasis;
+	private DependencyReference<AbstractAxes> parent = null;
 
 	private int slipType = 0;
 	public boolean dirty = true;
-	public boolean scaleDirty = false;
-	//public boolean forceOrthoNormality = true; 
-	public boolean forceOrthoNormality = true;
-	private int globalChirality = RIGHT;
-	private int localChirality = RIGHT;
-
-	public ArrayList<AxisDependancy> dependentsRegistry = new ArrayList<AxisDependancy>(); 
-
-	protected SGVec_3f workingVector; 
-
-	boolean areGlobal = true;
-
-	private sgRayf xTemp = new sgRayf(new SGVec_3f(), new SGVec_3f(1,1,1)); 
-	private sgRayf yTemp = new sgRayf(new SGVec_3f(), new SGVec_3f(1,1,1)); 
-	private sgRayf zTemp = new sgRayf(new SGVec_3f(), new SGVec_3f(1,1,1));
-	private int flipFlag = -1; //value of -1 means the bases do not need to flip. values of 0, 1, or 2 mean the bases 
-	//should flip along their X, Y, or Z axes respectively.  
-
-	public void updateGlobal() {
-		if(this.dirty || this.scaleDirty) {
-
-			if(this.areGlobal) {
-				globalMBasis.adoptValues(this.localMBasis);
-			} else {
-				//parent.markDirty();
-				parent.updateGlobal();
-				//if(this.debug) {
-					//System.out.println("====== " + this + " =========");
-					//System.out.println("LOCAL rotation prior:  \n" + localMBasis.rotation);
-					//System.out.println("Global Rotation prior: \n" + globalMBasis.rotation);
-					//}
-				parent.globalMBasis.setToGlobalOf(this.localMBasis, this.globalMBasis);
-				/*if(this.debug) {	
-					System.out.println("Global Rotation post: \n" + globalMBasis.rotation);
-				}*/
-
-				this.globalChirality = this.globalMBasis.chirality;
-				this.localChirality = this.localMBasis.chirality;
-			}
-		}
-		globalChirality = globalMBasis.chirality;
-		localChirality = localMBasis.chirality;
-		dirty = false;
-	} 
 	
-	public void createTempVars(SGVec_3f type) {
+	//public boolean forceOrthoNormality = true; 
+	
+
+	public LinkedList<DependencyReference<AxisDependency>> dependentsRegistry = new LinkedList<DependencyReference<AxisDependency>>(); 
+
+	protected Vec3f<?> workingVector; 
+
+	protected boolean areGlobal = true;
+	
+	public <V extends Vec3f<?>> void createTempVars(V type) {
 		workingVector =  type.copy(); 
 		tempOrigin =  type.copy(); 
 	}
-
-
+	
+	
+	
 	/**
-	 * 
+	 * @param globalMBasis a Basis object for this Axes to adopt the vakues of
+	 * @param customBases set to true if you intend to use a custom Bases class, in which case, this constructor will not initialize them.
+	 */
+	public <V extends Vec3f<?>> AbstractAxes(AbstractBasis globalBasis, AbstractAxes parent) {
+		this.globalMBasis = globalBasis.copy(); 
+		createTempVars(globalBasis.getOrigin());
+		if(this.getParentAxes() != null)
+			setParent(parent);
+		else {
+			this.areGlobal = true;
+			this.localMBasis = globalBasis.copy();
+		}
+		
+		this.updateGlobal();				
+		//this.updateChiralities();
+	}
+	
+	/**
 	 * @param origin the center of this axes basis. The basis vector parameters will be automatically ADDED to the origin in order to create this basis vector.
 	 * @param inX the direction of the X basis vector in global coordinates, given as an offset from this base's origin in global coordinates.   
 	 * @param inY the direction of the Y basis vector in global coordinates, given as an offset from this base's origin in global coordinates.
 	 * @param inZ the direction of the Z basis vector in global coordinates, given as an offset from this base's origin in global coordinates.
 	 * @param forceOrthoNormality
+	 * @param customBases set to true if you intend to use a custom Bases class, in which case, this constructor will not initialize them.
 	 */
-	public AbstractAxes(SGVec_3f origin, SGVec_3f inX, SGVec_3f inY, SGVec_3f inZ, boolean forceOrthoNormality, AbstractAxes parent) {
-
-		this.forceOrthoNormality = forceOrthoNormality; 
-		createTempVars(origin);
-
-		areGlobal = true;		
-		sgRayf xRay = new sgRayf(origin, origin.addCopy(inX));
-		sgRayf yRay = new sgRayf(origin, origin.addCopy(inY));
-		sgRayf zRay = new sgRayf(origin, origin.addCopy(inZ));
-
-		localMBasis = new Basis(xRay, yRay, zRay);
-		globalMBasis = new Basis(xRay, yRay, zRay);
-		//globalNormalizedBasis = globalMBasis.copy();
-		
-
-		if(parent != null) {
-			this.setParent(parent);
-		} 	else {
+	public AbstractAxes(Vec3f<?> origin, Vec3f<?> inX, Vec3f<?> inY, Vec3f<?> inZ, AbstractAxes parent, boolean customBases) {
+		if(!customBases) {
+			globalMBasis = parent != null ? parent.getGlobalMBasis().copy() : new CartesianBasis(origin);
+			localMBasis = parent != null ? parent.getLocalMBasis().copy() : new CartesianBasis(origin);
+			globalMBasis.setIdentity();
+			localMBasis.setIdentity();
+		}		
+		if(parent == null) 
 			this.areGlobal = true;
-		}
-		this.updateGlobal();
+		
 		//this.updateChiralities();
 	}
 
+	
+
+
 	public AbstractAxes getParentAxes() {
-		return this.parent;
+		if(this.parent == null) 
+			return null;
+		else 
+			return this.parent.get();
 	}
-
-	/** 
-	 * @param val if set to false, axes will not be reorthonormalized on update. If set to true, axes will 
-	 * be reorthogonalized. By default, this is set to true;
-	 */
-	public void setOrthoNormalityConstraint(boolean val) {
-		forceOrthoNormality = val;
-		this.markDirty();
-	}
-
-	public sgRayf lx_() {
-		return this.localMBasis.getXRay();
-	}
-
-	public sgRayf ly_() {
-		return this.localMBasis.getYRay();
-	}
-
-	public sgRayf lz_() {
-		return this.localMBasis.getZRay();
-	}
-
-	public sgRayf lx_raw_() {
-		return this.localMBasis.getXRay();
-	}
-
-	public sgRayf ly_raw_() {
-		return this.localMBasis.getYRay();
-	}
-
-	public sgRayf lz_raw_() {
-		return this.localMBasis.getZRay();
-	}
-
-	public sgRayf lx_norm_() {
-		return this.localMBasis.getXRay();
-	}
-
-	public sgRayf ly_norm_() {
-		return this.localMBasis.getYRay();
-	}
-
-	public sgRayf lz_norm_() {
-		return this.localMBasis.getZRay();
-	}
-
-	/**
-	 * @return a vector representing this frame's orientational X basis vector. Guaranteed to be Right-Handed and orthonormal. 
-	 */
-
-	public SGVec_3f orientation_X_() {
-		this.updateGlobal();
-		return  this.globalMBasis.getRotationalXHead();
-	}
-
-	/**
-	 * @return a vector representing this frame's orientational Y basis vector. Guaranteed to be Right-Handed and orthonormal. 
-	 */
-
-	public SGVec_3f   orientation_Y_() {
-		this.updateGlobal();
-		return  this.globalMBasis.getRotationalYHead();
-	}
-
-	/**
-	 * @return a vector representing this frame's orientational Z basis vector. Guaranteed to be Right-Handed and orthonormal. 
-	 */
-
-	public SGVec_3f   orientation_Z_() {
-		this.updateGlobal();
-		return  this.globalMBasis.getRotationalZHead();
-	}
-
-	/**
-	 * @return a vector representing this frame's orthonormal X basis vector. Guaranteed to be orthonormal but not necessarily right-handed. 
-	 */
-
-	public SGVec_3f   orthonormal_X_() {
-		this.updateGlobal();
-		return  this.globalMBasis.getOrthonormalXHead();
-	}
-
-	/**
-	 * @return a vector representing this frame's orthonormal Y basis vector. Guaranteed to be orthonormal but not necessarily right-handed. 
-	 */
-	public SGVec_3f   orthonormal_Y_() {
-		this.updateGlobal();
-		return  this.globalMBasis.getOrthonormalYHead();
-	}
-
-
-	/**
-	 * sets the value of this AbstractAxes relative to an interpolated value between the start and end axes 
-	 * relative to their parent. An amount of 0 makes it equivalent to the start axes, and amount of 1 
-	 * makes it equivalent to the end axes. 
-	 * 
-	 * the rotational components of this axis are slerped, while its shear/scale components are lerped.
-	 * 
-	 * @param start
-	 * @param end
-	 * @param amount
-	 */
-	public void interpolateLocally(AbstractAxes start, AbstractAxes end, float amount) {
-		start.updateGlobal(); end.updateGlobal(); this.updateGlobal();
-		this.localMBasis.rotation = new Rot(amount, start.localMBasis.rotation, end.localMBasis.rotation);
-		Matrix4f localShear = this.localMBasis.getShearScaleMatrix();
-		Matrix4f startLocalShear = start.localMBasis.getShearScaleMatrix();
-		Matrix4f endLocalShear = end.localMBasis.getShearScaleMatrix();
-
-		localShear.val[Matrix4f.M00] = MathUtils.lerp(startLocalShear.val[Matrix4f.M00], endLocalShear.val[Matrix4f.M00], amount);
-		localShear.val[Matrix4f.M10] = MathUtils.lerp(startLocalShear.val[Matrix4f.M10], endLocalShear.val[Matrix4f.M10], amount);
-		localShear.val[Matrix4f.M20] = MathUtils.lerp(startLocalShear.val[Matrix4f.M20], endLocalShear.val[Matrix4f.M20], amount);
-
-		localShear.val[Matrix4f.M01] = MathUtils.lerp(startLocalShear.val[Matrix4f.M01], endLocalShear.val[Matrix4f.M01], amount);
-		localShear.val[Matrix4f.M11] = MathUtils.lerp(startLocalShear.val[Matrix4f.M11], endLocalShear.val[Matrix4f.M11], amount);
-		localShear.val[Matrix4f.M21] = MathUtils.lerp(startLocalShear.val[Matrix4f.M21], endLocalShear.val[Matrix4f.M21], amount);
-
-		localShear.val[Matrix4f.M02] = MathUtils.lerp(startLocalShear.val[Matrix4f.M02], endLocalShear.val[Matrix4f.M02], amount);
-		localShear.val[Matrix4f.M12] = MathUtils.lerp(startLocalShear.val[Matrix4f.M12], endLocalShear.val[Matrix4f.M12], amount);
-		localShear.val[Matrix4f.M22] = MathUtils.lerp(startLocalShear.val[Matrix4f.M22], endLocalShear.val[Matrix4f.M22], amount);
-
-		this.localMBasis.translate = SGVec_3f.lerp(start.localMBasis.translate, end.localMBasis.translate, amount);
-		this.localMBasis.refreshMatrices();
-		this.markDirty();
-	}
-
-
-	/**
-	 * sets the global values of this AbstractAxes relative to an interpolated value between the start and end axes 
-	 * in global space. An amount of 0 makes it equivalent to the start axes, and amount of 1 
-	 * makes it equivalent to the end axes. 
-	 * 
-	 * the rotational components of this axis are slerped, while its shear/scale components are lerped.
-	 * 
-	 * @param start
-	 * @param end
-	 * @param amount
-	 */
-	public void interpolateGlobally(AbstractAxes start, AbstractAxes end, float amount) {
-		start.updateGlobal(); end.updateGlobal(); this.updateGlobal();
-		this.globalMBasis.rotation = new Rot(amount, start.globalMBasis.rotation, end.globalMBasis.rotation);
-		Matrix4f globalShear = this.globalMBasis.getShearScaleMatrix();
-		Matrix4f startGlobalShear = start.globalMBasis.getShearScaleMatrix();
-		Matrix4f endGlobalShear = end.globalMBasis.getShearScaleMatrix();
-
-		globalShear.val[Matrix4f.M00] = MathUtils.lerp(startGlobalShear.val[Matrix4f.M00], endGlobalShear.val[Matrix4f.M00], amount);
-		globalShear.val[Matrix4f.M10] = MathUtils.lerp(startGlobalShear.val[Matrix4f.M10], endGlobalShear.val[Matrix4f.M10], amount);
-		globalShear.val[Matrix4f.M20] = MathUtils.lerp(startGlobalShear.val[Matrix4f.M20], endGlobalShear.val[Matrix4f.M20], amount);
-
-		globalShear.val[Matrix4f.M01] = MathUtils.lerp(startGlobalShear.val[Matrix4f.M01], endGlobalShear.val[Matrix4f.M01], amount);
-		globalShear.val[Matrix4f.M11] = MathUtils.lerp(startGlobalShear.val[Matrix4f.M11], endGlobalShear.val[Matrix4f.M11], amount);
-		globalShear.val[Matrix4f.M21] = MathUtils.lerp(startGlobalShear.val[Matrix4f.M21], endGlobalShear.val[Matrix4f.M21], amount);
-
-		globalShear.val[Matrix4f.M02] = MathUtils.lerp(startGlobalShear.val[Matrix4f.M02], endGlobalShear.val[Matrix4f.M02], amount);
-		globalShear.val[Matrix4f.M12] = MathUtils.lerp(startGlobalShear.val[Matrix4f.M12], endGlobalShear.val[Matrix4f.M12], amount);
-		globalShear.val[Matrix4f.M22] = MathUtils.lerp(startGlobalShear.val[Matrix4f.M22], endGlobalShear.val[Matrix4f.M22], amount);
-
-		this.globalMBasis.translate = SGVec_3f.lerp(start.globalMBasis.translate, end.globalMBasis.translate, amount);
-		this.globalMBasis.refreshMatrices();
-
-		this.parent.globalMBasis.setToLocalOf(this.globalMBasis, this.localMBasis);
-		this.markDirty();
-	}
-
-	/**
-	 * 
-	 * @param xHeading new global xHeading
-	 * @param yHeading new global yHeading
-	 * @param zHeading new gloabl zHeading
-	 * @param flipOn axis to ignore on rotation adjustment if chirality changes. 0 = x, 1= y, 2 =z;
-	 */
-	public void setHeadings(SGVec_3f xHeading, SGVec_3f yHeading, SGVec_3f zHeading, int autoFlip) {
-		this.markDirty();
-		this.updateGlobal();
-		SGVec_3f localX = new SGVec_3f(); SGVec_3f localY = new SGVec_3f(); SGVec_3f localZ = new SGVec_3f(0,0,0);
-		SGVec_3f tempX = new SGVec_3f(xHeading); 
-		SGVec_3f tempY = new SGVec_3f(yHeading); 
-		SGVec_3f tempZ = new SGVec_3f(zHeading); 
-		if(this.parent != null) {
-			this.parent.globalMBasis.setToLocalOf(tempX.add(this.parent.globalMBasis.translate), localX); 
-			this.parent.globalMBasis.setToLocalOf(tempY.add(this.parent.globalMBasis.translate), localY);
-			this.parent.globalMBasis.setToLocalOf(tempZ.add(this.parent.globalMBasis.translate), localZ);
-		}
-		if(autoFlip >= 0) {
-			this.flipFlag = autoFlip;
-
-			if(autoFlip == 0) {
-
-				Rot newRot = new Rot(this.parent.globalMBasis.getOrthonormalYHead(), this.parent.globalMBasis.getOrthonormalZHead(), yHeading, zHeading);//new Rot(this.globalMBasis.yBase, this.globalMBasis.zBase, localY, localZ);/
-				this.localMBasis.rotation = this.parent.globalMBasis.getLocalOfRotation(newRot);//this.parent.globalMBasis.rotation.applyInverseTo(newRot.applyTo(this.parent.globalMBasis.rotation));
-			} else if( autoFlip == 1) {
-				Rot newRot = new Rot(this.parent.globalMBasis.getOrthonormalXHead(), this.parent.globalMBasis.getOrthonormalZHead(), xHeading, zHeading);
-				this.localMBasis.rotation = this.parent.globalMBasis.getLocalOfRotation(newRot);
-			} else{// if(autoFlip == 2){
-				Rot newRot = new Rot(this.parent.globalMBasis.getOrthonormalXHead(), this.parent.globalMBasis.getOrthonormalYHead(), xHeading, yHeading);
-				this.localMBasis.rotation = this.parent.globalMBasis.getLocalOfRotation(newRot);
+	
+	public void updateGlobal() {
+		if(this.dirty) {
+			if(this.areGlobal) {
+				globalMBasis.adoptValues(this.localMBasis);
+			} else {
+				getParentAxes().updateGlobal();				
+				getParentAxes().getGlobalMBasis().setToGlobalOf(this.localMBasis, this.globalMBasis);			
 			}
-
 		}
-
-		this.localMBasis.setXHeading(localX, false);
-		this.localMBasis.setYHeading(localY, false);
-		this.localMBasis.setZHeading(localZ, true);
-		this.markDirty();
-		this.updateGlobal();	
-	}
-
-
-	/**
-	 *TODO: implement this.
-	 * used by neighborhoodRotateBy and neighborhoodRotateTo. 
-	 * @param rotationNeighborhood a desired orientation to treat as the origin
-	 */
-	public void setLocalRotationNeighborhood(Rot rotationNeighborhood) {
-
-	}
-
-
-	/**
-	 *TODO: Implement this.
-	 * like rotateBy, but rotates through the path which is closest 
-	 * to the neighborhood. This is useful for things like armatures. 
-	 * Where most rigs have a relaxed and natural pose, rotations near 
-	 * which are less likely to represent hyperextions of any given joint. 	  
-	 */
-	public void neighborhoodRotateBy() {
-
+		dirty = false;
 	}
 
 	public void debugCall() {};
 
-	public SGVec_3f   orthonormal_Z_() {
-		this.updateGlobal();
-		return  this.globalMBasis.getOrthonormalZHead();
-	}
 
-	public sgRayf x_() {
-		this.updateGlobal();
-		if(this.forceOrthoNormality) {
-			return x_norm_();
-		} else 
-			return this.globalMBasis.getXRay();
-	}
-
-
-	public sgRayf y_() {
-		this.updateGlobal();  	
-		if(this.forceOrthoNormality) {
-			return y_norm_();
-		} else 
-			return this.globalMBasis.getYRay();
-	}
-
-	public sgRayf z_() {
+	Vec3f<?> tempOrigin;
+	public Vec3f<?> origin_() {
 		this.updateGlobal();  
-		if(this.forceOrthoNormality) {
-			return z_norm_();
-		} else 
-			return this.globalMBasis.getZRay();
-	}
-
-	public sgRayf x_norm_() {
-		this.updateGlobal();  
-		xTemp.p1().set(this.globalMBasis.getOrigin()); xTemp.heading(this.globalMBasis.getOrthonormalXHead());
-		return xTemp;
-	}
-
-	public sgRayf y_norm_() {
-		this.updateGlobal();  
-		yTemp.p1().set(this.globalMBasis.getOrigin()); yTemp.heading(this.globalMBasis.getOrthonormalYHead());
-		return yTemp;
-	}
-
-	public sgRayf z_norm_() {
-		this.updateGlobal();  
-		zTemp.p1().set(this.globalMBasis.getOrigin()); zTemp.heading(this.globalMBasis.getOrthonormalZHead());
-		return zTemp;
-	}
-
-	public sgRayf x_raw_() {
-		this.updateGlobal();  
-		return this.globalMBasis.getXRay();
-	}
-
-	public sgRayf y_raw_() {
-		this.updateGlobal();  
-		return this.globalMBasis.getYRay();
-	}
-
-	public sgRayf z_raw_() {
-		this.updateGlobal();  
-		return this.globalMBasis.getZRay();
-	}
-
-
-	SGVec_3f tempOrigin;
-	public SGVec_3f origin_() {
-		this.updateGlobal();  
-		tempOrigin.set(this.globalMBasis.getOrigin());
+		tempOrigin.set(this.getGlobalMBasis().getOrigin());
 		return tempOrigin;
 	}
 
-
-	public void scaleXBy(float scale) {
-		this.localMBasis.scaleXBy(scale);
-		this.markDirty();
-		this.updateGlobal();
-	}
-
-	public void scaleYBy(float scale) {
-		this.localMBasis.scaleYBy(scale);
-		this.markDirty();
-		this.updateGlobal();
-		//}
-	}	
-
-	public void scaleZBy(float scale) {
-		this.updateGlobal();
-		this.localMBasis.scaleZBy(scale);
-		this.markDirty();
-		this.updateGlobal();
-	}
-
-
-	public void scaleXTo(float scale) {		
-		if(!this.forceOrthoNormality) {
-			this.updateGlobal();
-			this.globalMBasis.scaleXTo(scale);
-			if(this.parent != null)
-				this.parent.setToLocalOf(this.globalMBasis, this.localMBasis);
-			else
-				this.localMBasis.adoptValues(globalMBasis);
-			this.markDirty();
-			this.updateGlobal();
-		}
-	}
-
-	public void scaleYTo(float scale) {		
-		if(!this.forceOrthoNormality) {
-			this.updateGlobal();
-			this.globalMBasis.scaleYTo(scale);
-			if(this.parent != null)
-				this.parent.setToLocalOf(this.globalMBasis, this.localMBasis);
-			else
-				this.localMBasis.adoptValues(globalMBasis);
-			this.markDirty();
-			this.updateGlobal();
-		}
-	}	
-
-	public void scaleZTo(float scale) {
-		if(!this.forceOrthoNormality) {
-			this.updateGlobal();
-			this.globalMBasis.scaleZTo(scale);
-			if(this.parent != null)
-				this.parent.setToLocalOf(this.globalMBasis, this.localMBasis);
-			else
-				this.localMBasis.adoptValues(globalMBasis);
-			this.markDirty();
-			this.updateGlobal();
-		}
-	}
-
-	public void markChildScalesDirty() {
-		for(AxisDependancy axes : dependentsRegistry) {
-			if(AbstractAxes.class.isAssignableFrom(axes.getClass()))
-				((AbstractAxes)axes).markScaleDirty();
-		}
-	}
-
-	public void markChildReflectionDirty(int flipFlag) {
-		for(AxisDependancy axes : dependentsRegistry) {
-			if(AbstractAxes.class.isAssignableFrom(axes.getClass()))
-				((AbstractAxes)axes).markReflectionDirty(flipFlag);
-		}
-	}
-
-	public void markScaleDirty() {
-		this.scaleDirty = true;
-		markChildScalesDirty();
-	}
-
-	public void markReflectionDirty(int flipFlag) {
-		this.flipFlag = flipFlag;
-		markChildReflectionDirty(this.flipFlag);
-	}
-
-
-	public AbstractAxes getGlobalCopy() {
-		this.updateGlobal();
-		AbstractAxes globalCopy = 
-				instantiate(
-						this.origin_(), 
-						this.x_().heading(), 
-						this.y_().heading(), 
-						this.z_().heading(), 
-						this.forceOrthoNormality,
-						null);
-		globalCopy.localMBasis.adoptValues(this.globalMBasis);
-		globalCopy.markDirty();
-		globalCopy.updateGlobal();
-		return globalCopy;
-	}
-
-	public AbstractAxes getRawGlobalCopy() {
-		this.updateGlobal();
-		AbstractAxes rawGlobalCopy = 
-				instantiate(
-						this.origin_(), 
-						this.globalMBasis.getXRay().heading(), 
-						this.globalMBasis.getYRay().heading(), 
-						this.globalMBasis.getZRay().heading(), 
-						false,
-						null);
-		rawGlobalCopy.localMBasis.adoptValues(this.globalMBasis);
-		rawGlobalCopy.markDirty();
-		rawGlobalCopy.updateGlobal();
-		return rawGlobalCopy;
-	}
-
-	public AbstractAxes getOrthoNormalizedGlobalCopy() {
-		this.updateGlobal();		
-		AbstractAxes orthoNormalizedCopy =
-				instantiate(
-						this.origin_(), 
-						this.x_norm_().heading(), 
-						this.y_norm_().heading(),
-						this.z_norm_().heading(), 
-						true,
-						null);
-		orthoNormalizedCopy.localMBasis.rotation = new Rot(this.globalMBasis.rotation.rotation);
-		orthoNormalizedCopy.localMBasis.setShearXBaseTo(Basis.xBase.mult(globalMBasis.flippedAxes[Basis.X] ? -1 : 1), false);
-		orthoNormalizedCopy.localMBasis.setShearYBaseTo(Basis.yBase.mult(globalMBasis.flippedAxes[Basis.Y] ? -1 : 1), false);
-		orthoNormalizedCopy.localMBasis.setShearZBaseTo(Basis.zBase.mult(globalMBasis.flippedAxes[Basis.Z] ? -1 : 1), false);
-		orthoNormalizedCopy.localMBasis.rotation = new Rot(this.globalMBasis.rotation.rotation);
-		orthoNormalizedCopy.markDirty();
-		orthoNormalizedCopy.updateGlobal();
-		return orthoNormalizedCopy;
-	}
+	/**
+	 * Make a GlobalCopy of these Axes. 
+	 * @return
+	 */
+	public abstract <A extends AbstractAxes> A getGlobalCopy();
 	
 	
 	/**
@@ -637,30 +149,88 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 	public void setParent(AbstractAxes intendedParent, Object requestedBy) {	
 		this.updateGlobal();
 		AbstractAxes oldParent = this.getParentAxes();
-		for(AxisDependancy ad : this.dependentsRegistry) {
-			ad.parentChangeWarning(this, oldParent, intendedParent, requestedBy);
-		}
+		/*for(DependencyReference<AxisDependency> ad : this.dependentsRegistry) {
+			ad.get().parentChangeWarning(this, oldParent, intendedParent, requestedBy);
+		}*/
+		forEachDependent(
+				(ad) -> ad.get().parentChangeWarning(this, oldParent, intendedParent, requestedBy));
+		
+		
 		if(intendedParent != null && intendedParent != this) {
 			intendedParent.updateGlobal(); 
-			intendedParent.globalMBasis.setToLocalOf(globalMBasis, localMBasis);			
+			intendedParent.getGlobalMBasis().setToLocalOf(globalMBasis, localMBasis);			
 
-			if(this.parent != null) this.parent.disown(this);
-			this.parent = intendedParent;
+			if(oldParent != null) oldParent.disown(this);
+			this.parent = new DependencyReference<AbstractAxes>(intendedParent);
 
-			this.parent.registerDependent(this);
+			this.getParentAxes().registerDependent(this);
 			this.areGlobal = false;
 		} else {
-			this.parent = null;
+			if(oldParent != null) oldParent.disown(this);
+			this.parent = new DependencyReference<AbstractAxes>(null);
 			this.areGlobal = true;
 		}
 		this.markDirty();
 		this.updateGlobal();
-		for(AxisDependancy ad : this.dependentsRegistry) {
-			ad.parentChangeCompletionNotice(this, oldParent, intendedParent, requestedBy);
+		
+		forEachDependent(
+				(ad) -> ad.get().parentChangeCompletionNotice(this, oldParent, intendedParent, requestedBy));
+		/*for(DependencyReference<AxisDependency> ad : this.dependentsRegistry) {
+			ad.get().parentChangeCompletionNotice(this, oldParent, intendedParent, requestedBy);
+		}*/
+	}
+	
+	/**
+	 * runs the given runnable on each dependent axis,
+	 * taking advantage of the call to remove entirely any 
+	 * weakreferences to elements that have been cleaned up by the garbage collector. 
+	 * @param r
+	 */
+	public void forEachDependent(Consumer<DependencyReference<AxisDependency>> action) {		
+		Iterator<DependencyReference<AxisDependency>> i = dependentsRegistry.iterator();
+		while (i.hasNext()) {
+			DependencyReference<AxisDependency> dr = i.next();
+			if(dr.get() != null) {
+				action.accept(dr);
+			} else {
+				i.remove();
+			}		    
 		}
 	}
+	
+	public int getGlobalChirality() {
+		this.updateGlobal();
+		return this.getGlobalMBasis().chirality;
+	}
 
+	public int getLocalChirality() {
+		this.updateGlobal();
+		return this.getLocalMBasis().chirality;
+	}	
 
+	/**
+	 * True if the input axis of this Axes object in global coordinates should be multiplied by negative one after rotation. 
+	 * By default, this always returns false. But can be overriden for more advanced implementations
+	 * allowing for reflection transformations. 
+	 * @param axis
+	 * @return true if axis should be flipped, false otherwise. Default is false. 
+	 */
+	public boolean isGlobalAxisFlipped(int axis) {
+		this.updateGlobal();
+		return globalMBasis.isAxisFlipped(axis);
+	}
+	
+	/**
+	 * True if the input axis of this Axes object in local coordinates should be multiplied by negative one after rotation. 
+	 * By default, this always returns false. But can be overriden for more advanced implementations
+	 * allowing for reflection transformations. 
+	 * @param axis
+	 * @return true if axis should be flipped, false otherwise. Default is false. 
+	 */
+	public boolean isLocalAxisFlipped(int axis) {
+		return localMBasis.isAxisFlipped(axis);
+	}
+	
 	/**
 	 * Sets the parentAxes for this axis locally. 
 	 * in other words, lx,ly,lz remain unchanged, but globalX, globalY, and globalZ 
@@ -671,10 +241,10 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 	 * as its parent.   
 	 **/
 	public void setRelativeToParent(AbstractAxes par) {
-		if(this.parent != null) this.parent.disown(this);
-		this.parent = par;
+		if(this.getParentAxes() != null) this.getParentAxes().disown(this);
+		this.parent = new DependencyReference<AbstractAxes>(par);
 		this.areGlobal = false;
-		this.parent.registerDependent(this);
+		this.getParentAxes().registerDependent(this);
 		this.markDirty();
 	}
 
@@ -690,24 +260,12 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 	 * @param in
 	 * @return
 	 */
-	public SGVec_3f getGlobalOf(SGVec_3f in) {
-		this.updateGlobal();
-		SGVec_3f result =  in.copy();
+	public <V extends Vec3f<?>> V getGlobalOf(V in) {
+		V result =  (V) in.copy();
 		setToGlobalOf(in, result);
 		return  result;
 	}
 
-	public SGVec_3f getOrthoNormalizedGlobalOf(SGVec_3f in) {
-		SGVec_3f result =  workingVector.copy();
-		setToOrthoNormalizedGlobalOf(in, result);
-		return  result;
-	}
-
-	public sgRayf getOrthoNormalizedGlobalOf(sgRayf in) {
-		sgRayf result = new sgRayf(new SGVec_3f(0,0,0), new SGVec_3f(1,1,1));
-		setToOrthoNormalizedGlobalOf(in, result);
-		return result;
-	}
 
 
 	/**
@@ -715,12 +273,9 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 	 * @param in
 	 * @return a reference to this the @param in object.
 	 */
-	public SGVec_3f setToGlobalOf(SGVec_3f in) {
+	public Vec3f<?> setToGlobalOf(Vec3f<?> in) {
 		this.updateGlobal();
-		if(this.forceOrthoNormality)
-			this.setToOrthoNormalizedGlobalOf(in, in);
-		else 
-			globalMBasis.setToGlobalOf(in, in);
+		getGlobalMBasis().setToGlobalOf(in, in);
 		return in;
 	}
 
@@ -728,41 +283,12 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 	 *  Given an input vector in this axes local coordinates, modifies the output vector's values to represent the input's position in global coordinates.
 	 * @param in
 	 */
-	public void setToGlobalOf(SGVec_3f input, SGVec_3f output) {
+	public <V extends Vec3f<?>> void setToGlobalOf(V input, V output) {
 		this.updateGlobal();
-		if(this.forceOrthoNormality)
-			this.setToOrthoNormalizedGlobalOf(input, output);
-		else 
-			globalMBasis.setToGlobalOf(input, output);		
+		getGlobalMBasis().setToGlobalOf(input, output);		
 	}
 
-	/** 
-	 * like setToGlobalOf, but operates on the axes non-orthonormaldoppelganger
-	 * @param input
-	 * @param output
-	 * @return a reference to these Axes, for method chaining.
-	 */
-	public void setToRawGlobalOf(SGVec_3f input, SGVec_3f output) {
-		this.updateGlobal();
-		globalMBasis.setToGlobalOf(input, output);
-	}
-
-	public void setToOrthoNormalizedGlobalOf(SGVec_3f input, SGVec_3f output) {
-		this.updateGlobal();		
-		globalMBasis.setToOrthoNormalGlobalOf(input, output);
-	}
-
-	public void setToOrthoNormalizedGlobalOf(sgRayf input, sgRayf output) {
-		this.updateGlobal();
-		this.setToOrthoNormalizedGlobalOf(input.p1(), output.p1());
-		this.setToOrthoNormalizedGlobalOf(input.p2(), output.p2());
-	}
-
-	public void setToRawGlobalOf(sgRayf input, sgRayf output) {
-		this.updateGlobal();
-		this.setToRawGlobalOf(input.p1(), output.p1());
-		this.setToRawGlobalOf(input.p2(), output.p2());
-	}
+	
 
 	/**
 	 *  Given an input sgRay in this axes local coordinates, modifies the output Rays's values to represent the input's in global coordinates.
@@ -778,125 +304,23 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 		return new sgRayf(this.getGlobalOf( in.p1()), this.getGlobalOf( in.p2()));
 	}
 	
-	/**
-	 * instantiate an instance of this Axes object.
-	 * Because Abstract classes cannot be instantiated, the user is expected to 
-	 * extend this method to do whatever preprocessing might be required 
-	 * and then to call the appropriate constructor of the extending class 
-	 * @param add
-	 * @param gXHeading
-	 * @param gYHeading
-	 * @param gZHeading
-	 * @param forceOrthoNormality
-	 * @param par
-	 * @return
-	 */
-	protected abstract AbstractAxes instantiate(
-			SGVec_3f add, 
-			SGVec_3f gXHeading, 
-			SGVec_3f gYHeading, 
-			SGVec_3f gZHeading, 
-			boolean forceOrthoNormality, 
-			AbstractAxes par);
 	
-
+	
 
 	/**
 	 * returns an axis representing the global location of this axis if the input axis were its parent.
 	 * @param in
 	 * @return
 	 */
-	public AbstractAxes relativeTo(AbstractAxes in) { 
-		AbstractAxes result = 
-				instantiate(workingVector, 
-						this.localMBasis.getXRay().heading(), 
-						this.localMBasis.getYRay().heading(), 
-						this.localMBasis.getZRay().heading(), 
-						this.forceOrthoNormality, 
-						null);
-
-		result.setParent(in);
-		return result;
-	}
+	public abstract AbstractAxes relativeTo(AbstractAxes in);
 
 
-	public boolean hasNonOrthonormalAncestor() {
-		if(this.parent == null) return false; 
-		else if (!this.parent.forceOrthoNormality || !this.forceOrthoNormality) 
-			return true; 
-		else 
-			return this.parent.hasNonOrthonormalAncestor();
-	}
-
-	public SGVec_3f getRawGlobalOf(SGVec_3f input) {
-		SGVec_3f result =  input.copy();
-		setToRawGlobalOf(input, result);
-		return  result;
-	}
-
-	public sgRayf getRawGlobalOf(sgRayf input) {
-		return new sgRayf(getRawGlobalOf(input.p1()), getRawGlobalOf(input.p2()));
-	}
+	
 
 
-	public sgRayf getRawLocalOf(sgRayf input) {
-		return new sgRayf(getRawLocalOf(input.p1()), getRawLocalOf(input.p2()));
-	}
-
-
-
-	public sgRayf getOrthoNormalizedLocalOf(sgRayf input) {
-		return new sgRayf(getOrthoNormalizedLocalOf(input.p1()), getOrthoNormalizedLocalOf(input.p2()));
-	}
-
-	public SGVec_3f   getOrthoNormalizedLocalOf(SGVec_3f in) {
-		SGVec_3f result =  in.copy(); 
-		setToOrthoNormalLocalOf(in, result);
-		return  result;
-	}
-
-
-	/**
-	 * like getLocalOf, except uses the axes non-orthonormal doppelganger. 
-	 * @param in
-	 * @return
-	 */
-	public SGVec_3f   getRawLocalOf(SGVec_3f in) {
-		SGVec_3f result =  in.copy(); 
-		setToRawLocalOf(in, result);
-		return  result;
-	}
-
-	/**
-	 * like setToLocalOf, except uses the axes non-orthonormal doppelganger. 
-	 * @param in
-	 * @return
-	 */
-	public void setToRawLocalOf(SGVec_3f in, SGVec_3f out) {
+	public <V extends Vec3f<?>> V getLocalOf(V in) {		
 		this.updateGlobal();
-		this.globalMBasis.setToLocalOf(in, out);
-	}
-
-	public void setToRawLocalOf(sgRayf input, sgRayf output) {
-		this.setToRawLocalOf(input.p1(), output.p1());
-		this.setToRawLocalOf(input.p2(), output.p2());
-	}
-
-	public void setToRawLocalOf(Basis input, Basis output) {
-		this.updateGlobal();
-		this.globalMBasis.setToLocalOf(input, output);
-	}
-
-	public void setToOrthoNormalizedLocalOf(Basis input, Basis output) {
-		this.updateGlobal();
-		this.globalMBasis.setToOrthoNormalLocalOf(input, output);
-	}
-
-
-	public SGVec_3f getLocalOf(SGVec_3f in) {
-		SGVec_3f result =  in.copy();
-		setToLocalOf(in, result);
-		return  result;
+		return getGlobalMBasis().getLocalOf(in);
 	}
 
 
@@ -906,12 +330,12 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 	 * @return a reference to the @param in object. 
 	 */
 
-	public SGVec_3f setToLocalOf(SGVec_3f  in) {
-		if(forceOrthoNormality)
-			setToOrthoNormalLocalOf(in, in);
-		else 
-			setToRawLocalOf(in, in);
-		return in;
+	public <V extends Vec3f<?>> V  setToLocalOf(V  in) {
+		this.updateGlobal();
+		V result = (V)in.copy();
+		this.getGlobalMBasis().setToLocalOf(in, result);
+		in.set(result);
+		return result;
 	}
 
 	/**
@@ -919,11 +343,9 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 	 * @param in
 	 */
 
-	public void setToLocalOf(SGVec_3f in, SGVec_3f out) {
-		if(forceOrthoNormality)
-			setToOrthoNormalLocalOf(in, out);
-		else 
-			setToRawLocalOf(in, out);
+	public <V extends Vec3f<?>> void setToLocalOf(V in, V out) {
+		this.updateGlobal();
+		this.getGlobalMBasis().setToLocalOf(in, out);
 	}
 
 	/**
@@ -936,41 +358,35 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 		this.setToLocalOf(in.p2(), out.p2());
 	}
 
-	public void setToLocalOf(Basis input, Basis output) {
-		this.globalMBasis.setToLocalOf(input, output);
-	}
-
-	public sgRayf getLocalOf(sgRayf in) {
-		return new sgRayf(this.getLocalOf(in.p1()), this.getLocalOf(in.p2()));  
-	}
-
-
-	public AbstractAxes getLocalOf(AbstractAxes input) {
-		return instantiate(
-				this.getLocalOf(input.origin_()), 
-				this.getLocalOf(input.x_()).heading(), 
-				this.getLocalOf(input.y_()).heading(), 
-				this.getLocalOf(input.z_()).heading(), 
-				input.forceOrthoNormality,
-				null); 
-	}	
-
-	public Basis getLocalOf(Basis input) {
-		return new Basis(this.getLocalOf(input.getXRay()), this.getLocalOf(input.getYRay()), this.getLocalOf(input.getZRay()));
-	}
-
-	public void translateByLocal(SGVec_3f translate) {    
+	public void setToLocalOf(AbstractBasis input, AbstractBasis output) {
 		this.updateGlobal();
-		localMBasis.translateBy(translate);
+		this.getGlobalMBasis().setToLocalOf(input, output);
+	}
+
+	public <R extends sgRayf> R getLocalOf(R in) {
+		R result = (R) in.copy();
+		result.p1.set(this.getLocalOf(in.p1())); 
+		result.p2.set(this.getLocalOf(in.p2()));
+		return result;
+	}
+
+
+	public abstract AbstractAxes getLocalOf(AbstractAxes input);	
+
+	public abstract <B extends AbstractBasis> B getLocalOf(B input);
+
+	public <V extends Vec3f<?>> void translateByLocal(V translate) {    
+		this.updateGlobal();
+		getLocalMBasis().translateBy(translate);
 		this.markDirty();
 
 	} 
-	public void translateByGlobal(SGVec_3f translate) {		
-		if(this.parent != null ) {
+	public void translateByGlobal(Vec3f<?> translate) {		
+		if(this.getParentAxes() != null ) {
 			this.updateGlobal();		
 			this.translateTo(translate.addCopy(this.origin_()));
 		} else {
-			localMBasis.translateBy(translate);
+			getLocalMBasis().translateBy(translate);
 		}
 
 		this.markDirty();
@@ -978,7 +394,7 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 
 
 
-	public void translateTo(SGVec_3f translate, boolean slip) {
+	public void translateTo(Vec3f<?> translate, boolean slip) {
 		this.updateGlobal();
 		if(slip) {
 			AbstractAxes tempAbstractAxes = this.getGlobalCopy();
@@ -989,14 +405,14 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 		}
 	}
 
-	public void translateTo(SGVec_3f translate) {
-		if(this.parent != null ) {
+	public void translateTo(Vec3f<?> translate) {
+		if(this.getParentAxes() != null ) {
 			this.updateGlobal();
-			localMBasis.translateTo(parent.globalMBasis.getLocalOf(translate));
+			getLocalMBasis().translateTo(getParentAxes().getGlobalMBasis().getLocalOf(translate));			
 			this.markDirty();
 		} else {
 			this.updateGlobal();
-			localMBasis.translateTo(translate);
+			getLocalMBasis().translateTo(translate);
 			this.markDirty();
 		}
 
@@ -1010,44 +426,41 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 	 * global coordinates will likely be drastically different from the original's global coordinates. 
 	 *   
 	 */
-	public AbstractAxes freeCopy() {
-		AbstractAxes freeCopy = 
-				instantiate(
-						this.localMBasis.translate, 
-						this.localMBasis.getXHeading(), 
-						this.localMBasis.getYHeading(),
-						this.localMBasis.getZHeading(), 
-						this.forceOrthoNormality,
-						null);
-		freeCopy.localMBasis.adoptValues(this.localMBasis);
-		freeCopy.markDirty();
-		freeCopy.updateGlobal();
-		return freeCopy;
-	}
+	public abstract AbstractAxes freeCopy();
+
+	
+	/**
+	 *  return a ray / segment representing this Axes global x basis position and direction and magnitude
+	 * @return a ray / segment representing this Axes global x basis position and direction and magnitude
+	 */
+	public abstract sgRayf x_();
 
 
+	/**
+	 *  return a ray / segment representing this Axes global y basis position and direction and magnitude
+	 * @return a ray / segment representing this Axes global y basis position and direction and magnitude
+	 */
+	public abstract sgRayf y_();
 
-	public AbstractAxes attachedCopy(boolean slipAware) {
-		AbstractAxes copy = 
-				instantiate(
-						this.origin_(), 
-						this.x_().heading(), 
-						this.y_().heading(), 
-						this.z_().heading(), 
-						this.forceOrthoNormality, 
-						this.parent);  
-		if(!slipAware) copy.setSlipType(IGNORE);
-		copy.localMBasis.adoptValues(this.localMBasis);
-		copy.markDirty();
-		return copy;
-	}
+	/**
+	 *  return a ray / segment representing this Axes global z basis position and direction and magnitude
+	 * @return a ray / segment representing this Axes global z basis position and direction and magnitude
+	 */
+	public abstract sgRayf z_();
+
+/**
+ * Creates an exact copy of this Axes object. Attached to the same parent as this Axes object
+ * @param slipAware
+ * @return
+ */
+	public abstract AbstractAxes attachedCopy(boolean slipAware);
 
 	public void setSlipType(int type) {
-		if(this.parent != null) {
+		if(this.getParentAxes() != null) {
 			if(type == IGNORE) {
-				this.parent.dependentsRegistry.remove(this);
+				this.getParentAxes().dependentsRegistry.remove(this);
 			} else if(type == NORMAL || type == FORWARD) {
-				this.parent.registerDependent(this);
+				this.getParentAxes().registerDependent(this);
 			} 
 		}
 		this.slipType = type;
@@ -1056,56 +469,35 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 	public int getSlipType() {
 		return this.slipType;
 	}
-
-
-	public void scaleBy(float scaleX, float scaleY, float scaleZ) {
-		this.updateGlobal();
-		this.localMBasis.scaleXBy(scaleX);
-		this.localMBasis.scaleYBy(scaleY);
-		this.localMBasis.scaleZBy(scaleZ);
-		this.markDirty();
-		this.updateGlobal();
-	}
-
+	
 	public void rotateAboutX(float angle, boolean orthonormalized) {
 		this.updateGlobal();
-		Rot xRot = new Rot(globalMBasis.getOrthonormalXHead(), angle);		
+		Rot xRot = new Rot(getGlobalMBasis().getXHeading(), angle);		
 		this.rotateBy(xRot);
-		//this.markDirty();
+		this.markDirty();
 	}
 
 	public void rotateAboutY(float angle, boolean orthonormalized) {
 		this.updateGlobal();	
-		Rot yRot = new Rot(globalMBasis.getOrthonormalYHead(), angle); 
+		Rot yRot = new Rot(getGlobalMBasis().getYHeading(), angle); 
 		this.rotateBy(yRot);
-		//this.markDirty();
+		this.markDirty();
 	}
 
 	public void rotateAboutZ(float angle, boolean orthonormalized) {
 		this.updateGlobal();
-		Rot zRot = new Rot(globalMBasis.getOrthonormalZHead(), angle);
+		Rot zRot = new Rot(getGlobalMBasis().getZHeading(), angle);
 		this.rotateBy(zRot);
-		//this.markDirty();
-	}
-
-
-	public int getGlobalChirality() {
-		this.updateGlobal();
-		return this.globalChirality;
-	}
-
-	public int getLocalChirality() {
-		this.updateGlobal();
-		return this.localChirality;
+		this.markDirty();
 	}
 
 	public void rotateBy(MRotation apply) {
 		this.updateGlobal();		
 		if(parent != null) {		
-			Rot newRot = this.parent.globalMBasis.getLocalOfRotation(new Rot(apply));
-			this.localMBasis.rotateBy(newRot);
+			Rot newRot = this.getParentAxes().getGlobalMBasis().getLocalOfRotation(new Rot(apply));
+			this.getLocalMBasis().rotateBy(newRot);
 		} else {
-			this.localMBasis.rotateBy(new Rot(apply));
+			this.getLocalMBasis().rotateBy(new Rot(apply));
 		}		
 		this.markDirty(); 
 	}
@@ -1118,11 +510,11 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 	public void rotateBy(Rot apply) {
 
 		this.updateGlobal();		
-		if(parent != null) {
-			Rot newRot = this.parent.globalMBasis.getLocalOfRotation(apply);
-			this.localMBasis.rotateBy(newRot);
+		if( this.getParentAxes() != null) {
+			Rot newRot = this.getParentAxes().getGlobalMBasis().getLocalOfRotation(apply);
+			this.getLocalMBasis().rotateBy(newRot);
 		} else {
-			this.localMBasis.rotateBy(apply);
+			this.getLocalMBasis().rotateBy(apply);
 		}
 
 		this.markDirty(); 
@@ -1135,74 +527,12 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 	public void rotateByLocal(Rot apply) {
 		this.updateGlobal();		
 		if(parent != null) {
-			this.localMBasis.rotateBy(apply);
+			this.getLocalMBasis().rotateBy(apply);
 		}
 		this.markDirty(); 
 	}
 	
-	/**
-	 * @param input_global a ray in global space
-	 * @param local_output will be updated to represent that   
-	 * with respect to an orthonormal version of this axes. (shear is not applied, but reflections are) 
-	 */	
-
-	public void setToOrthonormalLocalOf(sgRayf global_input, sgRayf local_output) {
-		this.setToOrthoNormalLocalOf(global_input.p1(), local_output.p1());
-		this.setToOrthoNormalLocalOf(global_input.p2(), local_output.p2());
-	}
 	
-	/**
-	 * @param input_global a point in global space
-	 * @param local_output will be updated to represent that point  
-	 * with respect to an orthonormal version of this axes. (shear is not applied, but reflections are) 
-	 */	
-
-	public void setToOrthoNormalLocalOf(SGVec_3f input_global, SGVec_3f output_local_normalized) {
-		this.updateGlobal();
-		this.globalMBasis.setToOrthoNormalLocalOf(input_global, output_local_normalized);
-	}
-	
-	/**
-	 * @param input_global a point in global space
-	 * @param output_local_orthonormal_chiral will be updated to the same point 
-	 * with respect to a righthanded orthonormal version of this axes.
-	 */	
-	public void setToOrientationalLocalOf(SGVec_3f input_global, SGVec_3f output_local_orthonormal_chiral) {
-		this.updateGlobal();
-		this.globalMBasis.setToOrientationalLocalOf(input_global, output_local_orthonormal_chiral);
-	}
-	
-	/**
-	 * @param input_global a point in global space
-	 * @return a copy of that point with respect to a righthanded orthonormal version of this axes.
-	 */	
-	public SGVec_3f   getOrientationalLocalOf(SGVec_3f input_global) {
-		SGVec_3f result =  input_global.copy();
-		setToOrientationalLocalOf(input_global, result);
-		return  result;
-	}
-
-	/**
-	 * @param input_local a point with respect to this axes
-	 * @param output_local_orthonormal_chiral will be updated to a point 
-	 * equivalent to the point which would result if transforming
-	 * only by this axes position and orientation (scale, shear, and reflection are not applied)
-	 */	
-	public void setToOrientationalGlobalOf(SGVec_3f input_local, SGVec_3f output_global_orthonormal_chiral) {
-		this.updateGlobal();
-		this.globalMBasis.setToOrientationalGlobalOf(input_local, output_global_orthonormal_chiral);
-	}
-
-	/**
-	 * @param input_local a point with respect to this axes
-	 * @return a point equivalent to the point which would result if transforming
-	 * only by this axes position and orientation (scale, shear, and reflection are not applied)
-	 */	
-	public SGVec_3f getOrientationalGlobalOf(SGVec_3f input_local) {
-		SGVec_3f result =  input_local.copy();
-		setToOrientationalGlobalOf(input_local, result);
-		return result;
-	}
 
 	/**
 	 * sets these axes to have the same orientation and location relative to their parent
@@ -1214,7 +544,7 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 	 * @param targetAxes the Axes to make this Axis identical to
 	 */
 	public void alignLocalsTo(AbstractAxes targetAxes ) {
-		this.localMBasis.adoptValues(targetAxes.localMBasis);
+		this.getLocalMBasis().adoptValues(targetAxes.localMBasis);
 		this.markDirty();
 	}
 
@@ -1227,7 +557,7 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 	 * be careful calling this method, as it destroys any shear / scale information. 
 	 */
 	public void alignToParent() {
-		this.localMBasis.setIdentity();
+		this.getLocalMBasis().setIdentity();
 		this.markDirty();
 	}
 
@@ -1236,7 +566,7 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 	 * its shear, translate and scale attributes.
 	 */
 	public void rotateToParent() {
-		this.localMBasis.rotateTo(new Rot(MRotation.IDENTITY));
+		this.getLocalMBasis().rotateTo(new Rot(MRotation.IDENTITY));
 		this.markDirty();
 	}
 
@@ -1250,10 +580,10 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 	public void alignGlobalsTo(AbstractAxes targetAxes ) {
 		targetAxes.updateGlobal();
 		this.updateGlobal();
-		if(this.parent != null) {
-			parent.globalMBasis.setToLocalOf(targetAxes.globalMBasis, localMBasis);	
+		if(this.getParentAxes() != null) {
+			getParentAxes().getGlobalMBasis().setToLocalOf(targetAxes.globalMBasis, localMBasis);	
 		} else {
-			this.localMBasis.adoptValues(targetAxes.globalMBasis);
+			this.getLocalMBasis().adoptValues(targetAxes.globalMBasis);
 		}
 		this.markDirty();
 		this.updateGlobal();
@@ -1262,39 +592,41 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 	public void alignOrientationTo(AbstractAxes targetAxes) {
 		targetAxes.updateGlobal();
 		this.updateGlobal();
-		if(this.parent != null) {
-			this.globalMBasis.rotateTo(targetAxes.globalMBasis.rotation);
-			parent.globalMBasis.setToLocalOf(this.globalMBasis, this.localMBasis);
+		if(this.getParentAxes() != null) {
+			this.getGlobalMBasis().rotateTo(targetAxes.getGlobalMBasis().rotation);
+			getParentAxes().getGlobalMBasis().setToLocalOf(this.globalMBasis, this.localMBasis);
 		} else {
-			this.localMBasis.rotateTo(targetAxes.globalMBasis.rotation);
+			this.getLocalMBasis().rotateTo(targetAxes.getGlobalMBasis().rotation);
 		}
 		this.markDirty();
 	}
-
 
 	/**
-	 * calling this function orthogonalizes and normalizes the bases in global space. 
+	 * updates the axes object such that its global orientation 
+	 * matches the given Rot object. 
+	 * @param rotation
 	 */
-	public void orthoNormalize() {
+	public void setGlobalOrientationTo(Rot rotation) {
 		this.updateGlobal();
-		if(!this.areGlobal) {
-			this.globalMBasis.orthoNormalize();
-			parent.setToLocalOf(this.globalMBasis, this.localMBasis);//this.local_rawBasis.orthoNormalize();
+		if(this.getParentAxes() != null) {
+			this.getGlobalMBasis().rotateTo(rotation);
+			getParentAxes().getGlobalMBasis().setToLocalOf(this.globalMBasis, this.localMBasis);
 		} else {
-			this.localMBasis.orthoNormalize();
+			this.getLocalMBasis().rotateTo(rotation);
 		}
 		this.markDirty();
 	}
 
-	public void registerDependent(AxisDependancy newDependent) {
+
+	public void registerDependent(AxisDependency newDependent) {
 		//Make sure we don't hit a dependency loop
 		if(AbstractAxes.class.isAssignableFrom(newDependent.getClass())) {
 			if(((AbstractAxes)newDependent).isAncestorOf(this)) {
-				this.transferToParent(((AbstractAxes)newDependent).getParentAxes());
+				this.transferToParent(((AxisDependency)newDependent).getParentAxes());
 			}			
 		} 
 		if(dependentsRegistry.indexOf(newDependent) == -1){
-			dependentsRegistry.add(newDependent);
+			dependentsRegistry.add(new DependencyReference<AxisDependency>(newDependent));
 		}
 	}
 
@@ -1329,35 +661,94 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 	 * but keeps its global position the same.
 	 */
 	public void emancipate() {
-		if(this.parent != null) {
+		if(this.getParentAxes() != null) {
 			this.updateGlobal();
-			AbstractAxes oldParent = this.parent;
-			for(AxisDependancy ad: this.dependentsRegistry) {
-				ad.parentChangeWarning(this, this.parent, null, null);
+			AbstractAxes oldParent = this.getParentAxes();
+			for(DependencyReference<AxisDependency> ad: this.dependentsRegistry) {
+				ad.get().parentChangeWarning(this, this.getParentAxes(), null, null);
 			}
-			this.localMBasis.adoptValues(this.globalMBasis);
-			this.parent.disown(this);
-			this.parent = null;
+			this.getLocalMBasis().adoptValues(this.globalMBasis);
+			this.getParentAxes().disown(this);
+			this.parent = new DependencyReference<AbstractAxes>(null);
 			this.areGlobal = true;
 			this.markDirty();
 			this.updateGlobal();
-			for(AxisDependancy ad: this.dependentsRegistry) {
-				ad.parentChangeCompletionNotice(this, oldParent, null, null);
+			for(DependencyReference<AxisDependency> ad: this.dependentsRegistry) {
+				ad.get().parentChangeCompletionNotice(this, oldParent, null, null);
 			}
 		}
 	}
 
-	public void disown(AxisDependancy child) {
+	public void disown(AxisDependency child) {
 		dependentsRegistry.remove(child);
 	}
+	
+	public AbstractBasis getGlobalMBasis() {
+		this.updateGlobal();
+		return globalMBasis;
+	}
+	
+	public AbstractBasis getLocalMBasis() {
+		return localMBasis;
+	}
+	
+	@Override
+	public JSONObject getSaveJSON(SaveManager saveManager) {
+		this.updateGlobal();
+		JSONObject thisAxes = new JSONObject(); 
+		JSONObject shearScale = new JSONObject();
+		SGVec_3f xShear = new SGVec_3f(); 
+		SGVec_3f yShear = new SGVec_3f(); 
+		SGVec_3f zShear = new SGVec_3f(); 
+
+		this.getLocalMBasis().setToShearXBase(xShear);
+		this.getLocalMBasis().setToShearYBase(yShear);
+		this.getLocalMBasis().setToShearZBase(zShear);
+
+		shearScale.setJSONArray("x", xShear.toJSONArray());
+		shearScale.setJSONArray("y", yShear.toJSONArray());
+		shearScale.setJSONArray("z", zShear.toJSONArray());
+		
+		thisAxes.setJSONArray("translation", (new SGVec_3f(getLocalMBasis().translate)).toJSONArray());
+		thisAxes.setJSONArray("rotation", getLocalMBasis().rotation.toJsonArray());
+		thisAxes.setJSONObject("bases", shearScale);
+
+		//thisAxes.setJSONArray("flippedAxes", saveManager.primitiveArrayToJSONArray(this.getLocalMBasis().flippedAxes));
+		String parentHash = "-1"; 
+		if(getParentAxes() != null) parentHash = ((Saveable)getParentAxes()).getIdentityHash();
+		thisAxes.setString("parent",  parentHash);
+		thisAxes.setInt("slipType", this.getSlipType());
+		thisAxes.setString("identityHash",  this.getIdentityHash());
+		return thisAxes;
+	}
+
+	@Override
+	public void loadFromJSONObject(JSONObject j, LoadManager l) {
+		SGVec_3f origin = new SGVec_3f(j.getJSONArray("translation"));		
+		Rot rotation = new Rot(j.getJSONArray("rotation"));
+		this.getLocalMBasis().translate = origin;
+		this.getLocalMBasis().rotation = rotation;
+		this.getLocalMBasis().refreshPrecomputed();
+		AbstractAxes par;
+		try {
+			par = (AbstractAxes) l.getObjectFor(AbstractAxes.class, j, "parent");
+			if(par != null)
+				this.setRelativeToParent(par);
+			this.setSlipType(j.getInt("slipType"));
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+	}
+
 
 	public void axisSlipWarning(AbstractAxes globalPriorToSlipping, AbstractAxes globalAfterSlipping, AbstractAxes actualAxis, ArrayList<Object>dontWarn) {
 		this.updateGlobal();
 		if(this.slipType == NORMAL ) {
-			if(this.parent != null) {
+			if(this.getParentAxes() != null) {
 				AbstractAxes globalVals = this.relativeTo(globalPriorToSlipping);
 				globalVals = globalPriorToSlipping.getLocalOf(globalVals); 
-				this.localMBasis.adoptValues(globalMBasis);
+				this.getLocalMBasis().adoptValues(globalMBasis);
 				this.markDirty();
 			}
 		} else if(this.slipType == FORWARD) {
@@ -1375,17 +766,7 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 	 * will be used in the comparison. 
 	 * @param ax
 	 */
-	public boolean equals(AbstractAxes ax) {
-		this.updateGlobal();
-		ax.updateGlobal();
-		Matrix4f thisGlobal = forceOrthoNormality ? globalMBasis.composedOrthoNormalMatrix : globalMBasis.getComposedMatrix();
-		Matrix4f axGlobal = ax.forceOrthoNormality ? ax.globalMBasis.composedOrthoNormalMatrix : ax.globalMBasis.getComposedMatrix();
-
-		boolean composedMatricesAreEquivalent = thisGlobal.equals(axGlobal);
-		boolean originsAreEquivalent = globalMBasis.getOrigin().equals(ax.origin_());
-
-		return composedMatricesAreEquivalent && originsAreEquivalent;
-	}
+	public abstract <A extends AbstractAxes> boolean equals(A ax);
 
 	public void axisSlipWarning(AbstractAxes globalPriorToSlipping, AbstractAxes globalAfterSlipping, AbstractAxes actualAxis) {
 
@@ -1401,14 +782,30 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 		notifyDependentsOfSlip(newAxisGlobal); 
 		AbstractAxes newVals = newAxisGlobal.freeCopy();
 
-		if(this.parent != null) {
-			newVals = parent.getLocalOf(newVals);
+		if(this.getParentAxes() != null) {
+			newVals = getParentAxes().getLocalOf(newVals);
 		}
-		this.localMBasis.adoptValues(newVals.globalMBasis);
+		this.getLocalMBasis().adoptValues(newVals.globalMBasis);
 		this.dirty = true;	
 		this.updateGlobal();
 
 		notifyDependentsOfSlipCompletion(originalGlobal);
+	}
+	
+	/**
+	 * You probably shouldn't touch this unless you're implementing i/o or undo/redo. 
+	 * @return
+	 */
+	protected DependencyReference<AbstractAxes> getWeakRefToParent() {
+		return this.parent;
+	}
+	
+	/**
+	 * You probably shouldn't touch this unless you're implementing i/o or undo/redo. 
+	 * @return
+	 */
+	protected void setWeakRefToParent(DependencyReference<AbstractAxes> parentRef) {
+		this.parent = parentRef;
 	}
 
 	public void slipTo(AbstractAxes newAxisGlobal, ArrayList<Object> dontWarn) {
@@ -1417,8 +814,8 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 		notifyDependentsOfSlip(newAxisGlobal, dontWarn); 
 		AbstractAxes newVals = newAxisGlobal.getGlobalCopy();
 
-		if(this.parent != null) {
-			newVals = parent.getLocalOf(newAxisGlobal);
+		if(this.getParentAxes() != null) {
+			newVals = getParentAxes().getLocalOf(newAxisGlobal);
 		}
 		this.alignGlobalsTo(newAxisGlobal);
 		this.markDirty();
@@ -1430,7 +827,7 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 	public void notifyDependentsOfSlip(AbstractAxes newAxisGlobal, ArrayList<Object> dontWarn) {
 		for(int i = 0; i<dependentsRegistry.size(); i++) {
 			if(!dontWarn.contains(dependentsRegistry.get(i))) {
-				AxisDependancy dependant = dependentsRegistry.get(i);
+				AxisDependency dependant = dependentsRegistry.get(i).get();
 
 				//First we check if the dependent extends AbstractAxes
 				//so we know whether or not to pass the dontWarn list
@@ -1448,7 +845,7 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 	public void notifyDependentsOfSlipCompletion(AbstractAxes globalAxisPriorToSlipping, ArrayList<Object> dontWarn) {
 		for(int i = 0; i<dependentsRegistry.size(); i++) {
 			if(!dontWarn.contains(dependentsRegistry.get(i)))
-				dependentsRegistry.get(i).axisSlipCompletionNotice(globalAxisPriorToSlipping, this.getGlobalCopy(), this);
+				dependentsRegistry.get(i).get().axisSlipCompletionNotice(globalAxisPriorToSlipping, this.getGlobalCopy(), this);
 			else 
 				System.out.println("skipping: " + dependentsRegistry.get(i));
 		}
@@ -1457,108 +854,80 @@ public abstract class AbstractAxes implements AxisDependancy, Saveable {
 
 	public void notifyDependentsOfSlip(AbstractAxes newAxisGlobal) {
 		for(int i = 0; i<dependentsRegistry.size(); i++) {
-			dependentsRegistry.get(i).axisSlipWarning(this.getGlobalCopy(), newAxisGlobal, this);
+			dependentsRegistry.get(i).get().axisSlipWarning(this.getGlobalCopy(), newAxisGlobal, this);
 		}
 	}
 
 	public void notifyDependentsOfSlipCompletion(AbstractAxes globalAxisPriorToSlipping) {
 		for(int i = 0; i<dependentsRegistry.size(); i++) {//AxisDependancy dependent : dependentsRegistry) {
-			dependentsRegistry.get(i).axisSlipCompletionNotice(globalAxisPriorToSlipping, this.getGlobalCopy(), this);
+			dependentsRegistry.get(i).get().axisSlipCompletionNotice(globalAxisPriorToSlipping, this.getGlobalCopy(), this);
 		}
 	}
 
 	
 
 	public void markDirty() {
-		if(!this.dirty) {
+		
+		if(!this.dirty) {			
 			this.dirty = true;
-			this.markDependentsDirty();
+			this.markDependentsDirty();			
 		}
+		
 	}
 
 	public void markDependentsDirty() {
-		for(AxisDependancy ad : dependentsRegistry) {
-			ad.markDirty();
-		}
+		forEachDependent((a) -> a.get().markDirty());
 	}
 
 	public String toString() {
-		String global = "Global: " + globalMBasis.toString();
-		String local = "Local: " + localMBasis.toString();
+		String global = "Global: " + getGlobalMBasis().toString();
+		String local = "Local: " + getLocalMBasis().toString();
 		return global + "\n" + local;
-	}
-	
-	
-	@Override
-	public JSONObject getSaveJSON(SaveManager saveManager) {
-		this.updateGlobal();
-		JSONObject thisAxes = new JSONObject(); 
-		JSONObject shearScale = new JSONObject();
-		SGVec_3f xShear = new SGVec_3f(); 
-		SGVec_3f yShear = new SGVec_3f(); 
-		SGVec_3f zShear = new SGVec_3f(); 
-
-		this.localMBasis.setToShearXBase(xShear);
-		this.localMBasis.setToShearYBase(yShear);
-		this.localMBasis.setToShearZBase(zShear);
-
-		shearScale.setJSONArray("x", xShear.toJSONArray());
-		shearScale.setJSONArray("y", yShear.toJSONArray());
-		shearScale.setJSONArray("z", zShear.toJSONArray());
-
-		thisAxes.setJSONArray("translation", localMBasis.translate.toJSONArray());
-		thisAxes.setJSONArray("rotation", localMBasis.rotation.toJsonArray());
-		thisAxes.setJSONObject("bases", shearScale);
-
-		//thisAxes.setJSONArray("flippedAxes", saveManager.primitiveArrayToJSONArray(this.localMBasis.flippedAxes));
-		String parentHash = "-1"; 
-		if(parent != null) parentHash = ((AbstractAxes) parent).getIdentityHash();
-		thisAxes.setString("parent",  parentHash);
-		thisAxes.setInt("slipType", this.getSlipType());
-		thisAxes.setString("identityHash",  this.getIdentityHash());
-		thisAxes.setBoolean("forceOrthoNormality", this.forceOrthoNormality);
-
-		return thisAxes;
-	}
-
-	@Override
-	public void loadFromJSONObject(JSONObject j, LoadManager l) {
-		SGVec_3f origin = new SGVec_3f(j.getJSONArray("translation"));
-		SGVec_3f x = new SGVec_3f(j.getJSONObject("bases").getJSONArray("x"));
-		SGVec_3f y = new SGVec_3f(j.getJSONObject("bases").getJSONArray("y"));
-		SGVec_3f z =  new SGVec_3f(j.getJSONObject("bases").getJSONArray("z"));
-		Rot rotation = new Rot(j.getJSONArray("rotation"));
-		this.forceOrthoNormality = j.getBoolean("forceOrthoNormality");
-		this.localMBasis.setShearXBaseTo(x, false);
-		this.localMBasis.setShearYBaseTo(y, false);
-		this.localMBasis.setShearZBaseTo(z, false);
-		this.localMBasis.translate = origin;
-		this.localMBasis.rotation = rotation;
-		this.localMBasis.refreshMatrices();
-		AbstractAxes par = (AbstractAxes) l.getObjectFor(AbstractAxes.class, j, "parent");
-		if(par != null)
-			this.setRelativeToParent(par);
-		this.setSlipType(j.getInt("slipType"));
-	}
+	}	
 	
 	@Override
-	public void notifyOfSaveIntent(SaveManager saveManager) {}	
-	
-	@Override
-	public void notifyOfLoadCompletion() {
-		this.markDirty();
+	public void notifyOfSaveIntent(SaveManager saveManager) {
+		// TODO Auto-generated method stub
+		
 	}
-
-	boolean isLoading = false;
 	@Override
-	public void setLoading(boolean loading) {isLoading = loading;}
+	public void notifyOfSaveCompletion(SaveManager saveManager) {
+		// TODO Auto-generated method stub
+		
+	}
 	@Override
-	public boolean isLoading() {return isLoading;}
+	public void setLoading(boolean loading) {
+		// TODO Auto-generated method stub
+		
+	}
 	@Override
-	public void notifyOfSaveCompletion(SaveManager saveManager) {}
+	public boolean isLoading() {
+		
+		return false;
+	}
+	@Override
 	public void makeSaveable(SaveManager saveManager) {
-		if(this.parent != null) 
-			((AbstractAxes)parent).makeSaveable(saveManager);
 		saveManager.addToSaveState(this);
+		forEachDependent(				  
+				(ad) -> {
+					if(Saveable.class.isAssignableFrom(ad.get().getClass()))
+							((Saveable)ad.get()).makeSaveable(saveManager);
+				});
+	}
+	
+	/**
+	 * custom Weakreference extension for garbage collection
+	 */
+	public class DependencyReference<E> extends WeakReference<E> {
+		public DependencyReference(E referent) {
+			super(referent);
+		}
+		
+		@Override 
+		public boolean equals(Object o) {
+			if(o == this) return true; 
+			if(o == this.get()) return true; 
+			else return false;
+		}
 	}
 }

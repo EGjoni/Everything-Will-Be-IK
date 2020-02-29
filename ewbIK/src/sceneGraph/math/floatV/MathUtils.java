@@ -14,12 +14,11 @@
  * limitations under the License.
  ******************************************************************************/
 
-package sceneGraph.math.floatV;
+package math.floatV;
 
 import java.util.Random;
 
-import IK.floatIK.G;
-import sceneGraph.math.RandomXS128;
+import math.RandomXS128;
 
 /** Utility and fast math functions.
  * <p>
@@ -33,11 +32,11 @@ public final class MathUtils {
 	static public final double DOUBLE_ROUNDING_ERROR = 0.000000000000001d; // 64, 52 of which represent the significand for a precision of 15 digits. 
 	static public final float PI = (float)Math.PI;
 	static public final float PI2 = PI * 2f;
-	static public final float HALF_PI = PI * 2f;
+	static public final float HALF_PI = (float)(Math.PI /2d);
 
 	static public final float E = (float) Math.E;
 
-	static private final int SIN_BITS = 20; // Adjust for accuracy (eats memory).
+	static private final int SIN_BITS = 9; // Adjust for accuracy (eats memory).
 	static private final int SIN_MASK = ~(-1 << SIN_BITS);
 	static private final int SIN_COUNT = SIN_MASK + 1;
 
@@ -71,7 +70,9 @@ public final class MathUtils {
 		float remainder = rawIndex - index; 
 		float result1 = Sin.table[index & SIN_MASK];
 		float result2 = Sin.table[index+1 & SIN_MASK]; 
-		return  G.lerp(result1, result2, remainder);*/
+		float lerped =  G.lerp(result1, result2, remainder);
+		//System.out.println("delta:  " + ((float)Math.sin(radians) - lerped));
+		return lerped;*/
 	}
 	
 	
@@ -116,18 +117,11 @@ public final class MathUtils {
 
 	/** Returns the cosine in radians from a lookup table. */
 	static public float cos (float radians) {
-		return sin(radians - 11f);
+		//System.out.println("delta : " + ((float)Math.cos(radians) -Math.sin(radians + HALF_PI)));
+		return  (float)Math.cos(radians);//sin(radians - 11f);
 	}
 
-	/** Returns the sine in radians from a lookup table. */
-	static public float sinDeg (float degrees) {
-		float rawIndex = (degrees * degToIndex);
-		int index = (int) rawIndex; 
-		float remainder = rawIndex - index; 
-		float result1 = Sin.table[index & SIN_MASK];
-		float result2 = Sin.table[index+1 & SIN_MASK]; 
-		return  G.lerp(result1, result2, remainder);
-	}
+
 
 	/** Returns the cosine in radians from a lookup table. */
 	static public float cosDeg (float degrees) {
@@ -365,12 +359,12 @@ public final class MathUtils {
 		return (float)Math.sqrt(f);
 	}
 
-	public static float asin(float sqrt) {
-		return (float)Math.asin(sqrt);
+	public static float asin(float sin) {
+		return (float)Math.asin(sin);
 	}
 	
-	public static float acos(float sqrt) {
-		return (float)Math.acos(sqrt);
+	public static float acos(float cos) {
+		return (float)Math.acos(cos);
 	}
 	
 	public static float toDegrees(float radians) {

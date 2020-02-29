@@ -18,32 +18,33 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 
-package sceneGraph.math.floatV;
+package math.floatV;
 
-import data.JSONObject;
-import sceneGraph.math.doubleV.SGVec_3d;
-import sceneGraph.math.floatV.SGVec_3f;
+import asj.CanLoad;
+import asj.data.JSONObject;
+import math.floatV.SGVec_3f;
+import math.floatV.Vec3f;
 
 /**
  * @author Eron Gjoni
  *
  */
-public class sgRayf {
+public class sgRayf implements CanLoad {
 	public static final int X=0, Y=1, Z=2;
-	protected SGVec_3f  p1;
-	protected SGVec_3f p2; 
+	protected Vec3f<?>  p1;
+	protected Vec3f<?> p2; 
 
 	public sgRayf() {
 		workingVector = new SGVec_3f();
 		//this.p1 = new SGVec_3f();
 	}
 	
-	public sgRayf(SGVec_3f origin) {
+	public sgRayf(Vec3f<?> origin) {
 		this.workingVector =  origin.copy();
 		this.p1 =  origin.copy();
 	}
 
-	public sgRayf(SGVec_3f p1, SGVec_3f p2) {
+	public sgRayf(Vec3f<?> p1, Vec3f<?> p2) {
 		this.workingVector =  p1.copy();
 		this.p1 =  p1.copy();
 		if(p2 != null)
@@ -51,11 +52,11 @@ public class sgRayf {
 	}	
 
 
-	public float distTo(SGVec_3f point) { 
+	public <V extends Vec3f<?>> float distTo(V point) { 
 
-		SGVec_3f inPoint =  point.copy();
+		Vec3f<?> inPoint =  point.copy();
 		inPoint.sub(this.p1); 
-		SGVec_3f heading =  this.heading();
+		Vec3f<?> heading =  this.heading();
 		float scale = (inPoint.dot(heading)/(heading.mag()*inPoint.mag()))*(inPoint.mag()/heading.mag());
 
 		return point.dist(this.getRayScaledBy(scale).p2); 
@@ -66,11 +67,11 @@ public class sgRayf {
 	 * @param point
 	 * @return
 	 */
-	public float distToStrict(SGVec_3f point) { 
+	public <V extends Vec3f<?>> float distToStrict(V point) { 
 
-		SGVec_3f inPoint =  point.copy();
+		Vec3f<?> inPoint =  point.copy();
 		inPoint.sub(this.p1); 
-		SGVec_3f heading = this.heading();
+		Vec3f<?> heading = this.heading();
 		float scale = (inPoint.dot(heading)/(heading.mag()*inPoint.mag()))*(inPoint.mag()/heading.mag());
 		if(scale < 0) {
 			return point.dist(this.p1);   
@@ -89,7 +90,7 @@ public class sgRayf {
 	 * @return
 	 */
 	public float distTo(sgRayf r) {
-		SGVec_3f closestOnThis = this.closestPointToRay3D(r);
+		Vec3f<?> closestOnThis = this.closestPointToRay3D(r);
 		return r.distTo(closestOnThis);
 	}
 
@@ -97,7 +98,7 @@ public class sgRayf {
 	 * returns the distance between this ray as a line segment, and the input ray treated as a line segment
 	 */	
 	public float distToStrict(sgRayf r) {
-		SGVec_3f closestOnThis = this.closestPointToSegment3D(r);
+		Vec3f<?> closestOnThis = this.closestPointToSegment3D(r);
 		return closestOnThis.dist(r.closestPointToStrict(closestOnThis));
 	}
 
@@ -106,11 +107,11 @@ public class sgRayf {
 	 * @param point
 	 * @return
 	 */
-	public SGVec_3f closestPointTo(SGVec_3f point) { 
+	public <V extends Vec3f<?>> V closestPointTo(V point) { 
 
 		workingVector.set(point);
 		workingVector.sub(this.p1); 
-		SGVec_3f heading = this.heading();
+		Vec3f<?> heading = this.heading();
 		heading.mag();
 		workingVector.mag();
 		//workingVector.normalize();
@@ -118,13 +119,13 @@ public class sgRayf {
 		float scale = workingVector.dot(heading);
 
 
-		return this.getScaledTo(scale);
+		return (V) this.getScaledTo(scale);
 	}
 
-	public SGVec_3f closestPointToStrict(SGVec_3f point) {
-		SGVec_3f inPoint =  point.copy();
+	public <V extends Vec3f<?>> Vec3f<?> closestPointToStrict(V point) {
+		V inPoint =  (V) point.copy();
 		inPoint.sub(this.p1); 
-		SGVec_3f heading = this.heading();
+		V heading = (V) this.heading();
 		float scale = (inPoint.dot(heading)/(heading.mag()*inPoint.mag()))*(inPoint.mag()/heading.mag());
 
 		if(scale <= 0) 
@@ -135,10 +136,10 @@ public class sgRayf {
 			return this.getMultipledBy(scale); 
 	}
 
-	public SGVec_3f heading(){
+	public Vec3f<?> heading(){
 		if(this.p2 == null) {
 			if(p1 == null) p1 = new SGVec_3f();
-			p2 =  p1.copy();
+			p2 =   p1.copy();
 			p2.set(0f,0f,0f);
 			return p2;
 		}
@@ -166,15 +167,15 @@ public class sgRayf {
 		p2.set(p1);		
 	}
 
-	public void heading(SGVec_3f newHead){
+	public  <V extends Vec3f<?>> void heading(V newHead){
 		if(p2 == null) p2 =  p1.copy();
 		p2.set(p1);
 		p2.add(newHead);
 	}
-	public void heading(SGVec_3d newHead){
+	public void heading(SGVec_3f newHead){
 		if(p2 == null) p2 =  p1.copy();
 		p2.set(p1);
-		p2.add(new SGVec_3f(newHead));
+		p2.add(newHead);
 	}
 
 	
@@ -221,7 +222,7 @@ public class sgRayf {
 		return result;
 	}
 
-	public SGVec_3f origin(){
+	public Vec3f<?> origin(){
 		return  p1.copy();
 	}
 
@@ -232,7 +233,7 @@ public class sgRayf {
 
 	public void mag(float newMag) {
 		workingVector.set(p2);
-		SGVec_3f dir =  workingVector.sub(p1);
+		Vec3f<?> dir =  workingVector.sub(p1);
 		dir.setMag(newMag);
 		this.heading(dir);   
 	}
@@ -263,7 +264,7 @@ public class sgRayf {
 	public float scaledProjection(SGVec_3f input) {
 		workingVector.set(input);
 		workingVector.sub(this.p1); 
-		SGVec_3f heading = this.heading();
+		 Vec3f<?> heading = this.heading();
 		float headingMag = heading.mag();
 		float workingVectorMag = workingVector.mag();
 		if(workingVectorMag == 0 || headingMag == 0) 
@@ -273,7 +274,7 @@ public class sgRayf {
 	}
 
 
-	protected SGVec_3f workingVector; 
+	protected Vec3f<?> workingVector; 
 
 
 
@@ -310,8 +311,8 @@ public class sgRayf {
 	 * @param scalar
 	 * @return
 	 */
-	public SGVec_3f getMultipledBy(float scalar) {
-		SGVec_3f result = this.heading();
+	public Vec3f<?> getMultipledBy(float scalar) {
+		 Vec3f<?> result = this.heading();
 		result.mult(scalar);
 		result.add(p1); 
 		return result;
@@ -325,8 +326,8 @@ public class sgRayf {
 	 * @param scalar
 	 * @return
 	 */
-	public SGVec_3f getDivideddBy(float divisor) {
-		SGVec_3f result =  this.heading().copy();
+	public Vec3f<?> getDivideddBy(float divisor) {
+		 Vec3f<?> result =  this.heading().copy();
 		result.mult(divisor);
 		result.add(p1); 
 		return result;
@@ -340,8 +341,8 @@ public class sgRayf {
 	 * @param scalar
 	 * @return
 	 */
-	public SGVec_3f getScaledTo(float scale) {
-		SGVec_3f result =  this.heading().copy();
+	public Vec3f<?> getScaledTo(float scale) {
+		Vec3f<?> result =  this.heading().copy();
 		result.normalize(); 
 		result.mult(scale);
 		result.add(p1); 
@@ -349,24 +350,27 @@ public class sgRayf {
 	}
 
 
-/**
- * scale the ray outward in both directions by a large amount. (900)
- */
-	public void elongate() {
-		sgRayf reverseRay = new sgRayf(this.p2.copy(), this.p1.copy()); 
-		sgRayf result = this.getRayScaledBy(900); 
-		reverseRay = reverseRay.getRayScaledBy(900);
-		result.p1 = reverseRay.p2.copy();
-		this.p1.set(result.p1); 
-		this.p2.set(result.p2);
-	}
+	/**
+	 *  adds the specified length to the ray in both directions.
+	 */
+		public void elongate(float amt) {
+			Vec3f midPoint = p1.addCopy(p2).multCopy(0.5f);
+			Vec3f p1Heading = p1.subCopy(midPoint);
+			Vec3f p2Heading = p2.subCopy(midPoint);
+			Vec3f p1Add = (Vec3f) p1Heading.copy().normalize().mult(amt);
+			Vec3f p2Add = (Vec3f) p2Heading.copy().normalize().mult(amt);
+			
+			this.p1.set((Vec3f)p1Heading.addCopy(p1Add).addCopy(midPoint)); 
+			this.p2.set((Vec3f)p2Heading.addCopy(p2Add).addCopy(midPoint));
+		}
+
 
 	public sgRayf copy() {
 		return new sgRayf(this.p1, this.p2);  
 	}
 
 	public void reverse() {
-		SGVec_3f temp = this.p1; 
+		 Vec3f<?> temp = this.p1; 
 		this.p1 = this.p2;
 		this.p2 = temp; 
 	}
@@ -392,8 +396,20 @@ public class sgRayf {
 		if(this.heading().dot(heading) < 0) this.reverse(); 
 	}
 	public sgRayf getRayScaledBy(float scalar) {
-
 		return new sgRayf(p1, this.getMultipledBy(scalar));
+	}
+	
+	/**
+	 * sets the values of the given vector to where the 
+	 * tip of this Ray would be if the ray were inverted
+	 * @param vec
+	 * @return the vector that was passed in after modification (for chaining) 
+	 */
+	public Vec3f<?> setToInvertedTip(Vec3f<?> vec) {
+		vec.x = (p1.x - p2.x)+p1.x; 
+		vec.y = (p1.y - p2.y)+p1.y; 
+		vec.z = (p1.z - p2.z)+p1.z; 
+		return vec;
 	}
 
 	public void contractTo(float percent) {
@@ -416,11 +432,11 @@ public class sgRayf {
 
 	public void translateTipTo(SGVec_3f newLocation) {
 		workingVector.set(newLocation);
-		SGVec_3f transBy =  workingVector.sub(p2); 
+		 Vec3f<?> transBy =  workingVector.sub(p2); 
 		this.translateBy(transBy); 
 	}
 
-	public void translateBy(SGVec_3f toAdd) {
+	public  <V extends Vec3f<?>> void translateBy(V toAdd) {
 		p1.add(toAdd); 
 		p2.add(toAdd);
 	}
@@ -430,8 +446,8 @@ public class sgRayf {
 		this.mag(1);  
 	}
 
-	public SGVec_3f intercepts2D (sgRayf r) {
-		SGVec_3f result =  p1.copy();
+	public Vec3f<?> intercepts2D (sgRayf r) {
+		Vec3f<?> result =  p1.copy();
 		
 		float p0_x = this.p1.x;
 		float p0_y = this.p1.y; 
@@ -458,7 +474,7 @@ public class sgRayf {
 		//return null; // No collision
 	}
 
-	/*public SGVec_3f intercepts2D(sgRay r) {
+	/*public Vec3f<?> intercepts2D(sgRay r) {
 		SGVec_3f result = new SGVec_3f();
 
 		float a1 = p2.y - p1.y;
@@ -488,12 +504,12 @@ public class sgRayf {
 	 * @param r
 	 * @return
 	 */
-	public SGVec_3f closestPointToSegment3D(sgRayf r) {
-		SGVec_3f closestToThis =  r.closestPointToRay3DStrict(this); 
+	public Vec3f<?> closestPointToSegment3D(sgRayf r) {
+		Vec3f<?> closestToThis =  r.closestPointToRay3DStrict(this); 
 		return this.closestPointTo(closestToThis);
 	}
 
-	/*public SGVec_3f closestPointToSegment3DStrict(sgRay r) {
+	/*public Vec3f<?> closestPointToSegment3DStrict(sgRay r) {
 
 	}*/
 
@@ -503,15 +519,15 @@ public class sgRayf {
 	 * @return
 	 */
 
-	public SGVec_3f closestPointToRay3D(sgRayf r) {
-		SGVec_3f result = null;
+	public Vec3f<?> closestPointToRay3D(sgRayf r) {
+		Vec3f<?> result = null;
 		
 		workingVector.set(p2);
-		SGVec_3f   u =  workingVector.sub(this.p1);
+		Vec3f<?>   u =  workingVector.sub(this.p1);
 		workingVector.set(r.p2);
-		SGVec_3f   v =  workingVector.sub(r.p1);
+		Vec3f<?>   v =  workingVector.sub(r.p1);
 		workingVector.set(this.p1);
-		SGVec_3f   w =  workingVector.sub(r.p1);
+		Vec3f<?>   w =  workingVector.sub(r.p1);
 		float    a = u.dot(u);         // always >= 0
 		float    b = u.dot(v);
 		float    c = v.dot(v);         // always >= 0
@@ -534,15 +550,15 @@ public class sgRayf {
 		return result;
 	}
 
-	public SGVec_3f closestPointToRay3DStrict(sgRayf r) {
-		SGVec_3f result = null;
+	public Vec3f<?> closestPointToRay3DStrict(sgRayf r) {
+		Vec3f<?> result = null;
 
 		workingVector.set(p2);
-		SGVec_3f   u =  workingVector.sub(this.p1);
+		Vec3f<?>   u =  workingVector.sub(this.p1);
 		workingVector.set(r.p2);
-		SGVec_3f   v =  workingVector.sub(r.p1);
+		Vec3f<?>   v =  workingVector.sub(r.p1);
 		workingVector.set(this.p1);
-		SGVec_3f   w =  workingVector.sub(r.p1);
+		Vec3f<?>   w =  workingVector.sub(r.p1);
 		float    a = u.dot(u);         // always >= 0
 		float    b = u.dot(v);
 		float    c = v.dot(v);         // always >= 0
@@ -553,7 +569,7 @@ public class sgRayf {
 
 		// compute the line parameters of the two closest points
 		if (D < Float.MIN_VALUE) {          // the lines are almost parallel
-			sc = 0f;
+			sc = 0.0f;
 			//tc = (b>c ? d/b : e/c);    // use the largest denominator
 		}
 		else {
@@ -575,15 +591,15 @@ public class sgRayf {
 	 * @param r
 	 * @return
 	 */
-	public SGVec_3f closestPointToRay3DBounded(sgRayf r) {
-		SGVec_3f result = null;
+	public Vec3f<?> closestPointToRay3DBounded(sgRayf r) {
+		Vec3f<?> result = null;
 
 		workingVector.set(p2);
-		SGVec_3f   u =  workingVector.sub(this.p1);
+		Vec3f<?>   u =  workingVector.sub(this.p1);
 		workingVector.set(r.p2);
-		SGVec_3f   v =  workingVector.sub(r.p1);
+		Vec3f<?>   v =  workingVector.sub(r.p1);
 		workingVector.set(this.p1);
-		SGVec_3f   w =  workingVector.sub(r.p1);
+		Vec3f<?>   w =  workingVector.sub(r.p1);
 		float    a = u.dot(u);         // always >= 0
 		float    b = u.dot(v);
 		float    c = v.dot(v);         // always >= 0
@@ -594,7 +610,7 @@ public class sgRayf {
 
 		// compute the line parameters of the two closest points
 		if (D < Float.MIN_VALUE) {          // the lines are almost parallel
-			sc = 0f;
+			sc = 0.0f;
 			//tc = (b>c ? d/b : e/c);    // use the largest denominator
 		}
 		else {
@@ -611,16 +627,15 @@ public class sgRayf {
 
 	//returns a ray perpendicular to this ray on the XY plane;
 	public sgRayf getPerpendicular2D() {
-		SGVec_3f heading = this.heading(); 
+		Vec3f<?> heading = this.heading(); 
 		workingVector.set(heading.x-1f, heading.x, 0f);
-		SGVec_3f perpHeading = workingVector;
 		return new sgRayf(this.p1,  workingVector.add(this.p1));
 	}
 
-	public SGVec_3f intercepts2DStrict(sgRayf r) { 
+	public Vec3f<?> intercepts2DStrict(sgRayf r) { 
 		//will also return null if the intersection does not occur on the 
 		//line segment specified by the ray.
-		SGVec_3f result =  p1.copy();
+		Vec3f<?> result =  p1.copy();
 
 		//boolean over = false;
 		float a1 = p2.y - p1.y;
@@ -660,18 +675,18 @@ public class sgRayf {
 	 * @param b3 the third vertex od a triangle on the second plane
 	 * @return a sgRay along the line of intersection of these two planes, or null if inputs are coplanar
 	 */
-	public static sgRayf planePlaneIntersect(SGVec_3f a1, SGVec_3f  a2, SGVec_3f  a3, SGVec_3f  b1, SGVec_3f  b2, SGVec_3f  b3) {
+	public static <V extends Vec3f<?>> sgRayf planePlaneIntersect(V a1, V  a2, V  a3, V  b1, V  b2, V  b3) {
 		sgRayf a1a2 = new sgRayf(a1,a2);
 		sgRayf a1a3 = new sgRayf(a1,a3); 
 		sgRayf a2a3 = new sgRayf(a2,a3);
 
-		SGVec_3f interceptsa1a2 =  a1a2.intersectsPlane(b1, b2, b3);
-		SGVec_3f interceptsa1a3 =  a1a3.intersectsPlane(b1, b2, b3);
-		SGVec_3f interceptsa2a3 =  a2a3.intersectsPlane(b1, b2, b3);
+		Vec3f<?> interceptsa1a2 =  a1a2.intersectsPlane(b1, b2, b3);
+		Vec3f<?> interceptsa1a3 =  a1a3.intersectsPlane(b1, b2, b3);
+		Vec3f<?> interceptsa2a3 =  a2a3.intersectsPlane(b1, b2, b3);
 
-		SGVec_3f[] notNullCandidates = {interceptsa1a2, interceptsa1a3, interceptsa2a3};
-		SGVec_3f notNull1 = null;  
-		SGVec_3f notNull2 = null; 
+		Vec3f<?>[] notNullCandidates = {interceptsa1a2, interceptsa1a3, interceptsa2a3};
+		Vec3f<?> notNull1 = null;  
+		Vec3f<?> notNull2 = null; 
 
 		for(int i=0; i<notNullCandidates.length; i++) {
 			if(notNullCandidates[i] != null) {
@@ -695,14 +710,14 @@ public class sgRayf {
 	 * @param tc the third vertex of a triangle on the plane
 	 * @return the point where this ray intersects the plane specified by the triangle ta,tb,tc. 
 	 */
-	public SGVec_3f intersectsPlane(SGVec_3f  ta, SGVec_3f tb, SGVec_3f tc) {
+	public  <V extends Vec3f<?>> Vec3f<?> intersectsPlane(V  ta, V tb, V tc) {
 		float[] uvw = new float[3]; 
 		return intersectsPlane(ta, tb, tc, uvw);
 	}
 
 	
-	SGVec_3f tta, ttb, ttc;
-	public SGVec_3f intersectsPlane(SGVec_3f ta, SGVec_3f tb, SGVec_3f tc, float[] uvw) {
+	Vec3f<?> tta, ttb, ttc;
+	public  <V extends Vec3f<?>> Vec3f<?>  intersectsPlane(V ta, V tb, V tc, float[] uvw) {
 		if(tta == null) {
 			tta =  ta.copy(); ttb =  tb.copy(); ttc =  tc.copy(); 
 		} else {
@@ -712,7 +727,7 @@ public class sgRayf {
 		ttb.sub(p1); 
 		ttc.sub(p1);
 		
-		SGVec_3f result =  planeIntersectTest(tta, ttb, ttc, uvw).copy();
+		Vec3f<?> result =  (V) planeIntersectTest(tta, ttb, ttc, uvw).copy();
 		return  result.add(this.p1);
 	}
 	
@@ -722,7 +737,7 @@ public class sgRayf {
 	 * @param tc the third vertex of a triangle on the plane
 	 * @param result the variable in which to hold the result
 	 */
-	public void intersectsPlane(SGVec_3f ta, SGVec_3f tb, SGVec_3f tc, SGVec_3f result) {
+	public void intersectsPlane(Vec3f<?> ta, Vec3f<?> tb, Vec3f<?> tc, Vec3f<?> result) {
 		float[] uvw = new float[3]; 
 		result.set(intersectsPlane(ta, tb, tc, uvw));
 	}
@@ -735,7 +750,7 @@ public class sgRayf {
 	 * @param tc the third vertex of a triangle on the plane
 	 * @param result the variable in which to hold the result
 	 */
-	public boolean intersectsTriangle(SGVec_3f ta, SGVec_3f tb, SGVec_3f tc, SGVec_3f result) {
+	public <V extends Vec3f<?>>boolean intersectsTriangle(V ta, V tb, V tc, V result) {
 		float[] uvw = new float[3]; 
 		result.set(intersectsPlane(ta, tb, tc, uvw));
 		if(Float.isNaN(uvw[0]) || Float.isNaN(uvw[1]) || Float.isNaN(uvw[2]) || uvw[0] < 0 || uvw[1] < 0 || uvw[2] < 0) 
@@ -744,10 +759,10 @@ public class sgRayf {
 			return true;
 	}
 
-	SGVec_3f I,u,v,n,dir,w0; 
+	Vec3f<?> I,u,v,n,dir,w0; 
 	boolean inUse = false;
 	
-	private SGVec_3f planeIntersectTest(SGVec_3f ta, SGVec_3f tb, SGVec_3f tc, float[] uvw) {
+	private <V extends Vec3f<?>> V planeIntersectTest(V ta, V tb, V tc, float[] uvw) {
 		
 		if(u== null) {
 			u =  tb.copy();
@@ -778,9 +793,8 @@ public class sgRayf {
 		I.mult(r);
 		//float[] barycentric = new float[3]; 
 		barycentric(ta, tb, tc, I, uvw);
-
-		
-		return I.copy();		
+	
+		return (V) I.copy();		
 	}
 
 	
@@ -791,9 +805,9 @@ public class sgRayf {
 	 * @param S2 reference to variable in which the second intersection will be placed
 	 * @return number of intersections found;
 	 */
-	public int intersectsSphere(SGVec_3f sphereCenter, float radius, SGVec_3f S1, SGVec_3f S2) {
-		SGVec_3f tp1 =  p1.subCopy(sphereCenter);
-		SGVec_3f tp2 =  p2.subCopy(sphereCenter);
+	public <V extends Vec3f<?>> int intersectsSphere(V sphereCenter, float radius, V S1, V S2) {
+		Vec3f<?> tp1 =  p1.subCopy(sphereCenter);
+		Vec3f<?> tp2 =  p2.subCopy(sphereCenter);
 		int result = intersectsSphere(tp1, tp2, radius, S1, S2);
 		S1.add(sphereCenter); S2.add(sphereCenter);
 		return result;
@@ -804,16 +818,19 @@ public class sgRayf {
 	 * @param S2 reference to variable in which the second intersection will be placed
 	 * @return number of intersections found;
 	 */
-	public int intersectsSphere(SGVec_3f rp1, SGVec_3f rp2, float radius, SGVec_3f S1, SGVec_3f S2) {
-		SGVec_3f direction =  rp2.subCopy(rp1);
-		SGVec_3f e =  direction.copy();   // e=ray.dir
+	public <V extends Vec3f<?>> int intersectsSphere(V rp1, V rp2, float radius, V S1, V S2) {
+		V direction =  (V) rp2.subCopy(rp1);
+		V e =  (V) direction.copy();   // e=ray.dir
 		e.normalize();                            // e=g/|g|
-		SGVec_3f h =  p1.copy();
+		V h =  (V) p1.copy();
 		h.set(0f,0f,0f);
-		h =  h.sub(rp1);  // h=r.o-c.M
+		h =  (V) h.sub(rp1);  // h=r.o-c.M
 		float lf = e.dot(h);                      // lf=e.h
-		float s = MathUtils.pow(radius, 2)-h.dot(h)+MathUtils.pow(lf, 2);   // s=r^2-h^2+lf^2
-		if (s < 0.0) return 0;                    // no intersection points ?
+		float radpow = radius*radius;
+		float hdh = h.magSq(); 
+		float lfpow = lf*lf;		
+		float s = radpow-hdh+lfpow;   // s=r^2-h^2+lf^2
+		if (s < 0.0f) return 0;                    // no intersection points ?
 		s = MathUtils.sqrt(s);                              // s=sqrt(r^2-h^2+lf^2)
 
 		int result = 0;
@@ -834,18 +851,18 @@ public class sgRayf {
 		return result;
 	}
 
-	SGVec_3f m, at, bt, ct, pt;;
-	SGVec_3f bc, ca, ac; 
-	public void barycentric(SGVec_3f a, SGVec_3f b, SGVec_3f c, SGVec_3f p, float[] uvw) {
+    Vec3f<?> m, at, bt, ct, pt;;
+    Vec3f<?> bc, ca, ac; 
+	public <V extends Vec3f<?>> void barycentric(V a, V b, V c, V p, float[] uvw) {
 		if(m == null) {
 			//m=a.copy();
 			//m.set(0f,0f,0f);
 			bc =  b.copy();
 			ca =  c.copy();
-			at = new SGVec_3f(a);
-			bt = new SGVec_3f(b);
-			ct = new SGVec_3f(c);
-			pt = new SGVec_3f(p);
+			at = a.copy();
+			bt = b.copy();
+			ct = c.copy();
+			pt = p.copy();
 		} else {
 			bc.set(b);
 			ca.set(a);
@@ -855,7 +872,7 @@ public class sgRayf {
 			pt.set(p);
 		}
 		
-		m = new SGVec_3f(((SGVec_3f)bc.sub(ct)).crossCopy((SGVec_3f)ca.subCopy(at)));
+		m = new SGVec_3f(((SGVec_3f)bc.subCopy(ct)).crossCopy((SGVec_3f)ca.subCopy(at)));
 
 		float nu;
 		float nv;
@@ -899,11 +916,11 @@ public class sgRayf {
 	}
 
 
-	public void p1(SGVec_3f in) {
+	public <V extends Vec3f<?>> void p1(V in) {
 		this.p1 =  in.copy();
 	}
 
-	public void p2(SGVec_3f in) {
+	public <V extends Vec3f<?>> void p2(V in) {
 		this.p2 =  in.copy();
 	}
 	
@@ -913,27 +930,53 @@ public class sgRayf {
 		return (1-t)*a + t*b;
 	}
 
-	public JSONObject toJSON() {
-		JSONObject result = new JSONObject();
-		result.setJSONArray("p1", p1.toJSONArray());
-		result.setJSONArray("p2", p2.toJSONArray());
-		return result;
-	}
 
-	public SGVec_3f p2() {
+	public Vec3f<?> p2() {
 		return p2;
 	}
+	
+	public <R extends sgRayf>void set(R r) {
+		this.p1.set(r.p1);
+		this.p2.set(r.p2);
+	}
 
-	public void setP2(SGVec_3f p2) {
+	public <V extends Vec3f<?>> void setP2(V p2) {
 		this.p2 = p2;
 	}
 
-	public SGVec_3f p1() {
+	public Vec3f<?> p1() {
 		return p1;
 	}
 
-	public void setP1(SGVec_3f p1) {
+	public <V extends Vec3f<?>> void setP1(V p1) {
 		this.p1 = p1;
+	}
+
+	@Override
+	public CanLoad populateSelfFromJSON(JSONObject j) {
+		if(this.p1 != null) this.p2 = this.p1.copy();
+		if(this.p2 != null) this.p1 = this.p2.copy();
+		
+		if(this.p1 == null)
+			this.p1 = new SGVec_3f(j.getJSONObject("p1"));
+		else { 
+			this.p1.set(new SGVec_3f(j.getJSONObject("p1")));
+		}
+		
+		if(this.p2 == null) 
+			this.p2 = new SGVec_3f(j.getJSONObject("p2"));
+		else 
+			this.p2.set(new SGVec_3f(j.getJSONObject("p2")));
+		
+		return this;
+	}
+
+	@Override
+	public JSONObject toJSONObject() {
+		JSONObject result = new JSONObject();
+		result.setJSONObject("p1", p1.toJSONObject());
+		result.setJSONObject("p2", p2.toJSONObject());
+		return result;
 	}
 
 

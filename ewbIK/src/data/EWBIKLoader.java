@@ -21,25 +21,34 @@ import IK.doubleIK.AbstractIKPin;
 import IK.doubleIK.AbstractKusudama;
 import IK.doubleIK.AbstractLimitCone;
 import IK.doubleIK.Constraint;
-import data.JSONArray;
-import data.JSONObject;
-import data.Saveable;
-import sceneGraph.math.doubleV.AbstractAxes;
-import sceneGraph.math.doubleV.MRotation;
-import sceneGraph.math.doubleV.Rot;
-import sceneGraph.math.doubleV.SGVec_3d;
-import sceneGraph.math.floatV.SGVec_3f;
-import sceneGraph.math.floatV.Vec3f;
+import asj.LoadManager;
+import asj.Saveable;
+import asj.TypeIdentifier;
+import asj.data.JSONArray;
+import asj.data.JSONObject;
+import asj.data.StringFuncs;
+import math.doubleV.AbstractAxes;
+import math.doubleV.MRotation;
+import math.doubleV.Rot;
+import math.doubleV.SGVec_3d;
+import math.floatV.SGVec_3f;
 
-public class EWBIKLoader implements LoadManager {
+public class EWBIKLoader {
 
 	public static final int SINGLE = 1, DOUBLE = 2; 
-	public static int currentMode = DOUBLE;
+	public int currentMode = DOUBLE;
+	
+	DoubleBackedLoader doubleBackedLoader; 
+	FloatBackedLoader floatBackedLoader; 
 	
 	
 	
-	public static void setMode(int mode) {
+	public void setMode(int mode) {
 		currentMode = mode;
+		if(currentMode == SINGLE)  
+			floatBackedLoader = new FloatBackedLoader();
+		else 
+			doubleBackedLoader = new DoubleBackedLoader();
 	}
 	
 	/**
@@ -66,14 +75,13 @@ public class EWBIKLoader implements LoadManager {
 		File selection = new File(filepath);
 		JSONObject loadFile = StringFuncs.loadJSONObject(selection);
 		clearCurrentLoadObjects();
-		return DoubleBackedLoader.loadJSON(loadFile, 
+		return doubleBackedLoader.loadJSON(loadFile, 
 				AxesClass, 
 				BoneClass, 
 				ArmatureClass, 
 				KusudamaClass, 
 				LimitConeClass, 
-				IKPinClass,
-				this);
+				IKPinClass);
 	}
 	
 	
@@ -92,46 +100,49 @@ public class EWBIKLoader implements LoadManager {
 	 */
 
 	public Collection<? extends  IK.floatIK.AbstractArmature> importSinglePrecisionArmatures(String filepath,
-			Class<? extends sceneGraph.math.floatV.AbstractAxes> AxesClass, 
+			Class<? extends math.floatV.AbstractAxes> AxesClass, 
 			Class<? extends IK.floatIK.AbstractBone> BoneClass, 
 			Class<? extends IK.floatIK.AbstractArmature> ArmatureClass, 
 			Class<? extends IK.floatIK.Constraint> KusudamaClass, 
 			Class<? extends IK.floatIK.AbstractLimitCone>  LimitConeClass, 
 			Class<? extends IK.floatIK.AbstractIKPin> IKPinClass) {
-		currentMode = SINGLE;
+		setMode(SINGLE);
 		File selection = new File(filepath);
 		JSONObject loadFile = StringFuncs.loadJSONObject(selection);
 		clearCurrentLoadObjects();
-		return FloatBackedLoader.loadJSON(loadFile,
+		return floatBackedLoader.loadJSON(loadFile,
 				AxesClass, 
 				BoneClass, 
 				ArmatureClass, 
 				KusudamaClass, 
 				LimitConeClass, 
-				IKPinClass,
-				this); 	
+				IKPinClass); 	
 	}
 
 
 
-	public static void updateArmatureSegments() {
-			FloatBackedLoader.updateArmatureSegments(); 
-			DoubleBackedLoader.updateArmatureSegments();
+	public void updateArmatureSegments() {
+		if(floatBackedLoader != null)
+			floatBackedLoader.updateArmatureSegments();
+		if(doubleBackedLoader != null)
+			doubleBackedLoader.updateArmatureSegments();
 	}
 
 
-	public static void clearCurrentLoadObjects() {
-			FloatBackedLoader.clearCurrentLoadObjects(); 
-			DoubleBackedLoader.clearCurrentLoadObjects();
+	public void clearCurrentLoadObjects() {
+		if(floatBackedLoader != null)
+			floatBackedLoader.clearCurrentLoadObjects(); 
+		if(doubleBackedLoader != null)
+			doubleBackedLoader.clearCurrentLoadObjects();
 	}
 
 	
 
 	public String getCurrentFilePath() {
 		if(currentMode == SINGLE) 
-			return FloatBackedLoader.getCurrentFilePath(); 
+			return floatBackedLoader.getCurrentFilePath(); 
 		else
-			return DoubleBackedLoader.getCurrentFilePath();
+			return doubleBackedLoader.getCurrentFilePath();
 	}
 
 
@@ -145,9 +156,9 @@ public class EWBIKLoader implements LoadManager {
 	 */
 	public <T extends Object, V extends Object> HashMap<T, V> hashMapFromJSON(JSONObject json, HashMap<T,V> result, TypeIdentifier ti) {
 		if(currentMode == SINGLE) 
-			return FloatBackedLoader.hashMapFromJSON(json, result, ti);
+			return floatBackedLoader.hashMapFromJSON(json, result, ti);
 		else
-			return DoubleBackedLoader.hashMapFromJSON(json, result, ti);
+			return doubleBackedLoader.hashMapFromJSON(json, result, ti);
 	}
 
 
@@ -161,9 +172,9 @@ public class EWBIKLoader implements LoadManager {
 	 */
 	public <T extends Object, V extends Object> HashMap<T, V> hashMapFromJSON(JSONObject json, TypeIdentifier ti) {
 		if(currentMode == SINGLE) 
-			return FloatBackedLoader.hashMapFromJSON(json, ti);
+			return floatBackedLoader.hashMapFromJSON(json, ti);
 		else
-			return DoubleBackedLoader.hashMapFromJSON(json, ti);
+			return doubleBackedLoader.hashMapFromJSON(json, ti);
 	}
 
 	public static Object parsePrimitive(Class keyClass, String toParse) {
@@ -198,9 +209,9 @@ public class EWBIKLoader implements LoadManager {
 
 	public Saveable getObjectFromClassMaps(Class keyClass, String identityHash) {
 		if(currentMode == SINGLE) 
-			return FloatBackedLoader.getObjectFromClassMaps(keyClass, identityHash);
+			return floatBackedLoader.getObjectFromClassMaps(keyClass, identityHash);
 		else
-			return DoubleBackedLoader.getObjectFromClassMaps(keyClass, identityHash);
+			return doubleBackedLoader.getObjectFromClassMaps(keyClass, identityHash);
 	}
 	
 
