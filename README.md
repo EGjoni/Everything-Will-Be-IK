@@ -15,10 +15,11 @@ It relies on a novel (I'm still writing an explainer) highly stable generalizati
 <li>Dampening (stiffness control).</li>
 <li>Target weight/priority (per target, per degree of freedom).</li>
 <li>Highly versatile 3-DOF constraints with arbitrarily shaped orientation regions.</li>
+<li>"Soft" constraint support, allowing joints to meet the target in the least uncomfortable way.</li>
 </ul>
 </br>
 
-The code is still being optimized, but the algorithm is fast enough that it shouldn't matter too much for most applications. 
+The code is quite fast and suitable for realtime use in most graphics applications. A fully constrained humanoid torso effectored at the hips, hands and head (simultaneously trying to reach all four corresponding targets in position and orientation) will usually solve in under a millisecond.  
 </br>
 </br>
 Please let me know if you find bugs you can't fix. Please commit back changes for any bugs you do fix. 
