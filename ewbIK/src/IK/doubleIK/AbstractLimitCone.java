@@ -335,13 +335,7 @@ public abstract class AbstractLimitCone implements Saveable {
 			Vec3d<?> B = next.getControlPoint().copy(); 
 
 			Vec3d<?> arcNormal = A.crossCopy(B); 
-			Rot aToARadian = new Rot(A, arcNormal); 
-			Vec3d<?> aToARadianAxis = aToARadian.getAxis();
-			Rot bToBRadian = new Rot(B, arcNormal); 
-			Vec3d<?> bToBRadianAxis = bToBRadian.getAxis();
-			aToARadian = new Rot(aToARadianAxis, radA);
-			bToBRadian = new Rot(bToBRadianAxis, radB);
-
+			
 			/**
 			 * There are an infinite number of circles co-tangent with A and B, every other
 			 * one of which had a unique radius.  
@@ -358,37 +352,39 @@ public abstract class AbstractLimitCone implements Saveable {
 			 * but their radii remain constant), we want our tangentCircle's diameter to be precisely that distance, 
 			 * and so, our tangent circles radius should be precisely half of that distance. 
 			 */
-
-			double tRadius = ((Math.PI)-(radA+radB))/2f;
-
+			double tRadius = ((Math.PI)-(radA+radB))/2d;
 
 			/**
 			 * Once we have the desired radius for our tangent circle, we may find the solution for its
 			 * centers (usually, there are two).
 			 */
-
-			double minorAppoloniusRadiusA = radA + tRadius;
-			Vec3d<?> minorAppoloniusAxisA = A.copy().normalize(); 
-			double minorAppoloniusRadiusB = radB + tRadius;
-			Vec3d<?> minorAppoloniusAxisB  = B.copy().normalize();
-
-			//the point on the radius of this cone + half the arcdistance to the circumference of the next cone along the arc path to the next cone 
-			Vec3d<?> minorAppoloniusP1A = new Rot(arcNormal, minorAppoloniusRadiusA).applyToCopy(minorAppoloniusAxisA);
-			//the point on the radius of this cone + half the arcdistance to the circumference of the next cone, rotated 90 degrees along the axis of this cone
-			Vec3d<?> minorAppoloniusP2A = new Rot(minorAppoloniusAxisA, Math.PI/2d).applyToCopy(minorAppoloniusP1A);
-			//the axis of this cone, scaled to minimize its distance to the previous two points. 
-			Vec3d<?> minorAppoloniusP3A =  SGVec_3d.mult(minorAppoloniusAxisA, Math.cos(minorAppoloniusRadiusA));
-
-			Vec3d<?> minorAppoloniusP1B = new Rot(arcNormal, minorAppoloniusRadiusB).applyToCopy(minorAppoloniusAxisB);
-			Vec3d<?> minorAppoloniusP2B = new Rot(minorAppoloniusAxisB, Math.PI/2d).applyToCopy(minorAppoloniusP1B);      
-			Vec3d<?> minorAppoloniusP3B = Vec3d.mult(minorAppoloniusAxisB, Math.cos(minorAppoloniusRadiusB));
+			double boundaryPlusTangentRadiusA = radA + tRadius;
+			double boundaryPlusTangentRadiusB = radB + tRadius;
+			
+			//the axis of this cone, scaled to minimize its distance to the tangent  contact points. 
+			Vec3d<?> scaledAxisA =  SGVec_3d.mult(A, Math.cos(boundaryPlusTangentRadiusA));
+			//a point on the plane running through the tangent contact points
+			Vec3d<?> planeDir1A = new Rot(arcNormal, boundaryPlusTangentRadiusA).applyToCopy(A);
+			//another poiint on the same plane
+			Vec3d<?> planeDir2A = new Rot(A, Math.PI/2d).applyToCopy(planeDir1A);			
+			
+			Vec3d<?> scaledAxisB = Vec3d.mult(B, Math.cos(boundaryPlusTangentRadiusB));
+			//a point on the plane running through the tangent contact points
+			Vec3d<?> planeDir1B = new Rot(arcNormal, boundaryPlusTangentRadiusB).applyToCopy(B);
+			//another poiint on the same plane
+			Vec3d<?> planeDir2B = new Rot(B, Math.PI/2d).applyToCopy(planeDir1B);      
+			
 
 			// ray from scaled center of next cone to half way point between the circumference of this cone and the next cone. 
-			sgRayd r1B = new sgRayd(minorAppoloniusP1B, minorAppoloniusP3B); r1B.elongate(99);
-			sgRayd r2B = new sgRayd(minorAppoloniusP1B, minorAppoloniusP2B); r2B.elongate(99);
-
-			Vec3d<?> intersection1 = r1B.intersectsPlane(minorAppoloniusP3A, minorAppoloniusP1A, minorAppoloniusP2A);
-			Vec3d<?> intersection2 = r2B.intersectsPlane( minorAppoloniusP3A, minorAppoloniusP1A, minorAppoloniusP2A);
+			sgRayd r1B = new sgRayd(planeDir1B, scaledAxisB); 
+			sgRayd r2B = new sgRayd(planeDir1B, planeDir2B);
+			
+			
+			r1B.elongate(99);
+			 r2B.elongate(99);
+			 
+			Vec3d<?> intersection1 = r1B.intersectsPlane(scaledAxisA, planeDir1A, planeDir2A);
+			Vec3d<?> intersection2 = r2B.intersectsPlane( scaledAxisA, planeDir1A, planeDir2A);
 
 			sgRayd intersectionRay = new sgRayd(intersection1, intersection2);
 			intersectionRay.elongate(99);

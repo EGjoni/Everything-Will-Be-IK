@@ -322,6 +322,9 @@ public abstract class AbstractArmature implements Saveable {
 	 * 	<li>
 	 * 		If your armature makes use of orientation aware pins and orientation constraints, then set this parameter to 1
 	 * 	</li>
+	 * 	<li>
+	 * 		If your armature makes use of orientation aware pins and orientation constraints, but speed is of the highest possible priority, then set this parameter to 0
+	 * 	</li>
 	 * </ul>
 	 * 
 	 * @param passCount
@@ -436,18 +439,7 @@ public abstract class AbstractArmature implements Saveable {
 		AbstractBone stopAfter = chain.segmentRoot;
 		
 		AbstractBone currentBone = startFrom;
-		if(chain.isTipPinned() && chain.segmentTip.getIKPin().getDepthFalloff() == 0d) { //if the tip is pinned, it should have already been oriented before this function was called.
-						
-				//if(chain.segmentTip.getIKPin().getSubtargetCount() == 1) {
-					//alignSegmentTipOrientationFor(chain, dampening);
-					//currentBone = currentBone.getParent();
-				//}
-				//if(currentBone == stopAfter)
-				//currentBone = null; 
-				//currentBone = currentBone.getParent();
-			
-		}
-
+		
 		if(debug && chain.simulatedBones.size() < 2) {
 
 		} else {	
@@ -478,36 +470,6 @@ public abstract class AbstractArmature implements Saveable {
 		}
 	}
 
-
-
-	private void alignSegmentTipOrientationsFor(SegmentedArmature chain, double dampening) {
-		ArrayList<SegmentedArmature> pinnedTips = chain.pinnedDescendants;
-
-		for(SegmentedArmature tipChain : pinnedTips) {
-			AbstractIKPin pin = tipChain.segmentTip.getIKPin();
-			if(!(pin.getDepthFalloff() != 0 && tipChain.childSegments.size() >0)) 
-				alignSegmentTipOrientationFor(tipChain, dampening);
-		}
-	}
-
-
-	private void alignSegmentTipOrientationFor(SegmentedArmature tipChain, double dampening) {
-
-		//AbstractBone tipBone = tipChain.segmentTip; 
-		dampening = dampening == -1 ? this.dampening : dampening;
-		WorkingBone sb = tipChain.simulatedBones.get( tipChain.segmentTip);
-		AbstractAxes currentBoneSimulatedAxes = sb.simLocalAxes;
-		currentBoneSimulatedAxes.updateGlobal();
-
-		AbstractAxes pinAxes = sb.forBone.getPinnedAxes();
-		pinAxes.updateGlobal();
-		currentBoneSimulatedAxes.alignOrientationTo(pinAxes);
-		currentBoneSimulatedAxes.markDirty(); currentBoneSimulatedAxes.updateGlobal();
-
-		sb.forBone.setAxesToSnapped(currentBoneSimulatedAxes,  sb.simConstraintAxes, dampening);
-		currentBoneSimulatedAxes.markDirty();
-		currentBoneSimulatedAxes.updateGlobal();
-	}
 
 	//debug code -- use to set a minimum distance an effector must move
 	// in order to trigger a chain iteration 

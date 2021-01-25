@@ -435,7 +435,7 @@ public class SegmentedArmature {
 			int iteration,
 			float totalIterations) {
 
-		qcpOrientationAligner.setMaxIterations(10);		
+		qcpOrientationAligner.setMaxIterations(55);		
 		Rot qcpRot =  qcpOrientationAligner.weightedSuperpose(localizedTipHeadings, localizedTargetHeadings, weights, translate);
 
 		SGVec_3f translateBy = qcpOrientationAligner.getTranslation();
