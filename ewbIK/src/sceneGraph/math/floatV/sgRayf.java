@@ -841,9 +841,9 @@ public class sgRayf implements CanLoad {
 			} 
 		}else result = 2;                          // 2 intersection points
 
-		S1.set(e.multCopy(lf-s));  
+		S1.set(e.multCopy((float)lf-s));  
 		S1.add(rp1); // S1=A+e*(lf-s)
-		S2.set(e.multCopy(lf+s));  
+		S2.set(e.multCopy((float)lf+s));  
 		S2.add(rp1); // S2=A+e*(lf+s)
 
 		// only for testing

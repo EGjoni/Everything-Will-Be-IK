@@ -225,6 +225,37 @@ public class QCP {
 		// transformation.set(rotmat);
 		return result;// transformation;
 	}
+	
+	/**
+	 * Weighted superposition.
+	 *
+	 * @param fixed
+	 * @param moved
+	 * @param weight
+	 *            array of weigths for each equivalent point position
+	 * @return
+	 */
+	public <V extends Vec3f<?>> Rot weightedSuperpose( V[] moved, V[] target, float[] weight, boolean translate) {
+		double[] weightd = null;
+		if(weight != null) weightd = new double[moved.length];
+		
+		SGVec_3d[] movedd = new SGVec_3d[moved.length];
+		SGVec_3d[] targetd = new SGVec_3d[target.length];
+		
+		for(int i =0; i< moved.length; i++) {
+			if(weight != null)
+				weightd[i] = weight[i];
+			
+			movedd[i] = new SGVec_3d((double)moved[i].x, (double)moved[i].y, (double)moved[i].z);
+			targetd[i] = new SGVec_3d((double)target[i].x, (double)target[i].y, (double)target[i].z);
+		}
+		
+		
+		set(movedd, targetd, weightd, translate);
+		Rot result = getRotation();
+		//transformation.set(rotmat);
+		return result;//transformation;
+	}
 
 
 	private Rot getRotation() {
@@ -513,6 +544,8 @@ public class QCP {
 
 		return center;
 	}
+	
+
 
 	public SGVec_3d getTranslation() {
 		return targetCenter.subCopy(movedCenter);
