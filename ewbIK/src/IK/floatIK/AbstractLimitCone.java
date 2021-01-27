@@ -36,8 +36,9 @@ public abstract class AbstractLimitCone implements Saveable {
 	Vec3f<?> radialPoint; 
 
 	//radius stored as  cosine to save on the acos call necessary for angleBetween. 
-	private float radiusCosine; 
+	private float radiusCosine;
 	private float radius; 
+	
 
 	public AbstractKusudama parentKusudama;
 
@@ -73,9 +74,7 @@ public abstract class AbstractLimitCone implements Saveable {
 		setControlPoint(location); 
 		tangentCircleCenterNext1 = location.getOrthogonal();
 		tangentCircleCenterNext2 = SGVec_3f.mult(tangentCircleCenterNext1, -1);
-
-		this.radius = MathUtils.max(Float.MIN_VALUE, rad);
-		this.radiusCosine = MathUtils.cos(radius);
+		this.setRadius(rad);
 		parentKusudama = attachedTo;
 	}
 
@@ -308,8 +307,9 @@ public abstract class AbstractLimitCone implements Saveable {
 	 * @return
 	 */
 	public <V extends Vec3f<?>> Vec3f<?> closestToCone(V input, boolean[] inBounds) {
-
-		if(input.dot(this.getControlPoint()) > this.getRadiusCosine()) {
+		float controlPointDotProduct = input.dot(this.getControlPoint()); 
+		float radiusCosine = this.getRadiusCosine();
+		if(controlPointDotProduct > radiusCosine) {
 			inBounds[0] = true;
 			return null;//input.copy();
 		} else {
@@ -335,13 +335,7 @@ public abstract class AbstractLimitCone implements Saveable {
 			Vec3f<?> B = next.getControlPoint().copy(); 
 
 			Vec3f<?> arcNormal = A.crossCopy(B); 
-			Rot aToARadian = new Rot(A, arcNormal); 
-			Vec3f<?> aToARadianAxis = aToARadian.getAxis();
-			Rot bToBRadian = new Rot(B, arcNormal); 
-			Vec3f<?> bToBRadianAxis = bToBRadian.getAxis();
-			aToARadian = new Rot(aToARadianAxis, radA);
-			bToBRadian = new Rot(bToBRadianAxis, radB);
-
+			
 			/**
 			 * There are an infinite number of circles co-tangent with A and B, every other
 			 * one of which had a unique radius.  
@@ -355,39 +349,42 @@ public abstract class AbstractLimitCone implements Saveable {
 			 *   
 			 * Another way to think of this is -- whatever the maximum distance can be between the
 			 * borders of A and B (presuming their centers are free to move about the circle
-			 * but their radii remain constant), we want our tangentCircle's diameter to be precisely that distance. 
+			 * but their radii remain constant), we want our tangentCircle's diameter to be precisely that distance, 
+			 * and so, our tangent circles radius should be precisely half of that distance. 
 			 */
-
 			float tRadius = ((MathUtils.PI)-(radA+radB))/2f;
-
 
 			/**
 			 * Once we have the desired radius for our tangent circle, we may find the solution for its
 			 * centers (usually, there are two).
 			 */
-
-			float minorAppoloniusRadiusA = radA + tRadius;
-			Vec3f<?> minorAppoloniusAxisA = A.copy().normalize(); 
-			float minorAppoloniusRadiusB = radB + tRadius;
-			Vec3f<?> minorAppoloniusAxisB  = B.copy().normalize();
-
-			//the point on the radius of this cone + half the arcdistance to the circumference of the next cone along the arc path to the next cone 
-			Vec3f<?> minorAppoloniusP1A = new Rot(arcNormal, minorAppoloniusRadiusA).applyToCopy(minorAppoloniusAxisA);
-			//the point on the radius of this cone + half the arcdistance to the circumference of the next cone, rotated 90 degrees along the axis of this cone
-			Vec3f<?> minorAppoloniusP2A = new Rot(minorAppoloniusAxisA, MathUtils.PI/2f).applyToCopy(minorAppoloniusP1A);
-			//the axis of this cone, scaled to minimize its distance to the previous two points. 
-			Vec3f<?> minorAppoloniusP3A =  SGVec_3f.mult(minorAppoloniusAxisA, MathUtils.cos(minorAppoloniusRadiusA));
-
-			Vec3f<?> minorAppoloniusP1B = new Rot(arcNormal, minorAppoloniusRadiusB).applyToCopy(minorAppoloniusAxisB);
-			Vec3f<?> minorAppoloniusP2B = new Rot(minorAppoloniusAxisB, MathUtils.PI/2f).applyToCopy(minorAppoloniusP1B);      
-			Vec3f<?> minorAppoloniusP3B = Vec3f.mult(minorAppoloniusAxisB, MathUtils.cos(minorAppoloniusRadiusB));
+			float boundaryPlusTangentRadiusA = radA + tRadius;
+			float boundaryPlusTangentRadiusB = radB + tRadius;
+			
+			//the axis of this cone, scaled to minimize its distance to the tangent  contact points. 
+			Vec3f<?> scaledAxisA =  SGVec_3f.mult(A, MathUtils.cos(boundaryPlusTangentRadiusA));
+			//a point on the plane running through the tangent contact points
+			Vec3f<?> planeDir1A = new Rot(arcNormal, boundaryPlusTangentRadiusA).applyToCopy(A);
+			//another poiint on the same plane
+			Vec3f<?> planeDir2A = new Rot(A, MathUtils.PI/2f).applyToCopy(planeDir1A);			
+			
+			Vec3f<?> scaledAxisB = Vec3f.mult(B, MathUtils.cos(boundaryPlusTangentRadiusB));
+			//a point on the plane running through the tangent contact points
+			Vec3f<?> planeDir1B = new Rot(arcNormal, boundaryPlusTangentRadiusB).applyToCopy(B);
+			//another poiint on the same plane
+			Vec3f<?> planeDir2B = new Rot(B, MathUtils.PI/2f).applyToCopy(planeDir1B);      
+			
 
 			// ray from scaled center of next cone to half way point between the circumference of this cone and the next cone. 
-			sgRayf r1B = new sgRayf(minorAppoloniusP1B, minorAppoloniusP3B); r1B.elongate(99);
-			sgRayf r2B = new sgRayf(minorAppoloniusP1B, minorAppoloniusP2B); r2B.elongate(99);
-
-			Vec3f<?> intersection1 = r1B.intersectsPlane(minorAppoloniusP3A, minorAppoloniusP1A, minorAppoloniusP2A);
-			Vec3f<?> intersection2 = r2B.intersectsPlane( minorAppoloniusP3A, minorAppoloniusP1A, minorAppoloniusP2A);
+			sgRayf r1B = new sgRayf(planeDir1B, scaledAxisB); 
+			sgRayf r2B = new sgRayf(planeDir1B, planeDir2B);
+			
+			
+			r1B.elongate(99);
+			 r2B.elongate(99);
+			 
+			Vec3f<?> intersection1 = r1B.intersectsPlane(scaledAxisA, planeDir1A, planeDir2A);
+			Vec3f<?> intersection2 = r2B.intersectsPlane( scaledAxisA, planeDir1A, planeDir2A);
 
 			sgRayf intersectionRay = new sgRayf(intersection1, intersection2);
 			intersectionRay.elongate(99);
@@ -448,9 +445,10 @@ public abstract class AbstractLimitCone implements Saveable {
 	}
 
 	public void setRadius(float radius) {
-		this.radius = radius;
-		this.radiusCosine = MathUtils.cos(radius);
-		this.parentKusudama.constraintUpdateNotification();
+		this.radius = MathUtils.max(Float.MIN_VALUE, radius);
+		this.radiusCosine = MathUtils.cos(this.radius);
+		if(this.parentKusudama != null)
+			this.parentKusudama.constraintUpdateNotification();
 	}
 
 	public AbstractKusudama getParentKusudama() {
@@ -485,8 +483,7 @@ public abstract class AbstractLimitCone implements Saveable {
 		controlPointJ.normalize();
 		
 		this.controlPoint = controlPointJ;
-		this.radius = j.getFloat("radius");
-		this.radiusCosine = MathUtils.cos(radius);
+		this.setRadius(j.getFloat("radius"));
 	}
 
 	@Override

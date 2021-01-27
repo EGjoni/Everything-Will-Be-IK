@@ -1,5 +1,7 @@
 package math.floatV;
 
+import math.floatV.Rot;
+
 public class QCP {
 
 	/**
@@ -106,6 +108,7 @@ public class QCP {
 	private float Syy, Sxx, SyzpSzy;
 	private boolean rmsdCalculated = false;
 	private boolean transformationCalculated = false;
+	private boolean innerProductCalculated = false;
 	private int length;
 
 
@@ -150,6 +153,7 @@ public class QCP {
 		this.target = moved;
 		rmsdCalculated = false;
 		transformationCalculated = false;
+		innerProductCalculated = false;
 	}
 
 	/**
@@ -166,20 +170,15 @@ public class QCP {
 	public <V extends Vec3f<?>> void set(V[] moved, V[] target, float[] weight, boolean translate) {
 		this.target = target;		
 		this.moved = moved;
-		/*this.target =new SGVec_3f[target.length];		
-		this.moved = new SGVec_3f[moved.length];
-		for(int i=0; i< target.length; i++) {
-			this.target[i] = target[i].copy();
-			this.moved[i] = moved[i].copy();
-		}*/
 		this.weight = weight;
 		rmsdCalculated = false;
 		transformationCalculated = false;
+		innerProductCalculated = false;
 
 		if(translate) {
-			getWeightedCenter(this.moved, weight, movedCenter);
+			moveToWeightedCenter(this.moved, weight, movedCenter);
 			wsum = 0f; //set wsum to 0 so we don't float up. 
-			getWeightedCenter(this.target, weight, targetCenter);
+			moveToWeightedCenter(this.target, weight, targetCenter);
 			translate(movedCenter.multCopy(-1f), this.moved);
 			translate(targetCenter.multCopy(-1f), this.target);
 		} else {
@@ -227,9 +226,10 @@ public class QCP {
 	}
 
 	private Rot getRotation() {
-		getRmsd();
-		Rot result = null; 
+		Rot result = null;
 		if (!transformationCalculated) {
+			if (!innerProductCalculated)
+				innerProduct( target, moved);			
 			result = calcRotation();
 			transformationCalculated = true;
 		}
@@ -253,7 +253,8 @@ public class QCP {
 			rmsdCalculated = true;
 		} 
 		else {
-			innerProduct(y, x);
+			if (!innerProductCalculated)
+				innerProduct(y, x);
 			calcRmsd(wsum);
 		}
 	}
@@ -286,10 +287,10 @@ public class QCP {
 		Szz = 0;
 
 		if (weight != null) {
-			//wsum = 0;
+			// wsum = 0;
 			for (int i = 0; i < coords1.length; i++) {
 
-				//wsum += weight[i];
+				// wsum += weight[i];
 
 				x1 = weight[i] * coords1[i].x;
 				y1 = weight[i] * coords1[i].y;
@@ -332,32 +333,11 @@ public class QCP {
 				Szy += coords1[i].z * coords2[i].y;
 				Szz += coords1[i].z * coords2[i].z;
 			}
-			//wsum = coords1.length;
+			// wsum = coords1.length;
 		}
-
+		
 		e0 = (g1 + g2) * 0.5f;
-	}
-
-	private int calcRmsd(float len) {
-		float Sxx2 = Sxx * Sxx;
-		float Syy2 = Syy * Syy;
-		float Szz2 = Szz * Szz;
-
-		float Sxy2 = Sxy * Sxy;
-		float Syz2 = Syz * Syz;
-		float Sxz2 = Sxz * Sxz;
-
-		float Syx2 = Syx * Syx;
-		float Szy2 = Szy * Szy;
-		float Szx2 = Szx * Szx;
-
-		float SyzSzymSyySzz2 = 2.0f * (Syz * Szy - Syy * Szz);
-		float Sxx2Syy2Szz2Syz2Szy2 = Syy2 + Szz2 - Sxx2 + Syz2 + Szy2;
-
-		float c2 = -2.0f * (Sxx2 + Syy2 + Szz2 + Sxy2 + Syx2 + Sxz2 + Szx2 + Syz2 + Szy2);
-		float c1 = 8.0f * (Sxx * Syz * Szy + Syy * Szx * Sxz + Szz * Sxy * Syx - Sxx * Syy * Szz - Syz * Szx * Sxy
-				- Szy * Syx * Sxz);
-
+		
 		SxzpSzx = Sxz + Szx;
 		SyzpSzy = Syz + Szy;
 		SxypSyx = Sxy + Syx;
@@ -366,54 +346,59 @@ public class QCP {
 		SxymSyx = Sxy - Syx;
 		SxxpSyy = Sxx + Syy;
 		SxxmSyy = Sxx - Syy;
-
-		float Sxy2Sxz2Syx2Szx2 = Sxy2 + Sxz2 - Syx2 - Szx2;
-
-		float c0 = Sxy2Sxz2Syx2Szx2 * Sxy2Sxz2Syx2Szx2
-				+ (Sxx2Syy2Szz2Syz2Szy2 + SyzSzymSyySzz2) * (Sxx2Syy2Szz2Syz2Szy2 - SyzSzymSyySzz2)
-				+ (-(SxzpSzx) * (SyzmSzy) + (SxymSyx) * (SxxmSyy - Szz))
-				* (-(SxzmSzx) * (SyzpSzy) + (SxymSyx) * (SxxmSyy + Szz))
-				+ (-(SxzpSzx) * (SyzpSzy) - (SxypSyx) * (SxxpSyy - Szz))
-				* (-(SxzmSzx) * (SyzmSzy) - (SxypSyx) * (SxxpSyy + Szz))
-				+ (+(SxypSyx) * (SyzpSzy) + (SxzpSzx) * (SxxmSyy + Szz))
-				* (-(SxymSyx) * (SyzmSzy) + (SxzpSzx) * (SxxpSyy + Szz))
-				+ (+(SxypSyx) * (SyzmSzy) + (SxzmSzx) * (SxxmSyy - Szz))
-				* (-(SxymSyx) * (SyzpSzy) + (SxzmSzx) * (SxxpSyy - Szz));
-
 		mxEigenV = e0;
 
+		innerProductCalculated = true;
+	}
 
-		int i;
-		for (i = 1; i < (max_iterations+1); ++i) {
-			float oldg = mxEigenV;
-			//float x2 = mxEigenV * mxEigenV;
-			//float b = (x2 + c2) * mxEigenV;
-			//float a = b + c1;
-			//float delta0 = ((a * mxEigenV + c0) / (2.0f * x2 * mxEigenV + b + a));			
-			//float delta = (((x2 + c2)*mxEigenV + c1)*mxEigenV + c0) / ((4*x2 + 2*c2)*mxEigenV + c1);
-			//float delta2 = (c0 + (c1 + (c2 +x2)*mxEigenV)*mxEigenV) / (c1 + (2*c2 + 4*x2)*mxEigenV);
-			float Y = 1f/mxEigenV;
-			float Y2 = Y*Y;
-			float delta = ((((Y*c0 + c1)*Y + c2)*Y2 + 1) / ((Y*c1 + 2*c2)*Y2*Y + 4));
-			mxEigenV -= delta;
-			
-			if (MathUtils.abs(mxEigenV - oldg) < MathUtils.abs(eval_prec * mxEigenV))
-				break;
+	private void calcRmsd(float len) {
+		if (max_iterations > 0) {
+			float Sxx2 = Sxx * Sxx;
+			float Syy2 = Syy * Syy;
+			float Szz2 = Szz * Szz;
+
+			float Sxy2 = Sxy * Sxy;
+			float Syz2 = Syz * Syz;
+			float Sxz2 = Sxz * Sxz;
+
+			float Syx2 = Syx * Syx;
+			float Szy2 = Szy * Szy;
+			float Szx2 = Szx * Szx;
+
+			float SyzSzymSyySzz2 = 2.0f * (Syz * Szy - Syy * Szz);
+			float Sxx2Syy2Szz2Syz2Szy2 = Syy2 + Szz2 - Sxx2 + Syz2 + Szy2;
+
+			float c2 = -2.0f * (Sxx2 + Syy2 + Szz2 + Sxy2 + Syx2 + Sxz2 + Szx2 + Syz2 + Szy2);
+			float c1 = 8.0f * (Sxx * Syz * Szy + Syy * Szx * Sxz + Szz * Sxy * Syx - Sxx * Syy * Szz - Syz * Szx * Sxy
+					- Szy * Syx * Sxz);
+
+			float Sxy2Sxz2Syx2Szx2 = Sxy2 + Sxz2 - Syx2 - Szx2;
+
+			float c0 = Sxy2Sxz2Syx2Szx2 * Sxy2Sxz2Syx2Szx2
+					+ (Sxx2Syy2Szz2Syz2Szy2 + SyzSzymSyySzz2) * (Sxx2Syy2Szz2Syz2Szy2 - SyzSzymSyySzz2)
+					+ (-(SxzpSzx) * (SyzmSzy) + (SxymSyx) * (SxxmSyy - Szz))
+							* (-(SxzmSzx) * (SyzpSzy) + (SxymSyx) * (SxxmSyy + Szz))
+					+ (-(SxzpSzx) * (SyzpSzy) - (SxypSyx) * (SxxpSyy - Szz))
+							* (-(SxzmSzx) * (SyzmSzy) - (SxypSyx) * (SxxpSyy + Szz))
+					+ (+(SxypSyx) * (SyzpSzy) + (SxzpSzx) * (SxxmSyy + Szz))
+							* (-(SxymSyx) * (SyzmSzy) + (SxzpSzx) * (SxxpSyy + Szz))
+					+ (+(SxypSyx) * (SyzmSzy) + (SxzmSzx) * (SxxmSyy - Szz))
+							* (-(SxymSyx) * (SyzpSzy) + (SxzmSzx) * (SxxpSyy - Szz));
+
+			int i;
+			for (i = 1; i < (max_iterations + 1); ++i) {
+				float oldg = mxEigenV;
+				float Y = 1f / mxEigenV;
+				float Y2 = Y * Y;
+				float delta = ((((Y * c0 + c1) * Y + c2) * Y2 + 1) / ((Y * c1 + 2 * c2) * Y2 * Y + 4));
+				mxEigenV -= delta;
+
+				if (MathUtils.abs(mxEigenV - oldg) < MathUtils.abs(eval_prec * mxEigenV))
+					break;
+			}
 		}
 
-		/*if (i == max_iterations) {
-			System.out.println(String.format("More than %d iterations needed!", i));
-		} else {
-			System.out.println(String.format("%d iterations needed!", i));
-		}*/
-
-		/*
-		 * the fabs() is to guard against extremely small, but *negative*
-		 * numbers due to floating point error
-		 */
 		rmsd = MathUtils.sqrt(MathUtils.abs(2.0f * (e0 - mxEigenV) / len));
-
-		return 1;
 	}
 
 	private Rot calcRotation() {
@@ -514,7 +499,7 @@ public class QCP {
 		}
 	}
 
-	public <V extends Vec3f<?>> V getWeightedCenter(V[] toCenter, float[] weight, V center)	{	    	    
+	public <V extends Vec3f<?>> V moveToWeightedCenter(V[] toCenter, float[] weight, V center)	{	    	    
 
 		if (weight != null) {
 			for (int i = 0; i < toCenter.length; i++)

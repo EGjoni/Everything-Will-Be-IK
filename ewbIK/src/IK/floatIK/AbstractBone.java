@@ -1102,6 +1102,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 
 		thisBone.setFloat("boneHeight", this.getBoneHeight());
 		thisBone.setFloat("stiffness", this.getStiffness());
+		thisBone.setString("tag", this.getTag());
 
 		return thisBone; 
 	}

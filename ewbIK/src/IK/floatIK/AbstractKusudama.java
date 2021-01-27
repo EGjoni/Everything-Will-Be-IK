@@ -233,7 +233,7 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	public <V extends Vec3f<?>> boolean isInLimits_(V globalPoint) {
 		float[] inBounds = {1f}; 
 		//boneRay.p1.set(toSet.origin()); boneRay.p2.set(toSet.y().getScaledTo(attachedTo.boneHeight));    
-		Vec3f<?> inLimits = this.pointInLimits(globalPoint, inBounds, limitingAxes);    
+		Vec3f<?> inLimits = this.pointInLimits(limitingAxes.getLocalOf(globalPoint), inBounds);    
 		return inBounds[0] > 0f;
 	}
 
@@ -246,15 +246,14 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	 */
 	public void setAxesToOrientationSnap(AbstractAxes toSet, AbstractAxes limitingAxes, float cosHalfAngleDampen) {
 		float[] inBounds = {1f}; 
-		boneRay.p1().set(toSet.origin_()); boneRay.p2().set(toSet.y_().getScaledTo(attachedTo.boneHeight));    
-		Vec3f<?> inLimits = this.pointInLimits(boneRay.p2(), inBounds, limitingAxes);
-
+		limitingAxes.updateGlobal();
+		boneRay.p1().set(limitingAxes.origin_()); boneRay.p2().set(toSet.y_().p2());
+		Vec3f<?> bonetip = limitingAxes.getLocalOf(toSet.y_().p2());
+		Vec3f<?> inLimits = this.pointInLimits(bonetip, inBounds);
 
 		if (inBounds[0] == -1 && inLimits != null) {     
-			constrainedRay.p1().set(boneRay.p1()); constrainedRay.p2().set(inLimits); 
+			constrainedRay.p1().set(boneRay.p1()); constrainedRay.p2().set(limitingAxes.getGlobalOf(inLimits)); 
 			Rot rectifiedRot = new Rot(boneRay.heading(), constrainedRay.heading());
-			
-			//rectifiedRot.rotation.clampToQuadranceAngle(cosHalfAngleDampen);
 			toSet.rotateBy(rectifiedRot);
 			toSet.updateGlobal();			
 		}		
@@ -262,8 +261,8 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 
 	public boolean isInOrientationLimits(AbstractAxes globalAxes, AbstractAxes limitingAxes) {
 		float[] inBounds = {1f}; 		
-		boneRay.p1().set(globalAxes.origin_()); boneRay.p2().set(globalAxes.y_().getScaledTo(attachedTo.boneHeight));    
-		Vec3f<?> inLimits = this.pointInLimits(boneRay.p2(), inBounds, limitingAxes);
+		//boneRay.p1().set(globalAxes.origin_()); boneRay.p2().set(globalAxes.y_().getScaledTo(attachedTo.boneHeight));    
+		Vec3f<?> inLimits = this.pointInLimits(limitingAxes.getLocalOf(globalAxes.y_().p2()), inBounds);
 		if(inBounds[0] == -1l) {
 			return false;
 		} else {
@@ -391,10 +390,9 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	 * the point is outside of the boundary, but does not signify anything about how far from the boundary the point is.  
 	 * @return the original point, if it's in limits, or the closest point which is in limits.
 	 */
-	public <V extends Vec3f<?>> Vec3f<?> pointInLimits(V inPoint, float[] inBounds, AbstractAxes limitingAxes) {
+	public <V extends Vec3f<?>> Vec3f<?> pointInLimits(V inPoint, float[] inBounds) {
 
 		Vec3f<?> point = inPoint.copy(); 
-		limitingAxes.setToLocalOf(inPoint, point);
 		point.normalize(); 		
 		//point.mult(attachedTo.boneHeight);
 
@@ -418,19 +416,22 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 				} 
 			}   
 			if (inBounds[0] == -1) { 
-				return limitingAxes.getGlobalOf(closestCollisionPoint);
+				return closestCollisionPoint;
 			} else { 
-				return inPoint;
+				return point;
 			}
 		} else if(orientationallyConstrained) {
-			if(point.dot(limitCones.get(0).getControlPoint()) > limitCones.get(0).getRadiusCosine()) {
+			float pointdot = point.dot(limitCones.get(0).getControlPoint()); 
+			float radcos = limitCones.get(0).getRadiusCosine();
+			if(pointdot > radcos) {
 				inBounds[0] = 1;
 				return inPoint;
 			} else {
 				Vec3f<?> axis = limitCones.get(0).getControlPoint().crossCopy(point);
 				//Rot toLimit = new Rot(limitCones.get(0).getControlPoint(), point);
 				Rot toLimit = new Rot(axis, limitCones.get(0).getRadius());
-				return limitingAxes.getGlobalOf(toLimit.applyToCopy(limitCones.get(0).getControlPoint()));
+				Vec3f<?> newPoint = toLimit.applyToCopy(limitCones.get(0).getControlPoint());
+				return newPoint;
 			}
 		} else {
 			inBounds[0] = 1;
