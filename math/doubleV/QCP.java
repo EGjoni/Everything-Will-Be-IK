@@ -171,11 +171,6 @@ public class QCP {
 	public <V extends Vec3d<?>> void set(V[] moved, V[] target, double[] weight, boolean translate) {
 		this.target = target;
 		this.moved = moved;
-		/*
-		 * this.target =new SGVec_3d[target.length]; this.moved = new
-		 * SGVec_3d[moved.length]; for(int i=0; i< target.length; i++) { this.target[i]
-		 * = target[i].copy(); this.moved[i] = moved[i].copy(); }
-		 */
 		this.weight = weight;
 		rmsdCalculated = false;
 		transformationCalculated = false;
@@ -183,10 +178,10 @@ public class QCP {
 
 		if (translate) {
 			moveToWeightedCenter(this.moved, weight, movedCenter);
-			wsum = 0f; // set wsum to 0 so we don't double up.
+			wsum = 0d; // set wsum to 0 so we don't double up.
 			moveToWeightedCenter(this.target, weight, targetCenter);
-			translate(movedCenter.multCopy(-1f), this.moved);
-			translate(targetCenter.multCopy(-1f), this.target);
+			translate(movedCenter.multCopy(-1d), this.moved);
+			translate(targetCenter.multCopy(-1d), this.target);
 		} else {
 			if (weight != null) {
 				for (int i = 0; i < weight.length; i++) {
@@ -231,36 +226,6 @@ public class QCP {
 		return result;// transformation;
 	}
 
-	/**
-	 * Weighted superposition.
-	 *
-	 * @param fixed
-	 * @param moved
-	 * @param weight
-	 *            array of weigths for each equivalent point position
-	 * @return
-	 */
-	public <V extends Vec3f<?>> Rot weightedSuperpose(V[] moved, V[] target, float[] weight, boolean translate) {
-		double[] weightd = null;
-		if (weight != null)
-			weightd = new double[moved.length];
-
-		SGVec_3d[] movedd = new SGVec_3d[moved.length];
-		SGVec_3d[] targetd = new SGVec_3d[target.length];
-
-		for (int i = 0; i < moved.length; i++) {
-			if (weight != null)
-				weightd[i] = weight[i];
-
-			movedd[i] = new SGVec_3d((double) moved[i].x, (double) moved[i].y, (double) moved[i].z);
-			targetd[i] = new SGVec_3d((double) target[i].x, (double) target[i].y, (double) target[i].z);
-		}
-
-		set(movedd, targetd, weightd, translate);
-		Rot result = getRotation();
-		// transformation.set(rotmat);
-		return result;// transformation;
-	}
 
 	private Rot getRotation() {
 		Rot result = null;
@@ -433,19 +398,8 @@ public class QCP {
 			}
 		}
 
-		/*
-		 * if (i == max_iterations) {
-		 * System.out.println(String.format("More than %d iterations needed!", i)); }
-		 * else { System.out.println(String.format("%d iterations needed!", i)); }
-		 */
-
-		/*
-		 * the fabs() is to guard against extremely small, but *negative* numbers due to
-		 * doubleing point error
-		 */
 		rmsd = MathUtils.sqrt(MathUtils.abs(2.0f * (e0 - mxEigenV) / len));
 
-		//return rmsd;
 	}
 
 	private Rot calcRotation() {
