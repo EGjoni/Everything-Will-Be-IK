@@ -17,14 +17,11 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
  */
 
-package sceneGraph.math.floatV;
+package math.floatV;
 //import org.apache.commons.math3.geometry.euclidean.threed.*;
 
-
-import data.JSONArray;
-import sceneGraph.math.floatV.SGVec_3f;
-import sceneGraph.numerical.Precision.MathArithmeticException;
-import sceneGraph.numerical.Precision.MathIllegalArgumentException;
+import asj.data.JSONArray;
+import math.floatV.SGVec_3f;
 
 public class Rot {
 	public MRotation rotation; 
@@ -39,24 +36,7 @@ public class Rot {
 				MRotation.IDENTITY.getQ3(), false);
 	};
 	
-	/**
-	 * assume no normalization is needed
-	 * 
-	 * @param q
-	 */
-	public Rot(Quaternionf q) {
-		this.rotation = new MRotation(q.getQ0(), q.getQ1(), q.getQ2(), q.getQ3(), false);
-	}
 
-	
-	/**
-	 * 
-	 * @param q
-	 * @param normalize
-	 */
-	public Rot(Quaternionf q, boolean normalize) {
-		this.rotation = new MRotation(q.getQ0(), q.getQ1(), q.getQ2(), q.getQ3(), normalize);
-	}
 	
 
 	
@@ -64,36 +44,33 @@ public class Rot {
 		this.rotation = new MRotation(r.getQ0(), r.getQ1(), r.getQ2(), r.getQ3());
 	}
 
-	public Rot( SGVec_3f v1, SGVec_3f v2, SGVec_3f u1, SGVec_3f u2) {
-		try {
-			rotation = new MRotation(
-					new SGVec_3f(v1), 
-					new SGVec_3f(v2), 
-					new SGVec_3f(u1), 
-					new SGVec_3f(u2));
-		} catch(Exception e) {
-			rotation = new MRotation(v1, 0f);
-		}
+	public <V extends Vec3f<?>> Rot( V v1, V v2, V u1, V u2) {
+		//try {
+			rotation = new MRotation(v1,v2,u1,u2);
+		//} catch(Exception e) {
+			//rotation = new MRotation(v1, 0f);
+		//}
 	}
 
-	public Rot( SGVec_3f  axis, float angle) {		
-		try {
+	
+	public <V extends Vec3f<?>> Rot( V  axis, float angle) {		
+		//try {
 			rotation = new MRotation(axis, angle); 
-		} catch(Exception e) { 
-			rotation = new MRotation(RotationOrder.X, 0f);
-		}
+		//} catch(Exception e) { 
+			//rotation = new MRotation(RotationOrder.X, 0f);
+		//}
 	}
 
 	public Rot(float w, float x, float y, float z, boolean needsNormalization) {
 		this.rotation = new MRotation(w, x, y, z, needsNormalization);  
 	}  
 	
-	public Rot( SGVec_3f begin, SGVec_3f end) {
-		try{ 
+	public <V extends Vec3f<?>> Rot( V begin, V end) {
+		//try{ 
 			rotation = new MRotation(begin, end);
-		} catch(Exception e) { 
-			rotation = new MRotation(RotationOrder.X, 0f);
-		}
+		//} catch(Exception e) { 
+			//rotation = new MRotation(RotationOrder.X, 0f);
+		//}
 	}
 
 	
@@ -131,12 +108,8 @@ public class Rot {
 	 * @param axis
 	 * @param angle
 	 */
-	public void set(SGVec_3f axis, float angle) {
-		try {
-			this.rotation.set(axis, angle);
-		} catch (MathIllegalArgumentException e) {
-			e.printStackTrace();
-		}
+	public <V extends Vec3f<?>> void set(V axis, float angle) {
+		this.rotation.set(axis, angle);
 	}
 	
 	/**
@@ -145,23 +118,19 @@ public class Rot {
 	 * @param axis
 	 * @param angle
 	 */
-	public void set(SGVec_3f startVec, SGVec_3f targetVec) {
-		try {
-			this.rotation.set(startVec, targetVec);
-		} catch (MathArithmeticException e) {
-			e.printStackTrace();
-		}
+	public <V extends Vec3f<?>> void set(V startVec, V targetVec) {
+		this.rotation.set(startVec, targetVec);
 	}
 	
 
-	public void applyTo( SGVec_3f v, SGVec_3f output) {
+	public <V extends Vec3f<?>> void applyTo( V v, V output) {
 		workingInput[0] = v.x; workingInput[1] = v.y; workingInput[2]=v.z; 
 		rotation.applyTo(workingInput, workingOutput);
 		output.set(workingOutput);
 	}
 
 
-	public void applyInverseTo( SGVec_3f v, SGVec_3f output) {
+	public <V extends Vec3f<?>> void applyInverseTo( V v, V output) {
 		workingInput[0] = v.x; workingInput[1] = v.y; workingInput[2]=v.z; 
 		rotation.applyInverseTo(workingInput, workingOutput);
 		output.set(workingOutput);
@@ -174,19 +143,19 @@ public class Rot {
 	 * @return
 	 */
 	
-	public SGVec_3f applyToCopy( SGVec_3f v) {
+	public <T extends Vec3f<?>> T applyToCopy( T v) {
 		workingInput[0] = v.x; workingInput[1] = v.y; workingInput[2]=v.z; 
 		rotation.applyTo(workingInput, workingOutput);
-		 SGVec_3f copy =  v.copy();		
-		return copy.set(workingOutput[0], workingOutput[1], workingOutput[2]);
+		 T copy =  (T)v.copy();		
+		return (T) copy.set(workingOutput[0], workingOutput[1], workingOutput[2]);
 	}
 
 
-	public SGVec_3f  applyInverseToCopy( SGVec_3f v) {
+	public <T extends Vec3f<?>> T applyInverseToCopy( T v) {
 		workingInput[0] = v.x; workingInput[1] = v.y; workingInput[2]=v.z; 
 		rotation.applyInverseTo(workingInput, workingOutput);
-		 SGVec_3f copy =  v.copy();		
-		return copy.set(workingOutput[0], workingOutput[1], workingOutput[2]);
+		 T copy =  (T) v.copy();		
+		return (T) copy.set(workingOutput[0], workingOutput[1], workingOutput[2]);
 	}
 
 
@@ -281,29 +250,33 @@ public class Rot {
 	}
 
 	public SGVec_3f getAxis() {
-		return rotation.getAxis();
+		SGVec_3f result = new SGVec_3f();
+		getAxis(result);
+		return result;
 	}
 	
-	public void getAxis( SGVec_3f output) {
-		output.set(rotation.getAxis());
+	public <T extends Vec3f<?>> void getAxis( T output) {
+		rotation.setToAxis(output);
 	}
 
 
 	public Rot revert() {
 		return new Rot(this.rotation.revert());
 	}
-
+	/** 
+	 * sets the values of the given rotation equal to the inverse of this rotation
+	 * @param storeIN
+	 */
+	public void setToReversion(Rot r) {
+		rotation.revert(r.rotation);
+	}
 
 	/*
 	 * interpolate between two rotations (SLERP)
 	 * 
 	 */
 	public Rot(float amount, Rot v1, Rot v2) {
-		Quaternionf q = slerp(amount, 
-				new Quaternionf(v1.rotation.getQ0(), v1.rotation.getQ1(),v1.rotation.getQ2(), v1.rotation.getQ3()),
-				new Quaternionf(v2.rotation.getQ0(), v2.rotation.getQ1(),v2.rotation.getQ2(), v2.rotation.getQ3()));
-
-		rotation = new MRotation(q.getQ0(), q.getQ1(), q.getQ2(), q.getQ3(), false);
+		rotation = slerp(amount, v1.rotation, v2.rotation);
 	}
 
 	/** Get the swing rotation and twist rotation for the specified axis. The twist rotation represents the rotation around the
@@ -317,67 +290,19 @@ public class Rot {
 	 * @return an Array of Rot objects. With the first element representing the swing, and the second representing the twist
 	 * @see <a href="http://www.euclideanspace.com/maths/geometry/rotations/for/decomposition">calculation</a> */
 	public Rot[] getSwingTwist ( SGVec_3f axis) {
-		Quaternionf swing = new Quaternionf(); 
-		Quaternionf twist = new Quaternionf(); 
-		Quaternionf thisRot = new Quaternionf(rotation.getQ0(), rotation.getQ1(), rotation.getQ2(), rotation.getQ3());
-		thisRot.getSwingTwist(axis, swing, twist);
-		Rot[] result = new Rot[2];
-		result[0] = new Rot(swing);
-		result[1] = new Rot(twist);
-		return result;
-	}
-
-
-	public static Quaternionf slerp(float amount, Quaternionf value1, Quaternionf value2)
-	{
-		if(Float.isNaN(amount)) {
-			return new Quaternionf(value1.getQ0(), value1.getQ1(), value1.getQ2(), value1.getQ3());
-		}
+		Rot twistRot= new Rot(new MRotation(rotation.getQ0(), rotation.getQ1(), rotation.getQ2(), rotation.getQ3()));
+		final float d = SGVec_3f.dot(twistRot.rotation.getQ1(), twistRot.rotation.getQ2(), twistRot.rotation.getQ3(), axis.x, axis.y, axis.z);
+		twistRot.rotation.set(rotation.getQ0(), axis.x * d, axis.y * d, axis.z * d, true);
+		if (d < 0) twistRot.rotation.multiply(-1f);
 		
-		if (amount < 0.0)
-			return value1;
-		else if (amount > 1.0)
-			return value2;
-
-		float dot = value1.dot(value2);
-		float x2, y2, z2, w2;
-		if (dot < 0.0)
-		{
-			dot = 0.0f - dot;
-			x2 = 0.0f - value2.getQ1();
-			y2 = 0.0f - value2.getQ2();
-			z2 = 0.0f - value2.getQ3();
-			w2 = 0.0f - value2.getQ0();
-		}
-		else
-		{
-			x2 = value2.getQ1();
-			y2 = value2.getQ2();
-			z2 = value2.getQ3();
-			w2 = value2.getQ0();
-		}
-
-		float t1, t2;
-
-		final float EPSILON = 0.0001f;
-		if ((1.0 - dot) > EPSILON) // standard case (slerp)
-		{
-			float angle = MathUtils.acos(dot);
-			float sinAngle = MathUtils.sin(angle);
-			t1 = MathUtils.sin((1.0f - amount) * angle) / sinAngle;
-			t2 = MathUtils.sin(amount * angle) / sinAngle;
-		}
-		else // just lerp
-		{
-			t1 = 1.0f - amount;
-			t2 = amount;
-		}
-
-		return new Quaternionf(
-				(value1.getQ0() * t1) + (w2 * t2),
-				(value1.getQ1() * t1) + (x2 * t2),
-				(value1.getQ2() * t1) + (y2 * t2),
-				(value1.getQ3() * t1) + (z2 * t2));
+		Rot swing = new Rot(twistRot.rotation);
+		swing.rotation.setToConjugate();
+		swing.rotation = MRotation.multiply(twistRot.rotation, swing.rotation);
+		
+		Rot[] result = new Rot[2];
+		result[0] = swing;
+		result[1] = twistRot;
+		return result;
 	}
 	
 	public static MRotation slerp(float amount, MRotation value1, MRotation value2)
@@ -393,21 +318,21 @@ public class Rot {
 
 		float dot = value1.dotProduct(value2);
 		float x2, y2, z2, w2;
-		if (dot < 0.0)
+		/*if (dot < 0.0)
 		{
-			dot = 0.0f - dot;
-			x2 = 0.0f - value2.getQ1();
-			y2 = 0.0f - value2.getQ2();
-			z2 = 0.0f - value2.getQ3();
-			w2 = 0.0f - value2.getQ0();
+			dot = 0.0 - dot;
+			x2 = 0.0 - value2.getQ1();
+			y2 = 0.0 - value2.getQ2();
+			z2 = 0.0 - value2.getQ3();
+			w2 = 0.0 - value2.getQ0();
 		}
 		else
-		{
+		{*/
 			x2 = value2.getQ1();
 			y2 = value2.getQ2();
 			z2 = value2.getQ3();
 			w2 = value2.getQ0();
-		}
+		//}
 
 		float t1, t2;
 
@@ -525,7 +450,11 @@ public class Rot {
 	}
 
 	public String toString() {
-		return "\n axis: "+ this.getAxis().toSGVec3f() +", \n angle: "+((float)Math.toDegrees(this.getAngle()));
+		return rotation.toString();//"\n axis: "+ this.getAxis().toVec3f() +", \n angle: "+((float)MathUtils.toDegrees(this.getAngle()));
+	}
+	
+	public boolean equalTo(Rot m) {
+		return MRotation.distance(this.rotation, m.rotation) < MathUtils.DOUBLE_ROUNDING_ERROR;
 	}
 	
 	/**
@@ -550,6 +479,5 @@ public class Rot {
 		result.append(this.rotation.getQ3());
 		return result;
 	}
-
 
 }

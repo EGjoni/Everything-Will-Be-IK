@@ -1,10 +1,10 @@
-package math.doubleV;
+package math.floatV;
 
 import asj.*;
 import asj.*;
 import asj.data.*;
 import math.*;
-import math.doubleV.*;
+import math.floatV.*;
 import math.floatV.Vec3f;
 
 
@@ -30,30 +30,30 @@ public abstract class AbstractBasis {
 	/**
 	 * a vector respresnting the translation of this basis relative to its parent. 
 	 */
-	public Vec3d<?> translate;
+	public Vec3f<?> translate;
 	
 	
-	protected Vec3d<?> xBase; //= new SGVec_3d(1,0,0); 
-	protected Vec3d<?> yBase; //= new SGVec_3d(0,1,0); 
-	protected Vec3d<?> zBase;// = new SGVec_3d(0,0,1); 
+	protected Vec3f<?> xBase; //= new SGVec_3f(1,0,0); 
+	protected Vec3f<?> yBase; //= new SGVec_3f(0,1,0); 
+	protected Vec3f<?> zBase;// = new SGVec_3f(0,0,1); 
 	
-	protected sgRayd xRay;// = new sgRayd(new SGVec_3d(0,0,0), new SGVec_3d(1,0,0)); 
-	protected sgRayd yRay;// = new sgRayd(new SGVec_3d(0,0,0), new SGVec_3d(0,1,0)); 
-	protected sgRayd zRay;// = new sgRayd(new SGVec_3d(0,0,0), new SGVec_3d(0,0,1)); 
+	protected sgRayf xRay;// = new sgRayf(new SGVec_3f(0,0,0), new SGVec_3f(1,0,0)); 
+	protected sgRayf yRay;// = new sgRayf(new SGVec_3f(0,0,0), new SGVec_3f(0,1,0)); 
+	protected sgRayf zRay;// = new sgRayf(new SGVec_3f(0,0,0), new SGVec_3f(0,0,1)); 
 	
 	
 	/**
 	 * Initialize this basis at the origin. The basis will be righthanded by default. 
 	 * @param origin
 	 */
-	public AbstractBasis(Vec3d<?> origin) {
+	public AbstractBasis(Vec3f<?> origin) {
 			translate = origin.copy();
 			xBase = origin.copy(); yBase = origin.copy(); zBase = origin.copy(); 
 			xBase.set(1,0,0); yBase.set(0,1,0); zBase.set(0,0,1);
-			Vec3d<?> zero = origin.copy(); zero.set(0,0,0);
-			xRay = new sgRayd(zero.copy(), xBase.copy());
-			yRay = new sgRayd(zero.copy(), yBase.copy());
-			zRay = new sgRayd(zero.copy(), zBase.copy());
+			Vec3f<?> zero = origin.copy(); zero.set(0,0,0);
+			xRay = new sgRayf(zero.copy(), xBase.copy());
+			yRay = new sgRayf(zero.copy(), yBase.copy());
+			zRay = new sgRayf(zero.copy(), zBase.copy());
 			refreshPrecomputed();
 	}
 	
@@ -61,10 +61,10 @@ public abstract class AbstractBasis {
 		translate = input.translate.copy();
 		xBase = translate.copy(); yBase = translate.copy(); zBase = translate.copy(); 
 		xBase.set(1,0,0); yBase.set(0,1,0); zBase.set(0,0,1);
-		Vec3d<?> zero = translate.copy(); zero.set(0,0,0);
-		xRay = new sgRayd(zero.copy(), xBase.copy());
-		yRay = new sgRayd(zero.copy(), yBase.copy());
-		zRay = new sgRayd(zero.copy(), zBase.copy());
+		Vec3f<?> zero = translate.copy(); zero.set(0,0,0);
+		xRay = new sgRayf(zero.copy(), xBase.copy());
+		yRay = new sgRayf(zero.copy(), yBase.copy());
+		zRay = new sgRayf(zero.copy(), zBase.copy());
 		this.adoptValues(input);
 		
 	}
@@ -85,11 +85,11 @@ public abstract class AbstractBasis {
 	 * @param y basis vector direction
 	 * @param z basis vector direction
 	 */
-	public <V extends Vec3d<?>> AbstractBasis(V origin, V x, V y, V z) {
+	public <V extends Vec3f<?>> AbstractBasis(V origin, V x, V y, V z) {
 		this.translate = origin.copy();
-		xRay = new sgRayd(origin.copy(), origin.copy());
-		yRay = new sgRayd(origin.copy(), origin.copy());
-		zRay = new sgRayd(origin.copy(), origin.copy());
+		xRay = new sgRayf(origin.copy(), origin.copy());
+		yRay = new sgRayf(origin.copy(), origin.copy());
+		zRay = new sgRayf(origin.copy(), origin.copy());
 		this.set(x.copy(), y.copy(), z.copy());
 	}
 	
@@ -110,21 +110,21 @@ public abstract class AbstractBasis {
 	 * @param y basis Ray 
 	 * @param z basis Ray 
 	 */	
-	public <R extends sgRayd> AbstractBasis(R x, R y, R z) {
+	public <R extends sgRayf> AbstractBasis(R x, R y, R z) {
 		this.translate = x.p1().copy();		
 		xRay = x.copy(); yRay= y.copy(); zRay = z.copy();		
-		Vec3d<?> xDirNew =x.heading().copy();
-		Vec3d<?> yDirNew =y.heading().copy();
-		Vec3d<?> zDirNew = z.heading().copy(); 		
+		Vec3f<?> xDirNew =x.heading().copy();
+		Vec3f<?> yDirNew =y.heading().copy();
+		Vec3f<?> zDirNew = z.heading().copy(); 		
 		xDirNew.normalize(); yDirNew.normalize(); zDirNew.normalize();		
 		set(xDirNew, yDirNew, zDirNew);
 		
 	}
 	
-	private <V extends Vec3d<?>> void set(V x, V y, V z) {
+	private <V extends Vec3f<?>> void set(V x, V y, V z) {
 		xBase = translate.copy(); yBase = translate.copy(); zBase = translate.copy(); 
 		xBase.set(1,0,0); yBase.set(0,1,0); zBase.set(0,0,1);
-		Vec3d<?> zero = translate.copy(); zero.set(0,0,0);
+		Vec3f<?> zero = translate.copy(); zero.set(0,0,0);
 		xRay.setP1(zero.copy()); xRay.setP2(xBase.copy());
 		yRay.setP1(zero.copy()); yRay.setP2(yBase.copy());
 		zRay.setP1(zero.copy()); zRay.setP2(zBase.copy());
@@ -157,19 +157,19 @@ public abstract class AbstractBasis {
 
 	
 	
-	private Rot createPrioritzedRotation(Vec3d<?> xHeading, Vec3d<?> yHeading, Vec3d<?> zHeading) {		
+	private Rot createPrioritzedRotation(Vec3f<?> xHeading, Vec3f<?> yHeading, Vec3f<?> zHeading) {		
 	
-			Vec3d<?> tempV = zHeading.copy(); tempV.set(0,0,0);
+			Vec3f<?> tempV = zHeading.copy(); tempV.set(0,0,0);
 			Rot toYZ = new Rot(yBase, zBase, yHeading, zHeading); 
 			toYZ.applyTo(yBase, tempV);
 			Rot toY = new Rot(tempV, yHeading);
 
 			return toY.applyTo(toYZ);
-		/*Vec3d<?> xidt = xBase.copy(); Vec3d<?> yidt = yBase.copy();  Vec3d<?> zidt = zBase.copy();
-		Vec3d<?> origin = xBase.copy(); origin.set(0,0,0);  
+		/*Vec3f<?> xidt = xBase.copy(); Vec3f<?> yidt = yBase.copy();  Vec3f<?> zidt = zBase.copy();
+		Vec3f<?> origin = xBase.copy(); origin.set(0,0,0);  
 		
-		Vec3d<?>[] from = {origin, xidt, yidt, zidt};
-		Vec3d<?>[] to = {origin.copy(), xHeading, yHeading, zHeading};
+		Vec3f<?>[] from = {origin, xidt, yidt, zidt};
+		Vec3f<?>[] to = {origin.copy(), xHeading, yHeading, zHeading};
 		QCP alignHeads = new QCP(MathUtils.DOUBLE_ROUNDING_ERROR, MathUtils.DOUBLE_ROUNDING_ERROR);
 		alignHeads.setMaxIterations(50);
 		Rot rotation = alignHeads.weightedSuperpose(from, to, null, false);
@@ -192,16 +192,17 @@ public abstract class AbstractBasis {
 	public void refreshPrecomputed() {
 		this.rotation.setToReversion(inverseRotation);
 		this.updateRays();		
+		
 	}
 	
-	public <V extends Vec3d<?>> V getLocalOf(V v) {
+	public <V extends Vec3f<?>> V getLocalOf(V v) {
 		V result = (V) v.copy(); 
 		setToLocalOf(v, result);
 		return result;
 	}
 
 	
-	public <V extends Vec3d<?>> void setToLocalOf(V input, V output) {
+	public <V extends Vec3f<?>> void setToLocalOf(V input, V output) {
 		output.set(input);
 		output.sub(this.translate); 
 		inverseRotation.applyTo(output, output);  	
@@ -223,7 +224,7 @@ public abstract class AbstractBasis {
 	 * so by default this function will just set @param vec to (1,0,0),
 	 * but extending (affine) classes can override this to represent the direction and magnitude of the x axis prior to rotation. 
 	 */
-	public <V extends Vec3d<?>> void setToShearXBase(V vec){
+	public <V extends Vec3f<?>> void setToShearXBase(V vec){
 		vec.set(xBase);
 	}
 
@@ -232,7 +233,7 @@ public abstract class AbstractBasis {
 	 * so by default this function will just set @param vec to (0,1,0),
 	 * but extending (affine) classes can override this to represent the direction and magnitude of the y axis prior to rotation. 
 	 */
-	public <V extends Vec3d<?>>void setToShearYBase(V vec){
+	public <V extends Vec3f<?>>void setToShearYBase(V vec){
 		vec.set(yBase);
 	}
 
@@ -241,7 +242,7 @@ public abstract class AbstractBasis {
 	 * so by default this function will just set @param vec to (0,0,1),
 	 * but extending (affine) classes can override this to represent the direction and magnitude of the z axis prior to rotation. 
 	 */
-	public <V extends Vec3d<?>> void setToShearZBase(V vec){
+	public <V extends Vec3f<?>> void setToShearZBase(V vec){
 		vec.set(zBase);
 	}
 	
@@ -260,51 +261,51 @@ public abstract class AbstractBasis {
 	}
 	
 	
-	public <V extends Vec3d<?>> void setToGlobalOf(V input, V output) {
+	public <V extends Vec3f<?>> void setToGlobalOf(V input, V output) {
 		rotation.applyTo(input, output);
-		output.add(this.translate);		
- 	}
+		output.add(this.translate); 	
+	}
 	
 	
-	public <V extends Vec3d<?>> void translateBy(V transBy) {
+	public <V extends Vec3f<?>> void translateBy(V transBy) {
 		this.translate.x += transBy.x; 
 		this.translate.y += transBy.y;
 		this.translate.z += transBy.z;
 		updateRays();
 	}
 	
-	public <V extends Vec3d<?>> void translateTo(V newOrigin) {
+	public <V extends Vec3f<?>> void translateTo(V newOrigin) {
 		this.translate.x = newOrigin.x;
 		this.translate.y = newOrigin.y;
 		this.translate.z = newOrigin.z; 
 		updateRays();
 	}
 	
-	public sgRayd getXRay() {
+	public sgRayf getXRay() {
 		return xRay; 
 	}
 
-	public sgRayd getYRay() {
+	public sgRayf getYRay() {
 		return yRay; 
 	}
 
-	public sgRayd getZRay() {
+	public sgRayf getZRay() {
 		return zRay; 
 	}
 	
-	public Vec3d<?> getXHeading() {
+	public Vec3f<?> getXHeading() {
 		return this.xRay.heading();
 	}
 
-	public Vec3d<?> getYHeading() {
+	public Vec3f<?> getYHeading() {
 		return this.yRay.heading();
 	}
 
-	public Vec3d<?> getZHeading() {
+	public Vec3f<?> getZHeading() {
 		return this.zRay.heading();
 	}
 
-	public Vec3d<?> getOrigin() {
+	public Vec3f<?> getOrigin() {
 		return translate;
 	}
 	
@@ -360,7 +361,7 @@ public abstract class AbstractBasis {
 				+chirality + " handed \n"
 				+"origin: " + this.translate.toVec3f() + "\n"
 				+"rot Axis: " + this.rotation.getAxis().toVec3f() + ", "
-				+"Angle: " + (float)Math.toDegrees(this.rotation.getAngle()) + "\n"
+				+"Angle: " + (float)MathUtils.toDegrees(this.rotation.getAngle()) + "\n"
 				+"xHead: " + xh + ", mag: " + xMag + "\n"
 				+"yHead: " + yh + ", mag: " + yMag + "\n"
 				+"zHead: " + zh + ", mag: " + zMag + "\n";

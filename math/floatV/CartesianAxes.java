@@ -1,4 +1,4 @@
-package math.doubleV;
+package math.floatV;
 
 import asj.LoadManager;
 import asj.data.JSONObject;
@@ -9,7 +9,7 @@ public class CartesianAxes extends AbstractAxes {
 	public CartesianAxes(AbstractBasis globalBasis, AbstractAxes parent) {
 		super(globalBasis, parent);
 	}
-	public CartesianAxes(Vec3d<?> origin, Vec3d<?> inX, Vec3d<?> inY, Vec3d<?> inZ,
+	public CartesianAxes(Vec3f<?> origin, Vec3f<?> inX, Vec3f<?> inY, Vec3f<?> inZ,
 			AbstractAxes parent) {
 		super(origin, inX, inY, inZ, parent, true);
 		createTempVars(origin);
@@ -19,8 +19,8 @@ public class CartesianAxes extends AbstractAxes {
 		localMBasis = new CartesianBasis(origin, inX, inY, inZ);
 		globalMBasis = new CartesianBasis(origin, inX, inY, inZ);
 		
-		Vec3d<?> o = origin.copy(); o.set(0,0,0);
-		Vec3d<?> i = o.copy(); i.set(1,1,1);	
+		Vec3f<?> o = origin.copy(); o.set(0,0,0);
+		Vec3f<?> i = o.copy(); i.set(1,1,1);	
 
 		if(parent != null) {
 			this.setParent(parent);
@@ -31,18 +31,18 @@ public class CartesianAxes extends AbstractAxes {
 		this.updateGlobal();
 	}
 	
-	public sgRayd x_() {
+	public sgRayf x_() {
 		this.updateGlobal();
 		return this.getGlobalMBasis().getXRay();
 	}
 
 
-	public sgRayd y_() {
+	public sgRayf y_() {
 		this.updateGlobal();
 		return this.getGlobalMBasis().getYRay();
 	}
 
-	public sgRayd z_() {
+	public sgRayf z_() {
 		this.updateGlobal();
 		return this.getGlobalMBasis().getZRay();
 	}
@@ -86,9 +86,28 @@ public class CartesianAxes extends AbstractAxes {
 		freeCopy.updateGlobal();
 		return freeCopy;
 	}
+
+	
 	@Override 
-	public void loadFromJSONObject(JSONObject j, LoadManager l) {	
+	public void loadFromJSONObject(JSONObject j, LoadManager l) {
 		super.loadFromJSONObject(j, l);
+		/*SGVec_3f origin = new SGVec_3f(j.getJSONArray("translation"));
+		SGVec_3f x = new SGVec_3f(j.getJSONObject("bases").getJSONArray("x"));
+		SGVec_3f y = new SGVec_3f(j.getJSONObject("bases").getJSONArray("y"));
+		SGVec_3f z =  new SGVec_3f(j.getJSONObject("bases").getJSONArray("z"));
+		Rot rotation = new Rot(j.getJSONArray("rotation"));
+		this.forceOrthoNormality = j.getBoolean("forceOrthoNormality");
+		this.localMBasis.setShearXBaseTo(x, false);
+		this.localMBasis.setShearYBaseTo(y, false);
+		this.localMBasis.setShearZBaseTo(z, false);
+		this.localMBasis.translate = origin;
+		this.localMBasis.rotation = rotation;
+		this.localMBasis.refreshMatrices();
+		AbstractAxes par = (AbstractAxes) l.getObjectFor(AbstractAxes.class, j, "parent");
+		if(par != null)
+			this.setRelativeToParent(par);
+		this.setSlipType(j.getInt("slipType"));
+		super.loadFromJSONObject(j, l);*/
 	} 
 	
 	/**

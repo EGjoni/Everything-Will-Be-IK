@@ -111,13 +111,6 @@ public interface Vecd<T extends Vecd<T>> extends Vec<T> {
 	 * @return This vector for chaining. */
 	 T lerp (T target, double alpha);
 
-	/** Interpolates between this vector and the given target vector by alpha (within range [0,1]) using the given Interpolation
-	 * method. the result is stored in this vector.
-	 * @param target The target vector
-	 * @param alpha The interpolation coefficient
-	 * @param interpolator An Interpolation object describing the used interpolation method
-	 * @return This vector for chaining. */
-	 T interpolate (T target, double alpha, Interpolation interpolator);
 
 	/*/** Sets this vector to the unit vector with a random direction
 	 * @return This vector for chaining 

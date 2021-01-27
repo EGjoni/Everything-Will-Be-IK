@@ -756,10 +756,16 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 		this.getLocalMBasis().translate = origin;
 		this.getLocalMBasis().rotation = rotation;
 		this.getLocalMBasis().refreshPrecomputed();
-		AbstractAxes par = (AbstractAxes) l.getObjectFor(AbstractAxes.class, j, "parent");
-		if(par != null)
-			this.setRelativeToParent(par);
-		this.setSlipType(j.getInt("slipType"));
+		AbstractAxes par;
+		try {
+			par = (AbstractAxes) l.getObjectFor(AbstractAxes.class, j, "parent");
+			if(par != null)
+				this.setRelativeToParent(par);
+			this.setSlipType(j.getInt("slipType"));
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
 	}
 
 
@@ -928,8 +934,12 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 	}
 	@Override
 	public void makeSaveable(SaveManager saveManager) {
-		// TODO Auto-generated method stub
-		
+		saveManager.addToSaveState(this);
+		forEachDependent(				  
+				(ad) -> {
+					if(Saveable.class.isAssignableFrom(ad.get().getClass()))
+							((Saveable)ad.get()).makeSaveable(saveManager);
+				});
 	}
 	
 	/**
