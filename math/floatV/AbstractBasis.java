@@ -1,6 +1,5 @@
 package math.floatV;
 
-
 import asj.*;
 import asj.*;
 import asj.data.*;
