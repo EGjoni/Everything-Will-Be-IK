@@ -5,7 +5,7 @@ import asj.data.JSONObject;
 /**
  * This interface defines objects which can self populate from JSONObjects but don't 
  * need to register themselves with the savestate tracker. 
- * @author rufsketch1
+ * @author Eron Gjoni
  */
 public interface CanLoad {	
 	/**

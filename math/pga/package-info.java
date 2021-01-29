@@ -5,4 +5,4 @@
  * @author Eron Gjoni
  *
  */
-package numerical;
+package math.pga;
