@@ -740,7 +740,7 @@ public class SegmentedArmature {
 
 	/**
 	 * Holds working information for the given bone. 
-	 * @author rufsketch1
+	 * @author Eron Gjoni
 	 */
 	class WorkingBone {
 		AbstractBone forBone;

@@ -12,7 +12,7 @@ import math.floatV.Vec3f;
 /**
  * Minimal implementation of basis transformations. 
  * Supports only righthanded orthonormal bases (no scaling, now skewing, no reflections). 
- * @author rufsketch1
+ * @author Eron Gjoni
  *
  */
 public abstract class AbstractBasis {

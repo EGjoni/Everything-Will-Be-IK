@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<project default="javadoc">
-    <target name="javadoc">
-        <javadoc access="public" author="true" classpath="library/ewbIK.jar" destdir="doc" doctitle="Everything Will Be IK" nodeprecated="false" nodeprecatedlist="false" noindex="false" nonavbar="false" notree="false" overview="/home/rufsketch1/git/Everything-WIll-Be-IK/ewbIK/doc/overview-summary.html" packagenames="IK,sceneGraph.numerical,IK.floatIK,data,IK.doubleIK,sceneGraph.math.doubleV,sceneGraph.math,exceptions,sceneGraph,sceneGraph.math.floatV" source="1.8" sourcepath="src" splitindex="true" use="true" version="true"/>
-    </target>
-</project>
