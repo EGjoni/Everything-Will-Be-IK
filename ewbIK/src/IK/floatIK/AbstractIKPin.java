@@ -203,7 +203,7 @@ public abstract class AbstractIKPin implements Saveable {
 	 * @param location
 	 */
 	public void translateBy_(Vec3f<?> location) {
-		this.axes.translateTo(location);
+		this.axes.translateByLocal(location);
 	}
 	
 	/**
