@@ -177,11 +177,24 @@ public abstract class AbstractIKPin implements Saveable {
 	}
 	
 	/**
-	 * translates the pin to the location specified in global coordinates
+	 * translates the pin to the location specified in global coordinates  
 	 * @param location
 	 */
 	public void translateTo_(Vec3f<?> location) {
 		this.axes.translateTo(location);
+	}
+	
+	/**
+	 * translates the pin to the location specified in Armature coordinates 
+	 * (in other words, relative to whatever coordinate frame the armature itself is specified in) 
+	 * @param location
+	 */
+	public void translateToArmatureLocal_(Vec3f<?> location) {
+		AbstractAxes armAxes = this.forBone().parentArmature.localAxes().getParentAxes();
+		if(armAxes == null)
+			this.axes.translateTo(location);
+		else 
+			this.axes.translateTo(armAxes.getLocalOf(location));
 	}
 	
 	/**
@@ -199,9 +212,7 @@ public abstract class AbstractIKPin implements Saveable {
 	public Vec3f<?> getLocation_() {
 		return axes.origin_();
 	}
-	
-	
-	
+		
 	
 	public AbstractBone forBone() {
 		return this.forBone;
