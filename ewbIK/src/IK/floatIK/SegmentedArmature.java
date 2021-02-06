@@ -688,7 +688,11 @@ public class SegmentedArmature {
 		if(chain != null) {			
 			WorkingBone sb = chain.simulatedBones.get(b);
 			AbstractAxes simulatedLocalAxes = sb.simLocalAxes;
-			b.localAxes().alignLocalsTo(simulatedLocalAxes);
+			if(b.parent != null) { 
+				b.localAxes().alignOrientationTo(simulatedLocalAxes);
+			} else {
+				b.localAxes().alignLocalsTo(simulatedLocalAxes);
+			}
 			/*if(b.getParent() == null) {
 				b.localAxes().alignGlobalsTo(simulatedLocalAxes);
 			} else {
