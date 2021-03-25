@@ -192,7 +192,6 @@ public abstract class AbstractBasis {
 	public void refreshPrecomputed() {
 		this.rotation.setToReversion(inverseRotation);
 		this.updateRays();		
-		
 	}
 	
 	public <V extends Vec3f<?>> V getLocalOf(V v) {
@@ -262,9 +261,13 @@ public abstract class AbstractBasis {
 	
 	
 	public <V extends Vec3f<?>> void setToGlobalOf(V input, V output) {
+		try {
 		rotation.applyTo(input, output);
-		output.add(this.translate); 	
-	}
+		output.add(this.translate);
+		} catch(Exception e) {
+			e.printStackTrace();
+		}
+ 	}
 	
 	
 	public <V extends Vec3f<?>> void translateBy(V transBy) {

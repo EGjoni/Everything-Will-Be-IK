@@ -2,6 +2,7 @@ package math.doubleV;
 
 import math.floatV.SGVec_3f;
 import math.floatV.Vec3f;
+import math.doubleV.Rot;
 
 public class QCP {
 
@@ -11,8 +12,8 @@ public class QCP {
 	 * <p>
 	 * Usage:
 	 * <p>
-	 * The input consists of 2 SGVec_3d arrays of equal length. The input coordinates
-	 * are not changed.
+	 * The input consists of 2 SGVec_3d arrays of equal length. The input
+	 * coordinates are not changed.
 	 *
 	 * <pre>
 	 *    SGVec_3d[] x = ...
@@ -85,10 +86,9 @@ public class QCP {
 	 * @author Eron Gjoni (adopted to EWB IK)
 	 */
 
-
 	private double evec_prec = (double) 1E-6;
 	private double eval_prec = (double) 1E-11;
-	private int max_iterations = 5; 
+	private int max_iterations = 5;
 
 	public Vec3d<?>[] target;
 	private Vec3d<?>[] moved;
@@ -97,11 +97,11 @@ public class QCP {
 	private double wsum;
 
 	private SGVec_3d targetCenter = new SGVec_3d();
-	private SGVec_3d movedCenter =  new SGVec_3d();
+	private SGVec_3d movedCenter = new SGVec_3d();
 
 	private double e0;
-	//private Matrix3f rotmat = new Matrix3f();
-	//private Matrix4f transformation = new Matrix4f();
+	// private Matrix3f rotmat = new Matrix3f();
+	// private Matrix4f transformation = new Matrix4f();
 	private double rmsd = 0;
 	private double Sxy, Sxz, Syx, Syz, Szx, Szy;
 	private double SxxpSyy, Szz, mxEigenV, SyzmSzy, SxzmSzx, SxymSyx;
@@ -109,8 +109,8 @@ public class QCP {
 	private double Syy, Sxx, SyzpSzy;
 	private boolean rmsdCalculated = false;
 	private boolean transformationCalculated = false;
+	private boolean innerProductCalculated = false;
 	private int length;
-
 
 	/**
 	 * Constructor with option to set the precision values.
@@ -123,16 +123,17 @@ public class QCP {
 	 * @param eval_prec
 	 *            required eigenvalue precision
 	 */
-	public QCP( double evec_prec, double eval_prec) {
+	public QCP(double evec_prec, double eval_prec) {
 		this.evec_prec = evec_prec;
 		this.eval_prec = eval_prec;
 	}
 
-	/** 
-	 * Sets the maximum number of iterations QCP should run before giving up. 
-	 * In most situations QCP converges in 3 or 4 iterations, but in some situations convergence
-	 * occurs slowly or not at all, and so an exit condition is used. The default value is 20. 
-	 * Increase it for more stability.
+	/**
+	 * Sets the maximum number of iterations QCP should run before giving up. In
+	 * most situations QCP converges in 3 or 4 iterations, but in some situations
+	 * convergence occurs slowly or not at all, and so an exit condition is used.
+	 * The default value is 20. Increase it for more stability.
+	 * 
 	 * @param max
 	 */
 	public void setMaxIterations(int max) {
@@ -153,11 +154,12 @@ public class QCP {
 		this.target = moved;
 		rmsdCalculated = false;
 		transformationCalculated = false;
+		innerProductCalculated = false;
 	}
 
 	/**
-	 * Sets the two input coordinate arrays and weight array. All input arrays
-	 * must be of equal length. Input coordinates are not modified.
+	 * Sets the two input coordinate arrays and weight array. All input arrays must
+	 * be of equal length. Input coordinates are not modified.
 	 *
 	 * @param fixed
 	 *            3f points of reference coordinate set
@@ -167,27 +169,22 @@ public class QCP {
 	 *            a weight in the inclusive range [0,1] for each point
 	 */
 	public <V extends Vec3d<?>> void set(V[] moved, V[] target, double[] weight, boolean translate) {
-		this.target = target;		
+		this.target = target;
 		this.moved = moved;
-		/*this.target =new SGVec_3d[target.length];		
-		this.moved = new SGVec_3d[moved.length];
-		for(int i=0; i< target.length; i++) {
-			this.target[i] = target[i].copy();
-			this.moved[i] = moved[i].copy();
-		}*/
 		this.weight = weight;
 		rmsdCalculated = false;
 		transformationCalculated = false;
+		innerProductCalculated = false;
 
-		if(translate) {
-			getWeightedCenter(this.moved, weight, movedCenter);
-			wsum = 0f; //set wsum to 0 so we don't double up. 
-			getWeightedCenter(this.target, weight, targetCenter);
-			translate(movedCenter.multCopy(-1f), this.moved);
-			translate(targetCenter.multCopy(-1f), this.target);
+		if (translate) {
+			moveToWeightedCenter(this.moved, weight, movedCenter);
+			wsum = 0d; // set wsum to 0 so we don't double up.
+			moveToWeightedCenter(this.target, weight, targetCenter);
+			translate(movedCenter.multCopy(-1d), this.moved);
+			translate(targetCenter.multCopy(-1d), this.target);
 		} else {
-			if(weight != null) {
-				for (int i = 0; i < weight.length; i++)  {
+			if (weight != null) {
+				for (int i = 0; i < weight.length; i++) {
 					wsum += weight[i];
 				}
 			} else {
@@ -198,10 +195,10 @@ public class QCP {
 	}
 
 	/**
-	 * Return the RMSD of the superposition of input coordinate set y onto x.
-	 * Note, this is the fasted way to calculate an RMSD without actually
-	 * superposing the two sets. The calculation is performed "lazy", meaning
-	 * calculations are only performed if necessary.
+	 * Return the RMSD of the superposition of input coordinate set y onto x. Note,
+	 * this is the fasted way to calculate an RMSD without actually superposing the
+	 * two sets. The calculation is performed "lazy", meaning calculations are only
+	 * performed if necessary.
 	 *
 	 * @return root mean square deviation for superposition of y onto x
 	 */
@@ -222,11 +219,11 @@ public class QCP {
 	 *            array of weigths for each equivalent point position
 	 * @return
 	 */
-	public <V extends Vec3d<?>> Rot weightedSuperpose( V[] moved, V[] target, double[] weight, boolean translate) {
+	public <V extends Vec3d<?>> Rot weightedSuperpose(V[] moved, V[] target, double[] weight, boolean translate) {
 		set(moved, target, weight, translate);
 		Rot result = getRotation();
-		//transformation.set(rotmat);
-		return result;//transformation;
+		// transformation.set(rotmat);
+		return result;// transformation;
 	}
 	
 	/**
@@ -260,10 +257,12 @@ public class QCP {
 		return result;//transformation;
 	}
 
+
 	private Rot getRotation() {
-		getRmsd();
-		Rot result = null; 
+		Rot result = null;
 		if (!transformationCalculated) {
+			if (!innerProductCalculated)
+				innerProduct( target, moved);			
 			result = calcRotation();
 			transformationCalculated = true;
 		}
@@ -271,8 +270,8 @@ public class QCP {
 	}
 
 	/**
-	 * Calculates the RMSD value for superposition of y onto x. This requires
-	 * the coordinates to be precentered.
+	 * Calculates the RMSD value for superposition of y onto x. This requires the
+	 * coordinates to be precentered.
 	 *
 	 * @param x
 	 *            3f points of reference coordinate set
@@ -280,25 +279,23 @@ public class QCP {
 	 *            3f points of coordinate set for superposition
 	 */
 	private <V extends Vec3d<?>> void calcRmsd(V[] x, V[] y) {
-		//QCP doesn't handle alignment of single values, so if we only have one point 
-		//we just compute regular distance.
-		if(x.length == 1) {
+		// QCP doesn't handle alignment of single values, so if we only have one point
+		// we just compute regular distance.
+		if (x.length == 1) {
 			rmsd = x[0].dist(y[0]);
 			rmsdCalculated = true;
-		} 
-		else {
-			innerProduct(y, x);
+		} else {
+			if (!innerProductCalculated)
+				innerProduct(y, x);
 			calcRmsd(wsum);
 		}
 	}
 
-
-
 	/**
-	 * Calculates the inner product between two coordinate sets x and y
-	 * (optionally weighted, if weights set through
-	 * {@link #set(SGVec_3d[], SGVec_3d[], double[])}). It also calculates an
-	 * upper bound of the most positive root of the key matrix.
+	 * Calculates the inner product between two coordinate sets x and y (optionally
+	 * weighted, if weights set through
+	 * {@link #set(SGVec_3d[], SGVec_3d[], double[])}). It also calculates an upper
+	 * bound of the most positive root of the key matrix.
 	 * http://theobald.brandeis.edu/qcp/qcprot.c
 	 *
 	 * @param coords1
@@ -320,10 +317,10 @@ public class QCP {
 		Szz = 0;
 
 		if (weight != null) {
-			//wsum = 0;
+			// wsum = 0;
 			for (int i = 0; i < coords1.length; i++) {
 
-				//wsum += weight[i];
+				// wsum += weight[i];
 
 				x1 = weight[i] * coords1[i].x;
 				y1 = weight[i] * coords1[i].y;
@@ -366,32 +363,11 @@ public class QCP {
 				Szy += coords1[i].z * coords2[i].y;
 				Szz += coords1[i].z * coords2[i].z;
 			}
-			//wsum = coords1.length;
+			// wsum = coords1.length;
 		}
-
+		
 		e0 = (g1 + g2) * 0.5d;
-	}
-
-	private int calcRmsd(double len) {
-		double Sxx2 = Sxx * Sxx;
-		double Syy2 = Syy * Syy;
-		double Szz2 = Szz * Szz;
-
-		double Sxy2 = Sxy * Sxy;
-		double Syz2 = Syz * Syz;
-		double Sxz2 = Sxz * Sxz;
-
-		double Syx2 = Syx * Syx;
-		double Szy2 = Szy * Szy;
-		double Szx2 = Szx * Szx;
-
-		double SyzSzymSyySzz2 = 2.0 * (Syz * Szy - Syy * Szz);
-		double Sxx2Syy2Szz2Syz2Szy2 = Syy2 + Szz2 - Sxx2 + Syz2 + Szy2;
-
-		double c2 = -2.0d * (Sxx2 + Syy2 + Szz2 + Sxy2 + Syx2 + Sxz2 + Szx2 + Syz2 + Szy2);
-		double c1 = 8.0d * (Sxx * Syz * Szy + Syy * Szx * Sxz + Szz * Sxy * Syx - Sxx * Syy * Szz - Syz * Szx * Sxy
-				- Szy * Syx * Sxz);
-
+		
 		SxzpSzx = Sxz + Szx;
 		SyzpSzy = Syz + Szy;
 		SxypSyx = Sxy + Syx;
@@ -400,60 +376,68 @@ public class QCP {
 		SxymSyx = Sxy - Syx;
 		SxxpSyy = Sxx + Syy;
 		SxxmSyy = Sxx - Syy;
-
-		double Sxy2Sxz2Syx2Szx2 = Sxy2 + Sxz2 - Syx2 - Szx2;
-
-		double c0 = Sxy2Sxz2Syx2Szx2 * Sxy2Sxz2Syx2Szx2
-				+ (Sxx2Syy2Szz2Syz2Szy2 + SyzSzymSyySzz2) * (Sxx2Syy2Szz2Syz2Szy2 - SyzSzymSyySzz2)
-				+ (-(SxzpSzx) * (SyzmSzy) + (SxymSyx) * (SxxmSyy - Szz))
-				* (-(SxzmSzx) * (SyzpSzy) + (SxymSyx) * (SxxmSyy + Szz))
-				+ (-(SxzpSzx) * (SyzpSzy) - (SxypSyx) * (SxxpSyy - Szz))
-				* (-(SxzmSzx) * (SyzmSzy) - (SxypSyx) * (SxxpSyy + Szz))
-				+ (+(SxypSyx) * (SyzpSzy) + (SxzpSzx) * (SxxmSyy + Szz))
-				* (-(SxymSyx) * (SyzmSzy) + (SxzpSzx) * (SxxpSyy + Szz))
-				+ (+(SxypSyx) * (SyzmSzy) + (SxzmSzx) * (SxxmSyy - Szz))
-				* (-(SxymSyx) * (SyzpSzy) + (SxzmSzx) * (SxxpSyy - Szz));
-
 		mxEigenV = e0;
 
+		innerProductCalculated = true;
+	}
 
-		int i;
-		for (i = 1; i < (max_iterations+1); ++i) {
-			double oldg = mxEigenV;
-			/*double x2 = mxEigenV * mxEigenV;
-			double b = (x2 + c2) * mxEigenV;
-			double a = b + c1;*/
-			//double delta = ((a * mxEigenV + c0) / (2.0d * x2 * mxEigenV + b + a));
-			/*double delta2 = (((x2 + c2)*mxEigenV + c1)*mxEigenV + c0) / ((4*x2 + 2*c2)*mxEigenV + c1);
-			double delta3 = (c0 + (c1 + (c2 +x2)*mxEigenV)*mxEigenV) / (c1 + (2*c2 + 4*x2)*mxEigenV);*/
-			double Y = 1d/mxEigenV;
-			double Y2 = Y*Y;
-			double delta = ((((Y*c0 + c1)*Y + c2)*Y2 + 1) / ((Y*c1 + 2*c2)*Y2*Y + 4));
-			mxEigenV -= delta;
-			
-			if (MathUtils.abs(mxEigenV - oldg) < MathUtils.abs(eval_prec * mxEigenV))
-				break;
+	private void calcRmsd(double len) {
+
+		if (max_iterations > 0) {
+			double Sxx2 = Sxx * Sxx;
+			double Syy2 = Syy * Syy;
+			double Szz2 = Szz * Szz;
+
+			double Sxy2 = Sxy * Sxy;
+			double Syz2 = Syz * Syz;
+			double Sxz2 = Sxz * Sxz;
+
+			double Syx2 = Syx * Syx;
+			double Szy2 = Szy * Szy;
+			double Szx2 = Szx * Szx;
+
+			double SyzSzymSyySzz2 = 2.0 * (Syz * Szy - Syy * Szz);
+			double Sxx2Syy2Szz2Syz2Szy2 = Syy2 + Szz2 - Sxx2 + Syz2 + Szy2;
+
+			double c2 = -2.0d * (Sxx2 + Syy2 + Szz2 + Sxy2 + Syx2 + Sxz2 + Szx2 + Syz2 + Szy2);
+			double c1 = 8.0d * (Sxx * Syz * Szy + Syy * Szx * Sxz + Szz * Sxy * Syx - Sxx * Syy * Szz - Syz * Szx * Sxy
+					- Szy * Syx * Sxz);
+
+			double Sxy2Sxz2Syx2Szx2 = Sxy2 + Sxz2 - Syx2 - Szx2;
+
+			double c0 = Sxy2Sxz2Syx2Szx2 * Sxy2Sxz2Syx2Szx2
+					+ (Sxx2Syy2Szz2Syz2Szy2 + SyzSzymSyySzz2) * (Sxx2Syy2Szz2Syz2Szy2 - SyzSzymSyySzz2)
+					+ (-(SxzpSzx) * (SyzmSzy) + (SxymSyx) * (SxxmSyy - Szz))
+							* (-(SxzmSzx) * (SyzpSzy) + (SxymSyx) * (SxxmSyy + Szz))
+					+ (-(SxzpSzx) * (SyzpSzy) - (SxypSyx) * (SxxpSyy - Szz))
+							* (-(SxzmSzx) * (SyzmSzy) - (SxypSyx) * (SxxpSyy + Szz))
+					+ (+(SxypSyx) * (SyzpSzy) + (SxzpSzx) * (SxxmSyy + Szz))
+							* (-(SxymSyx) * (SyzmSzy) + (SxzpSzx) * (SxxpSyy + Szz))
+					+ (+(SxypSyx) * (SyzmSzy) + (SxzmSzx) * (SxxmSyy - Szz))
+							* (-(SxymSyx) * (SyzpSzy) + (SxzmSzx) * (SxxpSyy - Szz));
+
+			int i;
+			for (i = 1; i < (max_iterations + 1); ++i) {
+				double oldg = mxEigenV;
+				double Y = 1d / mxEigenV;
+				double Y2 = Y * Y;
+				double delta = ((((Y * c0 + c1) * Y + c2) * Y2 + 1) / ((Y * c1 + 2 * c2) * Y2 * Y + 4));
+				mxEigenV -= delta;
+
+				if (MathUtils.abs(mxEigenV - oldg) < MathUtils.abs(eval_prec * mxEigenV))
+					break;
+			}
 		}
 
-		/*if (i == max_iterations) {
-			System.out.println(String.format("More than %d iterations needed!", i));
-		} else {
-			System.out.println(String.format("%d iterations needed!", i));
-		}*/
-
-		/*
-		 * the fabs() is to guard against extremely small, but *negative*
-		 * numbers due to doubleing point error
-		 */
 		rmsd = MathUtils.sqrt(MathUtils.abs(2.0f * (e0 - mxEigenV) / len));
 
-		return 1;
 	}
 
 	private Rot calcRotation() {
 
-		//QCP doesn't handle single targets, so if we only have one point and one target, we just rotate by the angular distance between them 
-		if(moved.length == 1) {
+		// QCP doesn't handle single targets, so if we only have one point and one
+		// target, we just rotate by the angular distance between them
+		if (moved.length == 1) {
 			return new Rot(moved[0], target[0]);
 		} else {
 
@@ -487,10 +471,10 @@ public class QCP {
 			double qsqr = q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4;
 
 			/*
-			 * The following code tries to calculate another column in the adjoint
-			 * matrix when the norm of the current column is too small. Usually this
-			 * commented block will never be activated. To be absolutely safe this
-			 * should be uncommented, but it is most likely unnecessary.
+			 * The following code tries to calculate another column in the adjoint matrix
+			 * when the norm of the current column is too small. Usually this commented
+			 * block will never be activated. To be absolutely safe this should be
+			 * uncommented, but it is most likely unnecessary.
 			 */
 			if (qsqr < evec_prec) {
 				q1 = a12 * a3344_4334 - a13 * a3244_4234 + a14 * a3243_4233;
@@ -530,14 +514,10 @@ public class QCP {
 		}
 	}
 
-
-
-
 	public double getRmsd(SGVec_3d[] fixed, SGVec_3d[] moved) {
 		set(moved, fixed);
 		return getRmsd();
 	}
-
 
 	public static <V extends Vec3d<?>> void translate(V trans, V[] x) {
 		for (V p : x) {
@@ -545,22 +525,19 @@ public class QCP {
 		}
 	}
 
-	public <V extends Vec3d<?>> V getWeightedCenter(V[] toCenter, double[] weight, V center)	{	    	    
+	public <V extends Vec3d<?>> V moveToWeightedCenter(V[] toCenter, double[] weight, V center) {
 
 		if (weight != null) {
-			for (int i = 0; i < toCenter.length; i++)
-			{
+			for (int i = 0; i < toCenter.length; i++) {
 				center.mulAdd(toCenter[i], weight[i]);
 				wsum += weight[i];
 			}
 
 			center.div(wsum);
-		}
-		else   {
-			for (int i = 0; i < toCenter.length; i++)
-			{
+		} else {
+			for (int i = 0; i < toCenter.length; i++) {
 				center.add(toCenter[i]);
-				wsum ++;
+				wsum++;
 			}
 			center.div(wsum);
 		}
@@ -571,10 +548,7 @@ public class QCP {
 
 
 	public SGVec_3d getTranslation() {
-		return targetCenter.subCopy(movedCenter);		
+		return targetCenter.subCopy(movedCenter);
 	}
 
 }
-
-
-

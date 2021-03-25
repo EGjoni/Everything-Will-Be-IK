@@ -112,7 +112,6 @@ public interface Vecf<T extends Vecf<T>> extends Vec<T> {
 	 T lerp (T target, float alpha);
 
 
-
 	/*/** Sets this vector to the unit vector with a random direction
 	 * @return This vector for chaining 
 	T setToRandomDirection ();*/

@@ -1,6 +1,7 @@
 package math.floatV;
 
 import asj.CanLoad;
+import math.doubleV.Vec3d;
 import math.floatV.Vec3f;
 
 public abstract class Vec3f<T extends Vec3f<T>> implements Vecf<T>, CanLoad {
@@ -36,7 +37,12 @@ public abstract class Vec3f<T extends Vec3f<T>> implements Vecf<T>, CanLoad {
 		this.set(vector);
 	}
 	
-	
+	/** Creates a vector from the given vector
+	 * @param vector The vector */
+	public Vec3f (final Vec3d vector) {
+		this.set(vector);
+	}
+
 	/** Creates a vector from the given array. The array must have at least 3 elements.
 	 *
 	 * @param values The array */
@@ -58,10 +64,13 @@ public abstract class Vec3f<T extends Vec3f<T>> implements Vecf<T>, CanLoad {
 		return (T)this;
 	}
 
-	public <V extends Vec3f<?>>T set (final V vector) {
-		return this.set(vector.x, vector.y, vector.z);
+	public <V extends Vec3d<?>>T set (final V vector) {
+		return this.set(this.set((float)vector.x, (float)vector.y, (float)vector.z));
 	}
 	
+	public T set (final Vec3f vector) {
+		return this.set(vector.getX(), vector.getY(), vector.getZ());
+	}
 
 	/** Sets the components from the array. The array must have at least 3 elements
 	 *
@@ -774,13 +783,25 @@ public abstract class Vec3f<T extends Vec3f<T>> implements Vecf<T>, CanLoad {
 	 * vector implementation requires more than that. 
 	 * @param v
 	 */
-	public <F extends Vec3f<F>> void adoptValuesOf(F v) {
+	public <F extends Vec3d<F>> void adoptValuesOf(F v) {
+		setX_((float)v.getX());
+		setY_((float)v.getY());
+		setZ_((float)v.getZ());
+	}
+	
+	
+	/**
+	 * should cause this Vector to adopt the xyz values
+	 * of the input vector. This method has a default implementation
+	 * that simply calls setX_(), setY_(), setZ() but you should override it if your
+	 * vector implementation requires more than that. 
+	 * @param v
+	 */
+	public void adoptValuesOf(T v) {
 		setX_(v.getX());
 		setY_(v.getY());
 		setZ_(v.getZ());
-	}
-	
-
+	}	
 		
 	/**
 	 * @return the Z component of this vector. 

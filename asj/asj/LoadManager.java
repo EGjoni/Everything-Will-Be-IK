@@ -34,7 +34,6 @@ public abstract class LoadManager {
 				Object created = c.newInstance();
 				oMap.put(id, (T) created);			
 				allLoadedObjects.add((Saveable)created);
-
 			}
 		} catch (InstantiationException | IllegalAccessException e) {
 			// TODO Auto-generated catch block

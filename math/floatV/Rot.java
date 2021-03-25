@@ -311,20 +311,20 @@ public class Rot {
 		if(Float.isNaN(amount)) {
 			return new MRotation(value1.getQ0(), value1.getQ1(), value1.getQ2(), value1.getQ3());
 		}
-		if (amount < 0.0)
+		if (amount < 0.0f)
 			return value1;
-		else if (amount > 1.0)
+		else if (amount > 1.0f)
 			return value2;
 
 		float dot = value1.dotProduct(value2);
 		float x2, y2, z2, w2;
-		/*if (dot < 0.0)
+		/*if (dot < 0.0f)
 		{
-			dot = 0.0 - dot;
-			x2 = 0.0 - value2.getQ1();
-			y2 = 0.0 - value2.getQ2();
-			z2 = 0.0 - value2.getQ3();
-			w2 = 0.0 - value2.getQ0();
+			dot = 0.0f - dot;
+			x2 = 0.0f - value2.getQ1();
+			y2 = 0.0f - value2.getQ2();
+			z2 = 0.0f - value2.getQ3();
+			w2 = 0.0f - value2.getQ0();
 		}
 		else
 		{*/
@@ -337,7 +337,7 @@ public class Rot {
 		float t1, t2;
 
 		final float EPSILON = 0.0001f;
-		if ((1.0 - dot) > EPSILON) // standard case (slerp)
+		if ((1.0f - dot) > EPSILON) // standard case (slerp)
 		{
 			float angle = MathUtils.acos(dot);
 			float sinAngle = MathUtils.sin(angle);

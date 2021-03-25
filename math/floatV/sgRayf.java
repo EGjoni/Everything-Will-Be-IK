@@ -23,6 +23,7 @@ package math.floatV;
 import asj.CanLoad;
 import asj.data.JSONObject;
 import math.floatV.SGVec_3f;
+import math.floatV.Vec3f;
 
 /**
  * @author Eron Gjoni
@@ -349,19 +350,20 @@ public class sgRayf implements CanLoad {
 	}
 
 
-/**
- *  adds the specified length to the ray in both directions.
- */
-	public void elongate(float amt) {
-		Vec3f midPoint = p1.addCopy(p2).multCopy(0.5f);
-		Vec3f p1Heading = p1.subCopy(midPoint);
-		Vec3f p2Heading = p2.subCopy(midPoint);
-		Vec3f p1Add = (Vec3f) p1Heading.copy().normalize().mult(amt);
-		Vec3f p2Add = (Vec3f) p2Heading.copy().normalize().mult(amt);
-		
-		this.p1.set((Vec3f)p1Heading.addCopy(p1Add).addCopy(midPoint)); 
-		this.p2.set((Vec3f)p2Heading.addCopy(p2Add).addCopy(midPoint));
-	}
+	/**
+	 *  adds the specified length to the ray in both directions.
+	 */
+		public void elongate(float amt) {
+			Vec3f midPoint = p1.addCopy(p2).multCopy(0.5f);
+			Vec3f p1Heading = p1.subCopy(midPoint);
+			Vec3f p2Heading = p2.subCopy(midPoint);
+			Vec3f p1Add = (Vec3f) p1Heading.copy().normalize().mult(amt);
+			Vec3f p2Add = (Vec3f) p2Heading.copy().normalize().mult(amt);
+			
+			this.p1.set((Vec3f)p1Heading.addCopy(p1Add).addCopy(midPoint)); 
+			this.p2.set((Vec3f)p2Heading.addCopy(p2Add).addCopy(midPoint));
+		}
+
 
 	public sgRayf copy() {
 		return new sgRayf(this.p1, this.p2);  
@@ -824,11 +826,11 @@ public class sgRayf implements CanLoad {
 		h.set(0f,0f,0f);
 		h =  (V) h.sub(rp1);  // h=r.o-c.M
 		float lf = e.dot(h);                      // lf=e.h
-		float radpow = radius*radius; 
+		float radpow = radius*radius;
 		float hdh = h.magSq(); 
-		float lfpow =lf*lf;
-		float s = radpow - hdh +lfpow;   // s=r^2-h^2+lf^2
-		if (s < 0.0) return 0;                    // no intersection points ?
+		float lfpow = lf*lf;		
+		float s = radpow-hdh+lfpow;   // s=r^2-h^2+lf^2
+		if (s < 0.0f) return 0;                    // no intersection points ?
 		s = MathUtils.sqrt(s);                              // s=sqrt(r^2-h^2+lf^2)
 
 		int result = 0;
