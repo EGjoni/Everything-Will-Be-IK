@@ -152,7 +152,7 @@ public final class Precision {
     
 	
 	
-	public class MathArithmeticException extends Exception {
+	public static class MathArithmeticException extends Exception {
 
 		public MathArithmeticException(String zERO_NORM_FOR_ROTATION_DEFINING_VECTOR) {
 			// TODO Auto-generated constructor stub
@@ -160,7 +160,7 @@ public final class Precision {
 		
 	}
 	
-public class MathIllegalArgumentException extends Exception {
+public static class MathIllegalArgumentException extends Exception {
 		public MathIllegalArgumentException(String zeroNormForRotationAxis) {
 		
 		}
