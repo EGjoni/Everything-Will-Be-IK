@@ -37,9 +37,11 @@ public class SGVec_3f extends Vec3f<SGVec_3f> implements CanLoad {
 	}	
 	
 	public <V extends Vec3f<?>> SGVec_3f(V v) {
-		this.x = v.x;
-		this.y = v.y;
-		this.z = v.z;
+		if(v != null) {		
+			this.x = v.x;
+			this.y = v.y;
+			this.z = v.z;
+		}
 	}
 
 	public SGVec_3f() {

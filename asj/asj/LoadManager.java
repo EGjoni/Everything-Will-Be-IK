@@ -6,7 +6,7 @@ import java.util.Map;
 
 import asj.data.JSONArray;
 import asj.data.JSONObject;
-import jdk.internal.dynalink.support.ClassMap;
+//import jdk.internal.dynalink.support.ClassMap;
 
 public abstract class LoadManager {
 	

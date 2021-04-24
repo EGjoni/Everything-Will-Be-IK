@@ -37,9 +37,11 @@ public class SGVec_3d extends Vec3d<SGVec_3d> implements CanLoad {
 	}	
 	
 	public <V extends Vec3d<?>> SGVec_3d(V v) {
-		this.x = v.x;
-		this.y = v.y;
-		this.z = v.z;
+		if(v != null) {		
+			this.x = v.x;
+			this.y = v.y;
+			this.z = v.z;
+		}
 	}
 
 	public SGVec_3d() {

@@ -228,12 +228,12 @@ public class sgRayd implements CanLoad {
 
 	public double mag() {
 		workingVector.set(p2);
-		return  (workingVector.sub(p1)).mag();   
+		return  (workingVector.subCopy(p1)).mag();   
 	}
 
 	public void mag(double newMag) {
 		workingVector.set(p2);
-		Vec3d<?> dir =  workingVector.sub(p1);
+		Vec3d<?> dir =  workingVector.subCopy(p1);
 		dir.setMag(newMag);
 		this.heading(dir);   
 	}
@@ -432,7 +432,7 @@ public class sgRayd implements CanLoad {
 
 	public void translateTipTo(SGVec_3d newLocation) {
 		workingVector.set(newLocation);
-		 Vec3d<?> transBy =  workingVector.sub(p2); 
+		 Vec3d<?> transBy =  workingVector.subCopy(p2); 
 		this.translateBy(transBy); 
 	}
 
@@ -523,11 +523,11 @@ public class sgRayd implements CanLoad {
 		Vec3d<?> result = null;
 		
 		workingVector.set(p2);
-		Vec3d<?>   u =  workingVector.sub(this.p1);
+		Vec3d<?>   u =  workingVector.subCopy(this.p1);
 		workingVector.set(r.p2);
-		Vec3d<?>   v =  workingVector.sub(r.p1);
+		Vec3d<?>   v =  workingVector.subCopy(r.p1);
 		workingVector.set(this.p1);
-		Vec3d<?>   w =  workingVector.sub(r.p1);
+		Vec3d<?>   w =  workingVector.subCopy(r.p1);
 		double    a = u.dot(u);         // always >= 0
 		double    b = u.dot(v);
 		double    c = v.dot(v);         // always >= 0
@@ -554,11 +554,11 @@ public class sgRayd implements CanLoad {
 		Vec3d<?> result = null;
 
 		workingVector.set(p2);
-		Vec3d<?>   u =  workingVector.sub(this.p1);
+		Vec3d<?>   u =  workingVector.subCopy(this.p1);
 		workingVector.set(r.p2);
-		Vec3d<?>   v =  workingVector.sub(r.p1);
+		Vec3d<?>   v =  workingVector.subCopy(r.p1);
 		workingVector.set(this.p1);
-		Vec3d<?>   w =  workingVector.sub(r.p1);
+		Vec3d<?>   w =  workingVector.subCopy(r.p1);
 		double    a = u.dot(u);         // always >= 0
 		double    b = u.dot(v);
 		double    c = v.dot(v);         // always >= 0
@@ -595,11 +595,11 @@ public class sgRayd implements CanLoad {
 		Vec3d<?> result = null;
 
 		workingVector.set(p2);
-		Vec3d<?>   u =  workingVector.sub(this.p1);
+		Vec3d<?>   u =  workingVector.subCopy(this.p1);
 		workingVector.set(r.p2);
-		Vec3d<?>   v =  workingVector.sub(r.p1);
+		Vec3d<?>   v =  workingVector.subCopy(r.p1);
 		workingVector.set(this.p1);
-		Vec3d<?>   w =  workingVector.sub(r.p1);
+		Vec3d<?>   w =  workingVector.subCopy(r.p1);
 		double    a = u.dot(u);         // always >= 0
 		double    b = u.dot(v);
 		double    c = v.dot(v);         // always >= 0
