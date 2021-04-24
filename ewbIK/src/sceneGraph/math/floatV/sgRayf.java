@@ -228,12 +228,12 @@ public class sgRayf implements CanLoad {
 
 	public float mag() {
 		workingVector.set(p2);
-		return  (workingVector.sub(p1)).mag();   
+		return  (workingVector.subCopy(p1)).mag();   
 	}
 
 	public void mag(float newMag) {
 		workingVector.set(p2);
-		Vec3f<?> dir =  workingVector.sub(p1);
+		Vec3f<?> dir =  workingVector.subCopy(p1);
 		dir.setMag(newMag);
 		this.heading(dir);   
 	}
@@ -432,7 +432,7 @@ public class sgRayf implements CanLoad {
 
 	public void translateTipTo(SGVec_3f newLocation) {
 		workingVector.set(newLocation);
-		 Vec3f<?> transBy =  workingVector.sub(p2); 
+		 Vec3f<?> transBy =  workingVector.subCopy(p2); 
 		this.translateBy(transBy); 
 	}
 
@@ -523,11 +523,11 @@ public class sgRayf implements CanLoad {
 		Vec3f<?> result = null;
 		
 		workingVector.set(p2);
-		Vec3f<?>   u =  workingVector.sub(this.p1);
+		Vec3f<?>   u =  workingVector.subCopy(this.p1);
 		workingVector.set(r.p2);
-		Vec3f<?>   v =  workingVector.sub(r.p1);
+		Vec3f<?>   v =  workingVector.subCopy(r.p1);
 		workingVector.set(this.p1);
-		Vec3f<?>   w =  workingVector.sub(r.p1);
+		Vec3f<?>   w =  workingVector.subCopy(r.p1);
 		float    a = u.dot(u);         // always >= 0
 		float    b = u.dot(v);
 		float    c = v.dot(v);         // always >= 0
@@ -554,11 +554,11 @@ public class sgRayf implements CanLoad {
 		Vec3f<?> result = null;
 
 		workingVector.set(p2);
-		Vec3f<?>   u =  workingVector.sub(this.p1);
+		Vec3f<?>   u =  workingVector.subCopy(this.p1);
 		workingVector.set(r.p2);
-		Vec3f<?>   v =  workingVector.sub(r.p1);
+		Vec3f<?>   v =  workingVector.subCopy(r.p1);
 		workingVector.set(this.p1);
-		Vec3f<?>   w =  workingVector.sub(r.p1);
+		Vec3f<?>   w =  workingVector.subCopy(r.p1);
 		float    a = u.dot(u);         // always >= 0
 		float    b = u.dot(v);
 		float    c = v.dot(v);         // always >= 0
@@ -595,11 +595,11 @@ public class sgRayf implements CanLoad {
 		Vec3f<?> result = null;
 
 		workingVector.set(p2);
-		Vec3f<?>   u =  workingVector.sub(this.p1);
+		Vec3f<?>   u =  workingVector.subCopy(this.p1);
 		workingVector.set(r.p2);
-		Vec3f<?>   v =  workingVector.sub(r.p1);
+		Vec3f<?>   v =  workingVector.subCopy(r.p1);
 		workingVector.set(this.p1);
-		Vec3f<?>   w =  workingVector.sub(r.p1);
+		Vec3f<?>   w =  workingVector.subCopy(r.p1);
 		float    a = u.dot(u);         // always >= 0
 		float    b = u.dot(v);
 		float    c = v.dot(v);         // always >= 0

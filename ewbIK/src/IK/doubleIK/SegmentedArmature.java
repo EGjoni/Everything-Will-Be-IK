@@ -506,6 +506,7 @@ public class SegmentedArmature {
 			
 			AbstractAxes targetAxes = pin.forBone.getPinnedAxes();
 			targetAxes.updateGlobal();
+			localizedTipHeadings[hdx].set(tipAxes.origin_()).sub(origin);
 			double scaleBy  = thisBoneAxes.origin_().dist(targetAxes.origin_());
 			hdx++;
 
