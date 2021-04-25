@@ -10,6 +10,8 @@ import asj.LoadManager;
 import asj.SaveManager;
 import asj.Saveable;
 import asj.data.JSONObject;
+import math.doubleV.SGVec_3d;
+import math.doubleV.Vec3d;
 
 /**
  * @author Eron Gjoni
@@ -86,7 +88,15 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 		//this.updateChiralities();
 	}
 
-	
+	/**
+	 * meant to be overriden to initializes an empty vector of 
+	 * whatever type your extended library extends Vec3f into.
+	 * 
+	 * If not overriden, will create an empty SGVec3f
+	 */
+	public <V extends Vec3f<?>> V makeDefaultVec( ) {
+		return (V) new SGVec_3f();
+	}
 
 
 	public AbstractAxes getParentAxes() {

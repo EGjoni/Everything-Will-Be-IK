@@ -66,6 +66,16 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 	}
 	
 	/**
+	 * meant to be overriden to initializes an empty vector of 
+	 * whatever type your extended library extends Vec3d into.
+	 * 
+	 * If not overriden, will create an empty SGVec3d
+	 */
+	public <V extends Vec3d<?>> V makeDefaultVec( ) {
+		return (V) new SGVec_3d();
+	}
+	
+	/**
 	 * @param origin the center of this axes basis. The basis vector parameters will be automatically ADDED to the origin in order to create this basis vector.
 	 * @param inX the direction of the X basis vector in global coordinates, given as an offset from this base's origin in global coordinates.   
 	 * @param inY the direction of the Y basis vector in global coordinates, given as an offset from this base's origin in global coordinates.
