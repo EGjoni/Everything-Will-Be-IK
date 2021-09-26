@@ -163,8 +163,8 @@ public class sgRayd implements CanLoad {
 	
 	public void heading(double[] newHead){
 		if(p2 == null) p2 =  p1.copy();
-		p2.set(newHead);
-		p2.set(p1);		
+		p2.set(p1);
+		p2.add(newHead);
 	}
 
 	public  <V extends Vec3d<?>> void heading(V newHead){
