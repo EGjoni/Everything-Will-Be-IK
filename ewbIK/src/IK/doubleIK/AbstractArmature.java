@@ -21,6 +21,8 @@ import java.nio.channels.SeekableByteChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import javax.swing.JInternalFrame;
+
 import IK.doubleIK.SegmentedArmature;
 import IK.doubleIK.SegmentedArmature.WorkingBone;
 import asj.LoadManager;
@@ -372,21 +374,39 @@ public abstract class AbstractArmature implements Saveable {
 				double totalIterations = iterations; 
 				//dampening = dampening == -1? this.dampening : dampening;
 				stabilizationPasses = stabilizationPasses == -1 ? this.defaultStabilizingPassCount : stabilizationPasses; 				
-				for(int i = 0; i<iterations; i++) {			
-					if(!armature.isBasePinned() ) {
-						//alignSegmentTipOrientationsFor(armature, dampening);		
-						armature.updateOptimalRotationToPinnedDescendants(armature.segmentRoot, Math.PI, true, stabilizationPasses, i, totalIterations);
-						armature.setProcessed(false);
-						for(SegmentedArmature s : armature.childSegments) {
-							groupedRecursiveSegmentSolver(s, dampening, stabilizationPasses, i, totalIterations);	
+				if(!armature.isBasePinned() && armature.getParentSegment() == null ) {
+					//alignSegmentTipOrientationsFor(armature, dampening);		
+					//
+					 // this condition  translates the rootmost chain to a location that maximizes the other chain's ability to reach their target. 
+					 // If this translation behavior isn't desired, simply set the rootmost bone to be an effector, in which case, the root bone will always end up
+					 //aligning to the specific transformation specified by its target. 
+					 //			 					
+					/*if(armature.segmentRoot != armature.segmentTip) {
+						// for situations where the root chain contains more than one bone, we first run a normal iteration of QCP on the chain to minimize the 
+						 // amount the root chain gets rotated before translation. 
+						 // (in effect, this makes the root chain bend toward the direction it needs to translate before actually translating to that location)
+						for(int i = 0; i<iterations; i++) {					
+							recursiveSegmentSolver(armature, dampening, stabilizationPasses, i, totalIterations);		
 						}
-					} else {
-						groupedRecursiveSegmentSolver(armature, dampening, stabilizationPasses, i, totalIterations);		
+						//QCPSolver(armature, Math.PI*2, false, stabilizationPasses, 0, totalIterations); 
+					}*/
+					armature.updateOptimalRotationToPinnedDescendants(armature.segmentRoot, Math.PI*2, true, stabilizationPasses, 0, totalIterations);
+						//armature.setProcessed(false);
+					for(int i = 0; i<iterations; i++) {			
+						for(SegmentedArmature c : armature.childSegments) {
+							groupedRecursiveSegmentSolver(c, dampening, stabilizationPasses, i, totalIterations);	
+						}					
+						//outwardRecursiveSegmentSolver(armature, dampening);
+						//alignSegmentTipOrientationsFor(armature, dampening);
 					}
-					//outwardRecursiveSegmentSolver(armature, dampening);
-					//alignSegmentTipOrientationsFor(armature, dampening);
-
-				}
+				
+				} else {
+					for(int i = 0; i<iterations; i++) {			
+							groupedRecursiveSegmentSolver(armature, dampening, stabilizationPasses, i, totalIterations);	
+						//outwardRecursiveSegmentSolver(armature, dampening);
+						//alignSegmentTipOrientationsFor(armature, dampening);
+					}
+				}				
 				armature.recursivelyAlignBonesToSimAxesFrom(armature.segmentRoot);
 				recursivelyNotifyBonesOfCompletedIKSolution(armature);
 			}
@@ -415,7 +435,7 @@ public abstract class AbstractArmature implements Saveable {
 		} else if(!armature.isTipPinned()) {
 			for(SegmentedArmature c: armature.childSegments) {			
 				recursiveSegmentSolver(c, dampening, stabilizationPasses, iteration, totalIterations);
-				c.setProcessed(true);
+				//c.setProcessed(true);
 			}
 		} 		
 		QCPSolver(armature, dampening, false, stabilizationPasses, iteration, totalIterations);			
@@ -438,8 +458,7 @@ public abstract class AbstractArmature implements Saveable {
 		AbstractBone startFrom = debug && lastDebugBone != null ? lastDebugBone :  chain.segmentTip;		
 		AbstractBone stopAfter = chain.segmentRoot;
 		
-		AbstractBone currentBone = startFrom;
-		
+		AbstractBone currentBone = startFrom;		
 		if(debug && chain.simulatedBones.size() < 2) {
 
 		} else {	
@@ -458,6 +477,7 @@ public abstract class AbstractArmature implements Saveable {
 					break;
 				}
 			}
+			
 		}
 	}
 
@@ -507,7 +527,7 @@ public abstract class AbstractArmature implements Saveable {
 	public double getDampening() {
 		return dampening;
 	}
-	boolean monitorPerformance = false;
+	boolean monitorPerformance = true;
 	public void setPerformanceMonitor(boolean state) {
 		monitorPerformance = state;
 	}
@@ -525,6 +545,7 @@ public abstract class AbstractArmature implements Saveable {
 
 		long startTime = 0;
 		public void startPerformanceMonitor() {
+			monitorPerformance = true;
 			if(monitorPerformance) {
 				if(timedCalls > benchmarkWindow) {			
 					performance.resetPerformanceStat();
@@ -596,8 +617,8 @@ public abstract class AbstractArmature implements Saveable {
 		try {
 			this.localAxes = l.getObjectFor(AbstractAxes.class, j, "localAxes");
 			this.rootBone = l.getObjectFor(AbstractBone.class, j, "rootBone");
-			this.IKIterations =  j.getInt("defaultIterations");
-			this.dampening = j.getDouble("dampening");
+			if(j.hasKey("defaultIterations")) this.IKIterations = j.getInt("defaultIterations");
+			if(j.hasKey("dampening")) this.dampening = j.getDouble("dampening");
 			this.tag = j.getString("tag");
 		} catch(Exception e) {
 			e.printStackTrace();

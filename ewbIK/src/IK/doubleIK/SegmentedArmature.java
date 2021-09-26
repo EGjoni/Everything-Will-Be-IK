@@ -345,32 +345,73 @@ public class SegmentedArmature {
 			int iteration,
 			double totalIterations) {
 
+		
+		if(forBone.getParent() == null || localizedTargetHeadings.length == 1) 
+			stabilizationPasses = 0;
+		
+		if(stabilizationPasses > 0) 
+			stableUpdateOptimalRotationToPinnedDescendants( forBone, dampening, translate,	stabilizationPasses,	iteration, totalIterations); 
+		else
+			fastUpdateOptimalRotationToPinnedDescendants(forBone, dampening, translate, iteration, totalIterations);
+		
+		
+	}
+	
+	private void fastUpdateOptimalRotationToPinnedDescendants(
+			AbstractBone forBone, 
+			double dampening,
+			boolean translate,
+			int iteration,
+			double totalIterations) {
+		
+		WorkingBone sb = simulatedBones.get(forBone);
+		AbstractAxes thisBoneAxes = sb.simLocalAxes;
+		thisBoneAxes.updateGlobal();
+		
+		double newDampening = -1; 		
+		if(translate == true) {
+			newDampening = Math.PI;
+		}
+		updateTargetHeadings(localizedTargetHeadings, weights, thisBoneAxes);
+		upateTipHeadings(localizedTipHeadings, thisBoneAxes);		
+		QCP qcpConvergenceCheck = new QCP(MathUtils.DOUBLE_ROUNDING_ERROR, MathUtils.DOUBLE_ROUNDING_ERROR);
+		updateOptimalRotationToPinnedDescendants(
+				sb, newDampening, 
+				translate, 
+				localizedTipHeadings, 
+				localizedTargetHeadings, 
+				weights, 
+				qcpConvergenceCheck,
+				iteration,
+				totalIterations);	
+		thisBoneAxes.markDirty(); 
+	}
+	
+	private void stableUpdateOptimalRotationToPinnedDescendants(
+			AbstractBone forBone, 
+			double dampening,
+			boolean translate,
+			int stabilizationPasses,
+			int iteration,
+			double totalIterations) {
+				
 		WorkingBone sb = simulatedBones.get(forBone);
 		AbstractAxes thisBoneAxes = sb.simLocalAxes;
 		thisBoneAxes.updateGlobal();
 
 		Rot bestOrientation = new Rot(thisBoneAxes.getGlobalMBasis().rotation.rotation);
-		double newDampening = -1; 
-		if(forBone.getParent() == null || localizedTargetHeadings.length == 1) 
-			stabilizationPasses = 0;
+		double newDampening = -1; 		
 		if(translate == true) {
 			newDampening = Math.PI;
 		}
-
-
 		updateTargetHeadings(localizedTargetHeadings, weights, thisBoneAxes);
 		upateTipHeadings(localizedTipHeadings, thisBoneAxes);		
 
 		double bestRMSD = 0d; 
 		QCP qcpConvergenceCheck = new QCP(MathUtils.DOUBLE_ROUNDING_ERROR, MathUtils.DOUBLE_ROUNDING_ERROR);
-		double newRMSD = 999999d;
-
+		double newRMSD = 999999d;		
+		bestRMSD = getManualMSD(localizedTipHeadings, localizedTargetHeadings, weights);
 		
-		
-		if(stabilizationPasses > 0)
-			bestRMSD = getManualMSD(localizedTipHeadings, localizedTargetHeadings, weights);
-
-
 		for(int i=0; i<stabilizationPasses + 1; i++) {
 			updateOptimalRotationToPinnedDescendants(
 					sb, newDampening, 
@@ -380,13 +421,10 @@ public class SegmentedArmature {
 					weights, 
 					qcpConvergenceCheck,
 					iteration,
-					totalIterations);	
-
-			if(stabilizationPasses > 0) {
-				//newDampening = dampening == -1 ? sb.forBone.parentArmature.dampening 
+					totalIterations);			
+			
 				upateTipHeadings(localizedTipHeadings, thisBoneAxes);		
-				newRMSD = getManualMSD(localizedTipHeadings, localizedTargetHeadings, weights);
-				
+				newRMSD = getManualMSD(localizedTipHeadings, localizedTargetHeadings, weights);		
 
 				if(bestRMSD >= newRMSD) {				
 					if(sb.springy) {
@@ -404,22 +442,12 @@ public class SegmentedArmature {
 						newRMSD = getManualMSD(localizedTipHeadings, localizedTargetHeadings, weights);
 					}
 					bestOrientation.set(thisBoneAxes.getGlobalMBasis().rotation.rotation);
-					bestRMSD = newRMSD;		
-					
-					//if(i>0) 
-					//System.out.println("inner retired after " + i + " attempts.");
+					bestRMSD = newRMSD;							
 					break;				
-				}
-			} else {
-				//System.out.println("retired after " + i + " attempts.");
-				break;
-			}
+				} 
 		}
-		if(stabilizationPasses > 0) { 
-			//System.out.println("retried " + (int)(((tryDampen -1d) /4d)));
-			thisBoneAxes.setGlobalOrientationTo(bestOrientation);
-			thisBoneAxes.markDirty(); 
-		}
+		thisBoneAxes.setGlobalOrientationTo(bestOrientation);
+		thisBoneAxes.markDirty(); 		
 	}
 
 	//AbstractAxes tempAxes = null;
@@ -435,12 +463,12 @@ public class SegmentedArmature {
 			int iteration,
 			double totalIterations) {
 
-		qcpOrientationAligner.setMaxIterations(0);		
+		qcpOrientationAligner.setMaxIterations(5);		
 		Rot qcpRot =  qcpOrientationAligner.weightedSuperpose(localizedTipHeadings, localizedTargetHeadings, weights, translate);
 
 		SGVec_3d translateBy = qcpOrientationAligner.getTranslation();
 		double boneDamp = sb.cosHalfDampen; 
-				
+		//sb.forBone.getIKPin().modeCode = 6;
 		if(dampening != -1) {
 			boneDamp = dampening;
 			qcpRot.rotation.clampToAngle(boneDamp);
@@ -507,7 +535,7 @@ public class SegmentedArmature {
 			AbstractAxes targetAxes = pin.forBone.getPinnedAxes();
 			targetAxes.updateGlobal();
 			localizedTipHeadings[hdx].set(tipAxes.origin_()).sub(origin);
-			double scaleBy  = thisBoneAxes.origin_().dist(targetAxes.origin_());
+			double scaleBy  = Math.max(1d, thisBoneAxes.origin_().dist(targetAxes.origin_()));
 			hdx++;
 
 			if((modeCode & AbstractIKPin.XDir) != 0) {
@@ -690,7 +718,8 @@ public class SegmentedArmature {
 			WorkingBone sb = chain.simulatedBones.get(b);
 			AbstractAxes simulatedLocalAxes = sb.simLocalAxes;
 			if(b.parent != null) { 
-				b.localAxes().alignOrientationTo(simulatedLocalAxes);
+				b.localAxes().localMBasis.rotateTo(simulatedLocalAxes.localMBasis.rotation);
+				b.localAxes().markDirty(); b.localAxes().updateGlobal();
 			} else {
 				b.localAxes().alignLocalsTo(simulatedLocalAxes);
 			}

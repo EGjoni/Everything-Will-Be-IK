@@ -233,10 +233,52 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	public <V extends Vec3d<?>> boolean isInLimits_(V globalPoint) {
 		double[] inBounds = {1d}; 
 		//boneRay.p1.set(toSet.origin()); boneRay.p2.set(toSet.y().getScaledTo(attachedTo.boneHeight));    
-		Vec3d<?> inLimits = this.pointInLimits(globalPoint, inBounds);    
+		Vec3d<?> inLimits = this.pointInLimits(globalPoint, inBounds, AbstractLimitCone.BOUNDARY);    
 		return inBounds[0] > 0d;
 	}
 
+	
+	/**
+	 * Presumes the input axes are the bone's localAxes, and rotates 
+	 * them to satisfy the snap limits. 
+	 * 
+	 * @param toSet
+	 */
+	public void setAxesToSoftOrientationSnap(AbstractAxes toSet, AbstractAxes limitingAxes, double cosHalfAngleDampen) {
+		double[] inBounds = {1d}; 
+		/**
+		 * Basic idea: 
+		 * We treat our hard and soft boundaries as if they were two seperate kusudamas. 
+		 * First we check if we have exceeded our soft boundaries, if so, 
+		 * we find the closest point on the soft boundary and the closest point on the same segment 
+		 * of the hard boundary. 
+		 * let d be our orientation between these two points, represented as a ratio with 0 being right on the soft boundary
+		 * and 1 being right on the hard boundary.
+		 * 
+		 * On every kusudama call, we store the previous value of d.
+		 * If the new d is  greater than the old d, our result is the weighted average of these 
+		 * (with the weight determining the resistance of the boundary). This result is stored for reference by future calls. 
+		 * If the new d is less than the old d, we return the input orientation, and set the new d to this lower value for reference by future calls.
+		 * 
+		 * 
+		 * Because we can expect rotations to be fairly small, we use nlerp instead of slerp for efficiency when averaging.
+		 */
+		//boneRay.p1().set(toSet.origin_()); boneRay.p2().set(toSet.y_().p2());    
+		//Vec3d<?> inLimits = this.pointInLimits(boneRay.p2(), inBounds, limitingAxes);
+		limitingAxes.updateGlobal();
+		boneRay.p1().set(limitingAxes.origin_()); boneRay.p2().set(toSet.y_().p2());
+		Vec3d<?> bonetip = limitingAxes.getLocalOf(toSet.y_().p2());
+		Vec3d<?> inCushionLimits = this.pointInLimits(bonetip, inBounds, AbstractLimitCone.CUSHION);
+		
+		if (inBounds[0] == -1 && inCushionLimits != null) {     
+			constrainedRay.p1().set(boneRay.p1()); constrainedRay.p2().set(limitingAxes.getGlobalOf(inCushionLimits)); 
+			Rot rectifiedRot = new Rot(boneRay.heading(), constrainedRay.heading());
+			
+			//rectifiedRot.rotation.clampToQuadranceAngle(cosHalfAngleDampen);
+			toSet.rotateBy(rectifiedRot);
+			toSet.updateGlobal();			
+		}		
+	}
 
 	/**
 	 * Presumes the input axes are the bone's localAxes, and rotates 
@@ -265,13 +307,23 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 
 	public boolean isInOrientationLimits(AbstractAxes globalAxes, AbstractAxes limitingAxes) {
 		double[] inBounds = {1d}; 		
-		//boneRay.p1().set(globalAxes.origin_()); boneRay.p2().set(globalAxes.y_().p2());    
-		Vec3d<?> inLimits = this.pointInLimits(limitingAxes.getLocalOf(globalAxes.y_().p2()), inBounds);
-		if(inBounds[0] == -1l) {
+		//boneRay.p1().set(globalAxes.origin_()); boneRay.p2().set(globalAxes.y_().p2());
+		//Vec3d<?> inLimits = this.pointInLimits(limitingAxes.getLocalOf(globalAxes.y_().p2()), inBounds);
+		Vec3d<?> localizedPoint = limitingAxes.getLocalOf(globalAxes.y_().p2()).copy().normalize();
+		if(limitCones.size() == 1) {
+			return limitCones.get(0).determineIfInBounds(null, localizedPoint);
+		} else {
+			for(int i=0; i<limitCones.size() -1; i++) {
+				if(limitCones.get(i).determineIfInBounds(limitCones.get(i+1),localizedPoint))
+					return true;
+			}
+			return false;
+		}
+		/*if(inBounds[0] == -1l) {
 			return false;
 		} else {
 			return true;
-		}
+		}*/
 	}
 
 
@@ -305,8 +357,8 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	public double snapToTwistLimits(AbstractAxes toSet, AbstractAxes limitingAxes) {
 
 		if(!axiallyConstrained) return 0d;
-
-		Rot alignRot = limitingAxes.getGlobalMBasis().getInverseRotation().applyTo(toSet.getGlobalMBasis().rotation);
+		Rot invRot = limitingAxes.getGlobalMBasis().getInverseRotation();
+		Rot alignRot = invRot.applyTo(toSet.getGlobalMBasis().rotation);
 		Rot[] decomposition = alignRot.getSwingTwist(new SGVec_3d(0,1,0));
 		double angleDelta2 = decomposition[1].getAngle() * decomposition[1].getAxis().y*-1d; 
 		angleDelta2 = toTau(angleDelta2);
@@ -349,27 +401,29 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 
 	public boolean inTwistLimits(AbstractAxes boneAxes, AbstractAxes limitingAxes) {
 
-		limitingAxes.updateGlobal();
-		Rot alignRot = limitingAxes.getGlobalMBasis().getInverseRotation().applyTo(boneAxes.globalMBasis.rotation);
+		Rot invRot = limitingAxes.getGlobalMBasis().getInverseRotation();
+		Rot alignRot = invRot.applyTo(boneAxes.getGlobalMBasis().rotation);
 		Rot[] decomposition = alignRot.getSwingTwist(new SGVec_3d(0,1,0));
-
-		double angleDelta = decomposition[1].getAngle() * decomposition[1].getAxis().y*-1;
-		//uncomment the next line for reflectable axis  support (removed for performance reasons) 
-		angleDelta*= limitingAxes.getGlobalChirality()*(limitingAxes.isGlobalAxisFlipped(AbstractAxes.Y) ? -1 : 1);;
-
-		angleDelta = toTau(angleDelta);
-		double fromMinToAngleDelta = toTau(signedAngleDifference(angleDelta, TAU - this.minAxialAngle())); 
+		double angleDelta2 = decomposition[1].getAngle() * decomposition[1].getAxis().y*-1d; 
+		angleDelta2 = toTau(angleDelta2);
+		double fromMinToAngleDelta = toTau(signedAngleDifference(angleDelta2, TAU - this.minAxialAngle())); 
 
 		if(fromMinToAngleDelta <  TAU - range ) {                          
-			double distToMin = Math.abs(signedAngleDifference(angleDelta, TAU-this.minAxialAngle()));
-			double distToMax =  Math.abs(signedAngleDifference(angleDelta, TAU-(this.minAxialAngle()+range)));
-			if(distToMin < distToMax){ 
-				return false;                                                                                                        
-			} else {                                                                                                                                                                                                           
-				return false;   
+			double distToMin = Math.abs(signedAngleDifference(angleDelta2, TAU-this.minAxialAngle()));
+			double distToMax =  Math.abs(signedAngleDifference(angleDelta2, TAU-(this.minAxialAngle()+range)));
+			double turnDiff = 1d; 
+			//uncomment the next line for reflectable axis  support (removed for performance reasons) 
+			turnDiff *= limitingAxes.getGlobalChirality(); 
+			if(distToMin < distToMax){
+				return false;                                                                                     
+			} else {                              
+				return false;
 			}
+			//return true;
+		} else {
+			return true;
 		}
-		return true;
+		//return 0;
 	}
 
 	public double signedAngleDifference(double minAngle, double base) {
@@ -389,13 +443,16 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	 * If it cannot exist, the tip of the ray within the kusudama's limits that would require the least rotation
 	 * to arrive at the input point is returned.
 	 * @param inPoint the point to test.
-	 * @param returns a number from -1 to 1 representing the point's distance from the boundary, 0 means the point is right on 
+	 * @param inBounds should be an array with at least 2 elements. The first element will be set to  a number from -1 to 1 representing the point's distance from the boundary, 0 means the point is right on 
 	 * the boundary, 1 means the point is within the boundary and on the path furthest from the boundary. any negative number means 
 	 * the point is outside of the boundary, but does not signify anything about how far from the boundary the point is.  
+	 * The second element will be given a value corresponding to the limit cone whose bounds were exceeded. If the bounds were exceeded on a segment between two limit cones, 
+	 * this value will be set to a non-integer value between the two indices of the limitcone comprising the segment whose bounds were exceeded.
 	 * @return the original point, if it's in limits, or the closest point which is in limits.
 	 */
-	public <V extends Vec3d<?>> Vec3d<?> pointInLimits(V inPoint, double[] inBounds) {
+	public <V extends Vec3d<?>> Vec3d<?> pointInLimits(V inPoint, double[] inBounds, int mode) {
 
+		//double restart = 5d;
 		Vec3d<?> point = inPoint.copy(); 
 		point.normalize(); 		
 		//point.mult(attachedTo.boneHeight);
@@ -404,40 +461,46 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 
 		Vec3d<?> closestCollisionPoint = null; 
 		double closestCos = -2d;
-		if (limitCones.size() > 1 && this.orientationallyConstrained) {
-			for (int i =0; i<limitCones.size() -1; i++) {
-				Vec3d<?> collisionPoint = inPoint.copy(); collisionPoint.set(0,0,0);
-				AbstractLimitCone nextCone = limitCones.get(i+1);				
-				boolean inSegBounds = limitCones.get(i).inBoundsFromThisToNext(nextCone, point, collisionPoint);				
-				if( inSegBounds == true) {
-					inBounds[0] = 1;  
-				} else {
-					double thisCos =  collisionPoint.dot(point); 
-					if(closestCollisionPoint == null || thisCos > closestCos) {
-						closestCollisionPoint = collisionPoint.copy();
-						closestCos = thisCos;
-					}
-				} 
-			}   
-			if (inBounds[0] == -1) { 
-				return closestCollisionPoint;
-			} else { 
-				return inPoint;
-			}
-		} else if(orientationallyConstrained) {
-			if(point.dot(limitCones.get(0).getControlPoint()) > limitCones.get(0).getRadiusCosine()) {
-				inBounds[0] = 1;
-				return inPoint;
+		boolean[] boundHint = {false};
+		
+		for (int i =0; i<limitCones.size(); i++) {
+			AbstractLimitCone cone = limitCones.get(i);
+			Vec3d<?> collisionPoint = inPoint.copy(); collisionPoint.set(0,0,0);			
+			collisionPoint = cone.closestToCone(point, boundHint);
+			if(collisionPoint == null) {
+				inBounds[0] = 1; 
+				return point;
 			} else {
-				Vec3d<?> axis = limitCones.get(0).getControlPoint().crossCopy(point);
-				//Rot toLimit = new Rot(limitCones.get(0).getControlPoint(), point);
-				Rot toLimit = new Rot(axis, limitCones.get(0).getRadius());
-				return toLimit.applyToCopy(limitCones.get(0).getControlPoint());
+				double thisCos =  collisionPoint.dot(point); 
+				if(closestCollisionPoint == null || thisCos > closestCos) {
+					closestCollisionPoint = collisionPoint; 
+					closestCos = thisCos;
+				}
 			}
-		} else {
-			inBounds[0] = 1;
-			return inPoint;
 		}
+		if(inBounds[0] == -1)  {
+			for (int i =0; i<limitCones.size() -1; i++) {
+				AbstractLimitCone currCone = limitCones.get(i);
+				AbstractLimitCone nextCone = limitCones.get(i+1);
+				Vec3d<?> collisionPoint = inPoint.copy(); collisionPoint.set(0,0,0);
+				collisionPoint = currCone.getOnGreatTangentTriangle(nextCone, point);
+				if(collisionPoint != null) {
+					double thisCos =  collisionPoint.dot(point);
+						if(thisCos == 1d) {
+							inBounds[0] =1; 
+							closestCollisionPoint = point;
+							return point;
+						} 
+						else if(thisCos > closestCos) {
+							closestCollisionPoint = collisionPoint; 
+							closestCos = thisCos;
+						}
+				}
+			}			
+		}
+		
+		return closestCollisionPoint;
+	
 	}
 	
 	

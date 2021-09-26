@@ -2,14 +2,17 @@ package math.doubleV;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.WeakHashMap;
 import java.util.function.Consumer;
 
 import asj.LoadManager;
 import asj.SaveManager;
 import asj.Saveable;
 import asj.data.JSONObject;
+import math.WeakHashSet;
 
 /**
  * @author Eron Gjoni
@@ -20,7 +23,7 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 	public static final int X =0, Y=1, Z=2; 
 
 
-	public boolean debug = false;
+	public static boolean debug = false;
 	//protected int globalChirality = RIGHT;
 	//protected int localChirality = RIGHT;
 
@@ -34,11 +37,14 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 	//public boolean forceOrthoNormality = true; 
 	
 
-	public LinkedList<DependencyReference<AxisDependency>> dependentsRegistry = new LinkedList<DependencyReference<AxisDependency>>(); 
+	//public LinkedList<DependencyReference<AxisDependency>> dependentsRegistry = new LinkedList<DependencyReference<AxisDependency>>(); 
+	public WeakHashSet<AxisDependency> dependentsSet = new WeakHashSet<AxisDependency>();
+	public WeakHashMap<AxisDependency, Boolean> dependentsMap = new WeakHashMap<AxisDependency, Boolean>();
 
 	protected Vec3d<?> workingVector; 
 
 	protected boolean areGlobal = true;
+	public String tag = this.getIdentityHash() +"-Axes";
 	
 	public <V extends Vec3d<?>> void createTempVars(V type) {
 		workingVector =  type.copy(); 
@@ -107,11 +113,18 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 	}
 	
 	public void updateGlobal() {
-		if(this.dirty) {
+		updateGlobal(false);
+	}
+	
+	/**,
+	 * @param force will non-recursively update the global transformation cache even if it isn't dirty. Meaning, the update won't also be forced on any ancestors. 
+	 */
+	public void updateGlobal(boolean force) {
+		if(this.dirty || force) {
 			if(this.areGlobal) {
 				globalMBasis.adoptValues(this.localMBasis);
 			} else {
-				getParentAxes().updateGlobal();				
+				getParentAxes().updateGlobal(false);				
 				getParentAxes().getGlobalMBasis().setToGlobalOf(this.localMBasis, this.globalMBasis);			
 			}
 		}
@@ -163,7 +176,7 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 			ad.get().parentChangeWarning(this, oldParent, intendedParent, requestedBy);
 		}*/
 		forEachDependent(
-				(ad) -> ad.get().parentChangeWarning(this, oldParent, intendedParent, requestedBy));
+				(ad) -> ad.parentChangeWarning(this, oldParent, intendedParent, requestedBy));
 		
 		
 		if(intendedParent != null && intendedParent != this) {
@@ -184,7 +197,7 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 		this.updateGlobal();
 		
 		forEachDependent(
-				(ad) -> ad.get().parentChangeCompletionNotice(this, oldParent, intendedParent, requestedBy));
+				(ad) -> ad.parentChangeCompletionNotice(this, oldParent, intendedParent, requestedBy));
 		/*for(DependencyReference<AxisDependency> ad : this.dependentsRegistry) {
 			ad.get().parentChangeCompletionNotice(this, oldParent, intendedParent, requestedBy);
 		}*/
@@ -196,11 +209,13 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 	 * weakreferences to elements that have been cleaned up by the garbage collector. 
 	 * @param r
 	 */
-	public void forEachDependent(Consumer<DependencyReference<AxisDependency>> action) {		
-		Iterator<DependencyReference<AxisDependency>> i = dependentsRegistry.iterator();
+	public void forEachDependent(Consumer<AxisDependency> action) {		
+		Iterator i = dependentsSet.iterator();
 		while (i.hasNext()) {
-			DependencyReference<AxisDependency> dr = i.next();
-			if(dr.get() != null) {
+			if(AbstractAxes.debug)
+				System.out.print(".");
+			AxisDependency dr = (AxisDependency) i.next();
+			if(dr != null) {
 				action.accept(dr);
 			} else {
 				i.remove();
@@ -468,7 +483,7 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 	public void setSlipType(int type) {
 		if(this.getParentAxes() != null) {
 			if(type == IGNORE) {
-				this.getParentAxes().dependentsRegistry.remove(this);
+				this.getParentAxes().dependentsSet.remove(this);
 			} else if(type == NORMAL || type == FORWARD) {
 				this.getParentAxes().registerDependent(this);
 			} 
@@ -635,8 +650,8 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 				this.transferToParent(((AxisDependency)newDependent).getParentAxes());
 			}			
 		} 
-		if(dependentsRegistry.indexOf(newDependent) == -1){
-			dependentsRegistry.add(new DependencyReference<AxisDependency>(newDependent));
+		if(!dependentsSet.contains(newDependent)){
+			dependentsSet.add(newDependent);
 		}
 	}
 
@@ -674,8 +689,8 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 		if(this.getParentAxes() != null) {
 			this.updateGlobal();
 			AbstractAxes oldParent = this.getParentAxes();
-			for(DependencyReference<AxisDependency> ad: this.dependentsRegistry) {
-				ad.get().parentChangeWarning(this, this.getParentAxes(), null, null);
+			for(AxisDependency ad: this.dependentsSet) {
+				ad.parentChangeWarning(this, this.getParentAxes(), null, null);
 			}
 			this.getLocalMBasis().adoptValues(this.globalMBasis);
 			this.getParentAxes().disown(this);
@@ -683,14 +698,14 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 			this.areGlobal = true;
 			this.markDirty();
 			this.updateGlobal();
-			for(DependencyReference<AxisDependency> ad: this.dependentsRegistry) {
-				ad.get().parentChangeCompletionNotice(this, oldParent, null, null);
+			for(AxisDependency ad: this.dependentsSet) {
+				ad.parentChangeCompletionNotice(this, oldParent, null, null);
 			}
 		}
 	}
 
 	public void disown(AxisDependency child) {
-		dependentsRegistry.remove(child);
+		dependentsSet.remove(child);
 	}
 	
 	public AbstractBasis getGlobalMBasis() {
@@ -739,6 +754,7 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 		this.getLocalMBasis().translate = origin;
 		this.getLocalMBasis().rotation = rotation;
 		this.getLocalMBasis().refreshPrecomputed();
+		//this.tag = j.getString("identityHash");
 		AbstractAxes par;
 		try {
 			par = (AbstractAxes) l.getObjectFor(AbstractAxes.class, j, "parent");
@@ -835,9 +851,8 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 	}
 
 	public void notifyDependentsOfSlip(AbstractAxes newAxisGlobal, ArrayList<Object> dontWarn) {
-		for(int i = 0; i<dependentsRegistry.size(); i++) {
-			if(!dontWarn.contains(dependentsRegistry.get(i))) {
-				AxisDependency dependant = dependentsRegistry.get(i).get();
+		for(AxisDependency dependant : dependentsSet) {
+			if(!dontWarn.contains(dependant)) {
 
 				//First we check if the dependent extends AbstractAxes
 				//so we know whether or not to pass the dontWarn list
@@ -847,47 +862,61 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 					dependant.axisSlipWarning(this.getGlobalCopy(), newAxisGlobal, this);
 				}
 			} else {
-				System.out.println("skipping: " + dependentsRegistry.get(i));
+				System.out.println("skipping: " + dependant);
 			}
 		}
 	}
 
 	public void notifyDependentsOfSlipCompletion(AbstractAxes globalAxisPriorToSlipping, ArrayList<Object> dontWarn) {
-		for(int i = 0; i<dependentsRegistry.size(); i++) {
-			if(!dontWarn.contains(dependentsRegistry.get(i)))
-				dependentsRegistry.get(i).get().axisSlipCompletionNotice(globalAxisPriorToSlipping, this.getGlobalCopy(), this);
+		for(AxisDependency dependant : dependentsSet) {
+			if(!dontWarn.contains(dependant))
+				dependant.axisSlipCompletionNotice(globalAxisPriorToSlipping, this.getGlobalCopy(), this);
 			else 
-				System.out.println("skipping: " + dependentsRegistry.get(i));
+				System.out.println("skipping: " + dependant);
 		}
 	}
 
 
 	public void notifyDependentsOfSlip(AbstractAxes newAxisGlobal) {
-		for(int i = 0; i<dependentsRegistry.size(); i++) {
-			dependentsRegistry.get(i).get().axisSlipWarning(this.getGlobalCopy(), newAxisGlobal, this);
+		for(AxisDependency dependant : dependentsSet) {
+			dependant.axisSlipWarning(this.getGlobalCopy(), newAxisGlobal, this);
 		}
 	}
 
 	public void notifyDependentsOfSlipCompletion(AbstractAxes globalAxisPriorToSlipping) {
-		for(int i = 0; i<dependentsRegistry.size(); i++) {//AxisDependancy dependent : dependentsRegistry) {
-			dependentsRegistry.get(i).get().axisSlipCompletionNotice(globalAxisPriorToSlipping, this.getGlobalCopy(), this);
+		for(AxisDependency dependant : dependentsSet) {
+			dependant.axisSlipCompletionNotice(globalAxisPriorToSlipping, this.getGlobalCopy(), this);
 		}
 	}
 
+	/**
+	 * @param depth indicates how many descendant generations down to notify of the dirtiness. 
+	 * leave blank unless you know what you're doing.
+	 */
+	public void markDirty(int depth) {
+		if(!this.dirty) {			
+			this.dirty = true;
+			this.markDependentsDirty(depth-1);			
+		}
+	}
 	
+	public void markDependentsDirty(int depth) {
+		if(depth >= 0)
+			forEachDependent((a) -> a.markDirty(depth));
+	}
+	
+	public void markDependentsDirty() {
+		forEachDependent((a) -> a.markDirty());
+	}
 
-	public void markDirty() {
-		
+	public void markDirty() {		
 		if(!this.dirty) {			
 			this.dirty = true;
 			this.markDependentsDirty();			
-		}
-		
+		}		
 	}
 
-	public void markDependentsDirty() {
-		forEachDependent((a) -> a.get().markDirty());
-	}
+	
 
 	public String toString() {
 		String global = "Global: " + getGlobalMBasis().toString();
@@ -920,8 +949,8 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 		saveManager.addToSaveState(this);
 		forEachDependent(				  
 				(ad) -> {
-					if(Saveable.class.isAssignableFrom(ad.get().getClass()))
-							((Saveable)ad.get()).makeSaveable(saveManager);
+					if(Saveable.class.isAssignableFrom(ad.getClass()))
+							((Saveable)ad).makeSaveable(saveManager);
 				});
 	}
 	

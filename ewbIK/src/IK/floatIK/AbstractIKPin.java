@@ -23,10 +23,10 @@ public abstract class AbstractIKPin implements Saveable {
 	protected AbstractIKPin parentPin; 		
 	protected ArrayList<AbstractIKPin> childPins = new ArrayList<>();
 	float pinWeight  = 1;
-	byte modeCode = 7; 
+	byte modeCode = 6; 
 	int subTargetCount = 4; 	
 	static final short XDir = 1, YDir = 2, ZDir = 4;
-	protected float xPriority =1f , yPriority =1f, zPriority = 1f;
+	protected float xPriority =1f , yPriority =3f, zPriority = 1f;
 	float depthFalloff= 0f;
 	
 	public AbstractIKPin() {}

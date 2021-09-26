@@ -20,7 +20,9 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 package math.doubleV;
 
+import java.lang.ref.WeakReference;
 
+import math.doubleV.AbstractAxes.DependencyReference;
 
 public interface AxisDependency {
 	default void emancipate() {};
@@ -30,5 +32,15 @@ public interface AxisDependency {
 	default void parentChangeCompletionNotice(AbstractAxes warningBy, AbstractAxes oldParent, AbstractAxes intendedParent, Object requestedBy) {}; 
 	default void markDirty() {};
 	default void markDependentsDirty() {};
+	/**
+	 * @param depth indicates how many descendant generations down to notify of the dirtiness. 
+	 * leave blank unless you know what you're doing.
+	 */
+	default void markDirty(int depth) {}
+	/**
+	 * @param depth indicates how many descendant generations down to notify of the dirtiness. 
+	 * leave blank unless you know what you're doing.
+	 */
+	default void markDependentsDirty(int depth) {}
 	public AbstractAxes getParentAxes();
 }

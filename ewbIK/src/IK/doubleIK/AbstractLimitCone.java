@@ -38,18 +38,34 @@ public abstract class AbstractLimitCone implements Saveable {
 	//radius stored as  cosine to save on the acos call necessary for angleBetween. 
 	private double radiusCosine; 
 	private double radius; 
+	private double cushionRadius;
+	private double cushionCosine; 
+	private double currentCushion = 1d;
 
 	public AbstractKusudama parentKusudama;
 
 	public Vec3d<?> tangentCircleCenterNext1;
 	public Vec3d<?> tangentCircleCenterNext2;
+	//public Vec3d<?> tangentCircleCenterPrevious1;
+	//public Vec3d<?> tangentCircleCenterPrevious2;
 	public double tangentCircleRadiusNext;
 	public double tangentCircleRadiusNextCos;
+	//public double tangentCircleRadiusPrevious;
+	//public double tangentCircleRadiusPreviousCos;
+	
+	public Vec3d<?> cushionTangentCircleCenterNext1;
+	public Vec3d<?> cushionTangentCircleCenterNext2;
+	public Vec3d<?> cushionTangentCircleCenterPrevious1;
+	public Vec3d<?> cushionTangentCircleCenterPrevious2;
+	public double cushionTangentCircleRadiusNext;
+	public double cushionTangentCircleRadiusNextCos;
+	//public double cushionTangentCircleRadiusPrevious;
+	//public double cushionTangentCircleRadiusPreviousCos;
 
-	public Vec3d<?> tangentCircleCenterPrevious1;
-	public Vec3d<?> tangentCircleCenterPrevious2;
-	public double tangentCircleRadiusPrevious;
-	public double tangentCircleRadiusPreviousCos;
+
+	public static int BOUNDARY = 0;
+	public static int CUSHION = 1; 
+	
 
 
 	//softness of 0 means completely hard. 
@@ -69,13 +85,37 @@ public abstract class AbstractLimitCone implements Saveable {
 
 	public AbstractLimitCone(){}
 
-	public AbstractLimitCone(Vec3d<?> location, double rad, AbstractKusudama attachedTo) {
-		setControlPoint(location); 
-		tangentCircleCenterNext1 = location.getOrthogonal();
+	public AbstractLimitCone(Vec3d<?> direction, double rad, AbstractKusudama attachedTo) {
+		setControlPoint(direction); 
+		tangentCircleCenterNext1 = direction.getOrthogonal();
 		tangentCircleCenterNext2 = SGVec_3d.mult(tangentCircleCenterNext1, -1);
 
 		this.radius = Math.max(Double.MIN_VALUE, rad);
 		this.radiusCosine = Math.cos(radius);
+		this.cushionRadius = this.radius;
+		this.cushionCosine = this.radiusCosine;
+		parentKusudama = attachedTo;
+	}
+	
+	/**
+	 * 
+	 * @param direction 
+	 * @param rad 
+	 * @param cushion range 0-1, how far toward the boundary to begin slowing down the rotation if soft constraints are enabled.
+	 * Value of 1 creates a hard boundary. Value of 0 means it will always be the case that the closer a joint in the allowable region 
+	 * is to the boundary, the more any further rotation in the direction of that boundary will be avoided.   
+	 * @param attachedTo
+	 */
+	public AbstractLimitCone(Vec3d<?> direction, double rad, double cushion, AbstractKusudama attachedTo) {
+		setControlPoint(direction); 
+		tangentCircleCenterNext1 = direction.getOrthogonal();
+		tangentCircleCenterNext2 = SGVec_3d.mult(tangentCircleCenterNext1, -1);
+
+		this.radius = Math.max(Double.MIN_VALUE, rad);
+		this.radiusCosine = Math.cos(radius);
+		double adjustedCushion = Math.min(1d, Math.max(0.001d, cushion));
+		this.cushionRadius = this.radius * adjustedCushion;
+		this.cushionCosine = Math.cos(cushionRadius);
 		parentKusudama = attachedTo;
 	}
 
@@ -162,9 +202,13 @@ public abstract class AbstractLimitCone implements Saveable {
 		 * if it is, then we're finished and in bounds. otherwise, we're out of bounds. 
 		 */
 
-		if(controlPoint.dot(input) >= radiusCosine || next.controlPoint.dot(input) >= next.radiusCosine ) {
+		if(controlPoint.dot(input) >= radiusCosine)
+			return true;
+		else if (next != null && next.controlPoint.dot(input) >= next.radiusCosine ) 
 			return true; 
-		} else {
+		else {
+			if(next == null) 
+				return false;
 			boolean inTan1Rad = tangentCircleCenterNext1.dot(input)	> tangentCircleRadiusNextCos; 
 			if(inTan1Rad)
 				return false; 
@@ -200,12 +244,6 @@ public abstract class AbstractLimitCone implements Saveable {
 		}
 	}	
 	
-	public <V extends Vec3d<?>> Vec3d<?> closestCone(AbstractLimitCone next, V input) {
-		if(input.dot(controlPoint) > input.dot(next.controlPoint)) 
-			return this.controlPoint.copy();
-		else 
-			return next.controlPoint.copy();
-	}
 
 	public <V extends Vec3d<?>> Vec3d<?> getOnPathSequence(AbstractLimitCone next, V input) {
 		Vec3d c1xc2 = controlPoint.crossCopy(next.controlPoint);		
@@ -237,19 +275,27 @@ public abstract class AbstractLimitCone implements Saveable {
 	}
 	
 	
+	/**
+	 *
+	 * @param next
+	 * @param input
+	 * @return null if inapplicable for rectification. the original point if in bounds, or the point rectified to the closest boundary on the path sequence
+	 * between two cones if the point is out of bounds and applicable for rectification.
+	 */
 	public <V extends Vec3d<?>> Vec3d<?> getOnGreatTangentTriangle(AbstractLimitCone next, V input) {
 		Vec3d c1xc2 = controlPoint.crossCopy(next.controlPoint);		
 		double c1c2dir = input.dot(c1xc2);
 		if(c1c2dir < 0.0) { 
 			Vec3d c1xt1 = controlPoint.crossCopy(tangentCircleCenterNext1); 
 			Vec3d t1xc2 = tangentCircleCenterNext1.crossCopy(next.controlPoint);	
-			if(input.dot(c1xt1) > 0 && input.dot(t1xc2) > 0) {
-				if(input.dot(tangentCircleCenterNext1) > tangentCircleRadiusNextCos) {
+			if( input.dot(c1xt1)> 0 &&  input.dot(t1xc2) > 0) {
+				double toNextCos = input.dot(tangentCircleCenterNext1) ;
+				if(toNextCos > tangentCircleRadiusNextCos) {
 					Vec3d<?> planeNormal = tangentCircleCenterNext1.crossCopy(input); 
 					Rot rotateAboutBy = new Rot(planeNormal, tangentCircleRadiusNext);
 					return rotateAboutBy.applyToCopy(tangentCircleCenterNext1);
 				}  else {
-					return input.copy();
+					return input;
 				}
 			} else {
 				return null;
@@ -263,14 +309,21 @@ public abstract class AbstractLimitCone implements Saveable {
 					Rot rotateAboutBy = new Rot(planeNormal, tangentCircleRadiusNext);
 					return rotateAboutBy.applyToCopy(tangentCircleCenterNext2);	
 				} else {
-					return input.copy();
+					return input;
 				} 
 			}
 			else {
 				return null;
 			}
-		}	
+		}
+	}
+	
 
+	public <V extends Vec3d<?>> Vec3d<?> closestCone(AbstractLimitCone next, V input) {
+		if(input.dot(controlPoint) > input.dot(next.controlPoint)) 
+			return this.controlPoint.copy();
+		else 
+			return next.controlPoint.copy();
 	}
 
 	/**
@@ -327,9 +380,14 @@ public abstract class AbstractLimitCone implements Saveable {
 
 	public void updateTangentHandles(AbstractLimitCone next) {    
 		this.controlPoint.normalize();
+		updateTangentAndCushionHandles(next, BOUNDARY);
+		updateTangentAndCushionHandles(next, CUSHION);
+	}
+	
+	private void updateTangentAndCushionHandles(AbstractLimitCone next, int mode) {
 		if(next !=null) {
-			double radA = this.getRadius();
-			double radB = next.getRadius();
+			double radA = this._getRadius(mode);
+			double radB = next._getRadius(mode);
 
 			Vec3d<?> A = this.getControlPoint().copy();
 			Vec3d<?> B = next.getControlPoint().copy(); 
@@ -338,7 +396,7 @@ public abstract class AbstractLimitCone implements Saveable {
 			
 			/**
 			 * There are an infinite number of circles co-tangent with A and B, every other
-			 * one of which had a unique radius.  
+			 * one of which has a unique radius.  
 			 * 
 			 * However, we want the radius of our tangent circles to obey the following properties: 
 			 *   1) When the radius of A + B == 0, our tangent circle's radius should = 90.
@@ -377,11 +435,10 @@ public abstract class AbstractLimitCone implements Saveable {
 
 			// ray from scaled center of next cone to half way point between the circumference of this cone and the next cone. 
 			sgRayd r1B = new sgRayd(planeDir1B, scaledAxisB); 
-			sgRayd r2B = new sgRayd(planeDir1B, planeDir2B);
-			
+			sgRayd r2B = new sgRayd(planeDir1B, planeDir2B);			
 			
 			r1B.elongate(99);
-			 r2B.elongate(99);
+			r2B.elongate(99);
 			 
 			Vec3d<?> intersection1 = r1B.intersectsPlane(scaledAxisA, planeDir1A, planeDir2A);
 			Vec3d<?> intersection2 = r2B.intersectsPlane( scaledAxisA, planeDir1A, planeDir2A);
@@ -394,24 +451,98 @@ public abstract class AbstractLimitCone implements Saveable {
 			Vec3d<?> sphereCenter = new SGVec_3d();
 			intersectionRay.intersectsSphere(sphereCenter, 1f, sphereIntersect1, sphereIntersect2);  
 
-			this.tangentCircleCenterNext1 = sphereIntersect1; 
-			this.tangentCircleCenterNext2 = sphereIntersect2; 
-			this.tangentCircleRadiusNext = tRadius;
-
-			next.tangentCircleCenterPrevious1 = sphereIntersect1; 
-			next.tangentCircleCenterPrevious2 = sphereIntersect2;
-			next.tangentCircleRadiusPrevious = tRadius;
+			this.setTangentCircleCenterNext1(sphereIntersect1, mode); 
+			this.setTangentCircleCenterNext2(sphereIntersect2, mode); 
+			this.setTangentCircleRadiusNext(tRadius, mode);
 		}
 
-		this.tangentCircleRadiusNextCos = Math.cos(tangentCircleRadiusNext);
-		this.tangentCircleRadiusPreviousCos = Math.cos(tangentCircleRadiusPrevious);
+		
+		//this.tangentCircleRadiusPreviousCos = Math.cos(tangentCircleRadiusPrevious);
 
-		if(tangentCircleCenterNext1 == null) 
-			tangentCircleCenterNext1 = controlPoint.getOrthogonal().normalize();
-		if(tangentCircleCenterNext2 == null)
+		if(this.tangentCircleCenterNext1 == null) { 
+			this.tangentCircleCenterNext1 = controlPoint.getOrthogonal().normalize();
+			this.cushionTangentCircleCenterNext1 = controlPoint.getOrthogonal().normalize();
+		}
+		if(tangentCircleCenterNext2 == null) {
 			tangentCircleCenterNext2 = SGVec_3d.mult(tangentCircleCenterNext1, -1).normalize();
+			cushionTangentCircleCenterNext2 = SGVec_3d.mult(cushionTangentCircleCenterNext2, -1).normalize();
+		}
 		if(next != null)
 			computeTriangles(next); 
+	}
+	
+	
+	private void setTangentCircleCenterNext1(Vec3d<?> point, int mode) {
+		if(mode == CUSHION) {
+			this.cushionTangentCircleCenterNext1 = point; 
+		} else {
+			this.tangentCircleCenterNext1 = point;
+		}
+	}
+	private void setTangentCircleCenterNext2(Vec3d<?> point, int mode) {
+		if(mode == CUSHION) {
+			this.cushionTangentCircleCenterNext2 = point; 
+		} else {
+			this.tangentCircleCenterNext2 = point;
+		}
+	}	
+	
+	
+	private void setTangentCircleRadiusNext(double rad, int mode ) {
+		if(mode==CUSHION) {
+			this.cushionTangentCircleRadiusNext = rad; 
+			this.cushionTangentCircleRadiusNext = Math.cos(cushionTangentCircleRadiusNextCos);
+		} else {
+				this.tangentCircleRadiusNext = rad;
+				this.tangentCircleRadiusNextCos = Math.cos(tangentCircleRadiusNext);
+		}
+	}	
+	/**
+	 * for internal and rendering use only. Avoid modifying any values in the resulting object, 
+	 * which is returned by reference. 
+	 * @param mode
+	 * @return
+	 */
+	protected Vec3d<?> getTangentCircleCenterNext1(int mode) {
+		if(mode == CUSHION)
+				return cushionTangentCircleCenterNext1;
+		return tangentCircleCenterNext1;
+	}	
+	
+	protected double getTangentCircleRadiusNext(int mode) {
+		if(mode == CUSHION) 
+				return cushionTangentCircleRadiusNext; 
+		return tangentCircleRadiusNext;
+	}
+	
+	protected double getTangentCircleRadiusNextCos(int mode) {
+		if(mode == CUSHION) 
+				return cushionTangentCircleRadiusNextCos; 
+		return tangentCircleRadiusNextCos;
+	}
+
+	/**
+	 * for internal and rendering use only. Avoid modifying any values in the resulting object, 
+	 * which is returned by reference. 
+	 * @param mode
+	 * @return
+	 */
+	protected Vec3d<?> getTangentCircleCenterNext2(int mode) {
+		if(mode == CUSHION)
+			return cushionTangentCircleCenterNext2;
+		return tangentCircleCenterNext2;
+	}
+
+	protected double _getRadius(int mode) {
+		if(mode == CUSHION)
+			return cushionRadius;
+		return radius;
+	}
+	
+	protected double _getRadiusCosine(int mode) {
+		if(mode == CUSHION)
+			return cushionCosine;
+		else return radiusCosine; 
 	}
 
 	private void computeTriangles(AbstractLimitCone next) {
@@ -437,7 +568,7 @@ public abstract class AbstractLimitCone implements Saveable {
 	}
 
 	public double getRadius() {
-		return radius;
+		return this.radius;
 	}
 
 	public double getRadiusCosine() {
@@ -448,6 +579,25 @@ public abstract class AbstractLimitCone implements Saveable {
 		this.radius = radius;
 		this.radiusCosine = Math.cos(radius);
 		this.parentKusudama.constraintUpdateNotification();
+	}
+	
+	public double getCushionRadius() {
+		return this.cushionRadius;
+	}
+	
+	public double getCushionCosine() {
+		return this.cushionCosine;
+	}
+	
+	/**
+	 * @param cushion range 0-1, how far toward the boundary to begin slowing down the rotation if soft constraints are enabled.
+	 * Value of 1 creates a hard boundary. Value of 0 means it will always be the case that the closer a joint in the allowable region 
+	 * is to the boundary, the more any further rotation in the direction of that boundary will be avoided.   
+	 */
+	public void setCushionBoundary(double cushion) {
+		double adjustedCushion = Math.min(1d, Math.max(0.001d, cushion));
+		this.cushionRadius = this.radius * adjustedCushion;
+		this.cushionCosine = Math.cos(cushionRadius);
 	}
 
 	public AbstractKusudama getParentKusudama() {
