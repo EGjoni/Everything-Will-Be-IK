@@ -373,6 +373,15 @@ public abstract class Vec3d<T extends Vec3d<T>> implements Vecd<T>, CanLoad {
 	}
 	
 	
+	/** makes a copy of this vector and sets it to the cross product between it and the input vector,
+	 *  then returns the copy
+	 * @param vector The other vector
+	 * @return The copied vector for chaining */
+	public  <V extends Vec3d<?>>  T crossCopy(V vector) {
+		T  c = this.copy();
+		return c.crs(vector);
+	}
+	
 	/**
 	 * Takes a vector representing the normal of a plane, and returns 
 	 * the value of this vector projected onto that plane

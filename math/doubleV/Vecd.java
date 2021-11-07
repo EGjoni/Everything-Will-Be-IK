@@ -261,17 +261,8 @@ public interface Vecd<T extends Vecd<T>> extends Vec<T> {
 	public default  <V extends Vecd<?>>  T addCopy (V v) {
 		T cv = this.copy();
 		return cv.add(v);
-	}
-	
-	
-	/** makes a copy of this vector and sets it to the cross product between it and the input vector,
-	 *  then returns the copy
-	 * @param vector The other vector
-	 * @return The copied vector for chaining */
-	public default  <V extends Vecd<?>>  T crossCopy(V vector) {
-		T  c = this.copy();
-		return c.crs(vector);
-	}
+	}	
+
 
 	/** Subtracts the given vector from this vector.
 	 * @param v The vector
