@@ -150,6 +150,19 @@ public final class MathUtils {
 	static public int randomSign () {
 		return 1 | (random.nextInt() >> 31);
 	}
+	
+	/**
+	 * 
+	 * @param min the lower boundary
+	 * @param max the upper boundary
+	 * @param current the current value
+	 * @return 0 if @param current == @param min, 1 if @param current == max, 
+	 * some number greater than 1 if @param current > @param max, 
+	 * and some number < 0 if @param current < @param min.    
+	 */
+	public static double inverseLerp(double min, double max, double current) {
+		return (current - min) / (max - min);
+	}
 
 	
 	public static int max(int a, int b) {

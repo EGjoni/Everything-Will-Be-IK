@@ -248,7 +248,7 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 		double[] inBounds = {1d}; 
 		/**
 		 * Basic idea: 
-		 * We treat our hard and soft boundaries as if they were two seperate kusudamas. 
+		 * We treat our hard and soft boundaries as if they were two separate kusudamas. 
 		 * First we check if we have exceeded our soft boundaries, if so, 
 		 * we find the closest point on the soft boundary and the closest point on the same segment 
 		 * of the hard boundary. 
@@ -293,7 +293,7 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 		limitingAxes.updateGlobal();
 		boneRay.p1().set(limitingAxes.origin_()); boneRay.p2().set(toSet.y_().p2());
 		Vec3d<?> bonetip = limitingAxes.getLocalOf(toSet.y_().p2());
-		Vec3d<?> inLimits = this.pointInLimits(bonetip, inBounds);
+		Vec3d<?> inLimits = this.pointInLimits(bonetip, inBounds, AbstractLimitCone.BOUNDARY );
 		
 		if (inBounds[0] == -1 && inLimits != null) {     
 			constrainedRay.p1().set(boneRay.p1()); constrainedRay.p2().set(limitingAxes.getGlobalOf(inLimits)); 
@@ -434,7 +434,8 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 		r *= sign;
 		return r;
 	}
-
+	
+	
 	/**
 	 * Given a point (in global coordinates), checks to see if a ray can be extended from the Kusudama's
 	 * origin to that point, such that the ray in the Kusudama's reference frame is within the range allowed by the Kusudama's
@@ -443,14 +444,16 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	 * If it cannot exist, the tip of the ray within the kusudama's limits that would require the least rotation
 	 * to arrive at the input point is returned.
 	 * @param inPoint the point to test.
-	 * @param inBounds should be an array with at least 2 elements. The first element will be set to  a number from -1 to 1 representing the point's distance from the boundary, 0 means the point is right on 
-	 * the boundary, 1 means the point is within the boundary and on the path furthest from the boundary. any negative number means 
-	 * the point is outside of the boundary, but does not signify anything about how far from the boundary the point is.  
+	 * @param inBounds should be an array with at least 2 elements. The first element will be set to  a real number indicating the point's location with respect to the constraint boundaries.  
+	 * Any negative number means the point is outside of the hard boundary and must be rectified. 
+	 * 0 means the point is right on the hard boundary, and should only be rectified insofar as the cushioning parameters require it.  
+	 * 1 means the point is right on the Cushion line, and no rectification is required. 
+	 * Any number greater than 1 means the point is within the cushion bounds and no rectification is required.
 	 * The second element will be given a value corresponding to the limit cone whose bounds were exceeded. If the bounds were exceeded on a segment between two limit cones, 
-	 * this value will be set to a non-integer value between the two indices of the limitcone comprising the segment whose bounds were exceeded.
+	 * this value will be set to a non-integer value between the two indices of the limitcones comprising the segment whose bounds were exceeded.
 	 * @return the original point, if it's in limits, or the closest point which is in limits.
 	 */
-	public <V extends Vec3d<?>> Vec3d<?> pointInLimits(V inPoint, double[] inBounds, int mode) {
+	public <V extends Vec3d<?>> Vec3d<?> pointInCushionLimits(V inPoint, double[] inBounds) {
 
 		//double restart = 5d;
 		Vec3d<?> point = inPoint.copy(); 
@@ -460,47 +463,93 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 		inBounds[0] = -1;
 
 		Vec3d<?> closestCollisionPoint = null; 
-		double closestCos = -2d;
+		double closestBoundDist = -2d;
+		double closestIndex = -1;
 		boolean[] boundHint = {false};
+		double thisBoundDist = -99d;
 		
 		for (int i =0; i<limitCones.size(); i++) {
-			AbstractLimitCone cone = limitCones.get(i);
-			Vec3d<?> collisionPoint = inPoint.copy(); collisionPoint.set(0,0,0);			
-			collisionPoint = cone.closestToCone(point, boundHint);
-			if(collisionPoint == null) {
-				inBounds[0] = 1; 
-				return point;
-			} else {
-				double thisCos =  collisionPoint.dot(point); 
-				if(closestCollisionPoint == null || thisCos > closestCos) {
-					closestCollisionPoint = collisionPoint; 
-					closestCos = thisCos;
-				}
+			AbstractLimitCone cone = limitCones.get(i);	
+			thisBoundDist = cone.getCushionedDist(point);
+			if(thisBoundDist > closestBoundDist) {				 
+				closestBoundDist = thisBoundDist;
+				closestIndex = i;
 			}
 		}
 		if(inBounds[0] == -1)  {
 			for (int i =0; i<limitCones.size() -1; i++) {
 				AbstractLimitCone currCone = limitCones.get(i);
 				AbstractLimitCone nextCone = limitCones.get(i+1);
-				Vec3d<?> collisionPoint = inPoint.copy(); collisionPoint.set(0,0,0);
-				collisionPoint = currCone.getOnGreatTangentTriangle(nextCone, point);
-				if(collisionPoint != null) {
-					double thisCos =  collisionPoint.dot(point);
-						if(thisCos == 1d) {
-							inBounds[0] =1; 
-							closestCollisionPoint = point;
-							return point;
-						} 
-						else if(thisCos > closestCos) {
-							closestCollisionPoint = collisionPoint; 
-							closestCos = thisCos;
-						}
+				
+				thisBoundDist  = currCone.getCushionedOnGreatTangentTriangle(nextCone, point);
+				if(thisBoundDist > closestBoundDist) {
+					closestBoundDist = thisBoundDist;			
+					closestIndex = i+0.5d;
 				}
 			}			
 		}
 		
 		return closestCollisionPoint;
 	
+	}
+
+	/**
+	 * Given a point (in global coordinates), checks to see if a ray can be extended from the Kusudama's
+	 * origin to that point, such that the ray in the Kusudama's reference frame is within the range allowed by the Kusudama's
+	 * coneLimits.
+	 * If such a ray exists, the original point is returned (the point is within the limits). 
+	 * If it cannot exist, the tip of the ray within the kusudama's limits that would require the least rotation
+	 * to arrive at the input point is returned.
+	 * @param inPoint the point to test.
+	 * @param returns a number from -1 to 1 representing the point's distance from the boundary, 0 means the point is right on 
+	 * the boundary, 1 means the point is within the boundary and on the path furthest from the boundary. any negative number means 
+	 * the point is outside of the boundary, but does not signify anything about how far from the boundary the point is.  
+	 * @return the original point, if it's in limits, or the closest point which is in limits.
+	 */
+	public <V extends Vec3d<?>> Vec3d<?> pointInLimits(V inPoint, double[] inBounds, int boundaryMode) {
+
+		Vec3d<?> point = inPoint.copy(); 
+		point.normalize(); 		
+		//point.mult(attachedTo.boneHeight);
+
+		inBounds[0] = -1;
+
+		Vec3d<?> closestCollisionPoint = null; 
+		double closestCos = -2d;
+		if (limitCones.size() > 1 && this.orientationallyConstrained) {
+			for (int i =0; i<limitCones.size() -1; i++) {
+				Vec3d<?> collisionPoint = inPoint.copy(); collisionPoint.set(0,0,0);
+				AbstractLimitCone nextCone = limitCones.get(i+1);				
+				boolean inSegBounds = limitCones.get(i).inBoundsFromThisToNext(nextCone, point, collisionPoint);				
+				if( inSegBounds == true) {
+					inBounds[0] = 1;  
+				} else {
+					double thisCos =  collisionPoint.dot(point); 
+					if(closestCollisionPoint == null || thisCos > closestCos) {
+						closestCollisionPoint = collisionPoint.copy();
+						closestCos = thisCos;
+					}
+				} 
+			}   
+			if (inBounds[0] == -1) { 
+				return closestCollisionPoint;
+			} else { 
+				return inPoint;
+			}
+		} else if(orientationallyConstrained) {
+			if(point.dot(limitCones.get(0).getControlPoint()) > limitCones.get(0).getRadiusCosine()) {
+				inBounds[0] = 1;
+				return inPoint;
+			} else {
+				Vec3d<?> axis = limitCones.get(0).getControlPoint().crossCopy(point);
+				//Rot toLimit = new Rot(limitCones.get(0).getControlPoint(), point);
+				Rot toLimit = new Rot(axis, limitCones.get(0).getRadius());
+				return toLimit.applyToCopy(limitCones.get(0).getControlPoint());
+			}
+		} else {
+			inBounds[0] = 1;
+			return inPoint;
+		}
 	}
 	
 	
