@@ -23,7 +23,6 @@ package math.doubleV;
 import asj.CanLoad;
 import asj.data.JSONObject;
 import math.floatV.SGVec_3f;
-import math.floatV.Vec3f;
 
 /**
  * @author Eron Gjoni

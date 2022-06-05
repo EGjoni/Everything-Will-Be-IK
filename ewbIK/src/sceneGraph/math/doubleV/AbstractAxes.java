@@ -2,9 +2,7 @@ package math.doubleV;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.WeakHashMap;
 import java.util.function.Consumer;
 
@@ -919,6 +917,7 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 	
 
 	public String toString() {
+		this.updateGlobal();
 		String global = "Global: " + getGlobalMBasis().toString();
 		String local = "Local: " + getLocalMBasis().toString();
 		return global + "\n" + local;

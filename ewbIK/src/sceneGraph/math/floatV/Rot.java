@@ -21,7 +21,6 @@ package math.floatV;
 //import org.apache.commons.math3.geometry.euclidean.threed.*;
 
 import asj.data.JSONArray;
-import math.floatV.SGVec_3f;
 
 public class Rot {
 	public MRotation rotation; 

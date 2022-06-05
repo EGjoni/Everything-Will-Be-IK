@@ -18,8 +18,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 package IK.floatIK;
-import math.floatV.AbstractAxes;
-import math.floatV.CartesianAxes;
 import math.floatV.MathUtils;
 import math.floatV.Rot;
 import math.floatV.SGVec_3f;

@@ -4,8 +4,6 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.Map;
-
 import IK.doubleIK.AbstractArmature;
 import IK.doubleIK.AbstractBone;
 import IK.doubleIK.AbstractIKPin;

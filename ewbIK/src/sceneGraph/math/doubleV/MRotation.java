@@ -1396,7 +1396,8 @@ public class MRotation {
 	 * @return a new rotation which is the composition of r by the instance
 	 */
 	public void applyTo(MRotation r, MRotation output) {
-		output.set(r.q0 * q0 - (r.q1 * q1 + r.q2 * q2 + r.q3 * q3),
+		output.set(
+				r.q0 * q0 - (r.q1 * q1 + r.q2 * q2 + r.q3 * q3),
 				r.q1 * q0 + r.q0 * q1 + (r.q2 * q3 - r.q3 * q2),
 				r.q2 * q0 + r.q0 * q2 + (r.q3 * q1 - r.q1 * q3),
 				r.q3 * q0 + r.q0 * q3 + (r.q1 * q2 - r.q2 * q1),

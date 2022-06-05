@@ -20,9 +20,6 @@ package IK.floatIK;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.WeakHashMap;
-
-import IK.PerfTimer;
 import math.floatV.AbstractAxes;
 import math.floatV.MathUtils;
 import math.floatV.QCP;
@@ -30,10 +27,6 @@ import math.floatV.Rot;
 import math.floatV.SGVec_3f;
 import math.floatV.Vec3f;
 import math.floatV.sgRayf;
-import asj.LoadManager;
-import asj.SaveManager;
-import asj.Saveable;
-import asj.data.JSONObject;
 
 /**
  * @author Eron Gjoni

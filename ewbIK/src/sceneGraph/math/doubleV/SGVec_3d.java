@@ -16,8 +16,6 @@
 
 package math.doubleV;
 
-import java.io.Serializable;
-
 import asj.CanLoad;
 import asj.data.JSONArray;
 import asj.data.JSONObject;

@@ -1,13 +1,8 @@
 package IK.floatIK;
 
 import math.floatV.AbstractAxes;
-import math.floatV.Rot;
-import math.floatV.SGVec_3f;
 import math.floatV.Vec3f;
-import asj.LoadManager;
-import asj.SaveManager;
 import asj.Saveable;
-import asj.data.JSONObject;
 
 public interface Constraint extends Saveable{
 	

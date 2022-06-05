@@ -387,6 +387,40 @@ public class SegmentedArmature {
 		thisBoneAxes.markDirty(); 
 	}
 	
+	
+	private void updateOptimalRotationToPinnedDescendants( 
+			WorkingBone sb,
+			double dampening,
+			boolean translate,
+			SGVec_3d[] localizedTipHeadings,
+			SGVec_3d[] localizedTargetHeadings, 
+			double[] weights,
+			QCP qcpOrientationAligner,
+			int iteration,
+			double totalIterations) {
+
+		qcpOrientationAligner.setMaxIterations(5);		
+		Rot qcpRot =  qcpOrientationAligner.weightedSuperpose(localizedTipHeadings, localizedTargetHeadings, weights, translate);
+
+		SGVec_3d translateBy = qcpOrientationAligner.getTranslation();
+		double boneDamp = sb.cosHalfDampen; 
+		//sb.forBone.getIKPin().modeCode = 6;
+		if(dampening != -1) {
+			boneDamp = dampening;
+			qcpRot.rotation.clampToAngle(boneDamp);
+		}else {
+			qcpRot.rotation.clampToQuadranceAngle(boneDamp);
+		}	
+		sb.simLocalAxes.rotateBy(qcpRot);
+		
+		sb.simLocalAxes.updateGlobal();	
+		
+		sb.forBone.setAxesToSnapped(sb.simLocalAxes, sb.simConstraintAxes, boneDamp);
+		sb.simLocalAxes.translateByGlobal(translateBy);
+		sb.simConstraintAxes.translateByGlobal(translateBy);		
+		
+	}
+	
 	private void stableUpdateOptimalRotationToPinnedDescendants(
 			AbstractBone forBone, 
 			double dampening,
@@ -452,38 +486,7 @@ public class SegmentedArmature {
 
 	//AbstractAxes tempAxes = null;
 
-	private void updateOptimalRotationToPinnedDescendants( 
-			WorkingBone sb,
-			double dampening,
-			boolean translate,
-			SGVec_3d[] localizedTipHeadings,
-			SGVec_3d[] localizedTargetHeadings, 
-			double[] weights,
-			QCP qcpOrientationAligner,
-			int iteration,
-			double totalIterations) {
-
-		qcpOrientationAligner.setMaxIterations(5);		
-		Rot qcpRot =  qcpOrientationAligner.weightedSuperpose(localizedTipHeadings, localizedTargetHeadings, weights, translate);
-
-		SGVec_3d translateBy = qcpOrientationAligner.getTranslation();
-		double boneDamp = sb.cosHalfDampen; 
-		//sb.forBone.getIKPin().modeCode = 6;
-		if(dampening != -1) {
-			boneDamp = dampening;
-			qcpRot.rotation.clampToAngle(boneDamp);
-		}else {
-			qcpRot.rotation.clampToQuadranceAngle(boneDamp);
-		}	
-		sb.simLocalAxes.rotateBy(qcpRot);
-		
-		sb.simLocalAxes.updateGlobal();	
-		
-		sb.forBone.setAxesToSnapped(sb.simLocalAxes, sb.simConstraintAxes, boneDamp);
-		sb.simLocalAxes.translateByGlobal(translateBy);
-		sb.simConstraintAxes.translateByGlobal(translateBy);		
-		
-	}
+	
 
 
 	public void updateTargetHeadings(Vec3d<?>[] localizedTargetHeadings, double[] weights, AbstractAxes thisBoneAxes) {		

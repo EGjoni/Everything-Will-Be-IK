@@ -1,27 +1,14 @@
 package data;
 
-import java.beans.Visibility;
 import java.io.File;
-import java.io.IOException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Enumeration;
 import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-
-import javax.swing.JTree;
-import javax.swing.tree.TreePath;
-
 import IK.doubleIK.AbstractArmature;
 import IK.doubleIK.AbstractBone;
 import IK.doubleIK.AbstractIKPin;
-import IK.doubleIK.AbstractKusudama;
 import IK.doubleIK.AbstractLimitCone;
 import IK.doubleIK.Constraint;
-import asj.LoadManager;
 import asj.Saveable;
 import asj.TypeIdentifier;
 import asj.data.JSONArray;

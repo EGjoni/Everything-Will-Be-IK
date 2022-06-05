@@ -19,19 +19,12 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 package IK.doubleIK;
 import java.util.ArrayList;
 
-import com.sun.org.apache.xalan.internal.xsltc.compiler.Template;
-
 import IK.IKExceptions;
 import IK.IKExceptions.NullParentForBoneException;
 import IK.doubleIK.AbstractBone;
-import IK.doubleIK.AbstractIKPin;
-import IK.doubleIK.Constraint;
 import IK.doubleIK.SegmentedArmature.WorkingBone;
-import data.EWBIKLoader;
-import data.EWBIKSaver;
 import math.doubleV.AbstractAxes;
 import math.doubleV.MRotation;
-import math.doubleV.MathUtils;
 import math.doubleV.Rot;
 import math.doubleV.RotationOrder;
 import math.doubleV.SGVec_3d;

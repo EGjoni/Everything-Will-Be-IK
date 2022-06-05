@@ -2,14 +2,8 @@ package IK.floatIK;
 
 import java.util.ArrayList;
 
-import data.EWBIKLoader;
-import data.EWBIKSaver;
 import math.floatV.AbstractAxes;
-import math.floatV.MathUtils;
-import math.floatV.Rot;
-import math.floatV.SGVec_3f;
 import math.floatV.Vec3f;
-import math.floatV.sgRayf;
 import asj.LoadManager;
 import asj.SaveManager;
 import asj.Saveable;

@@ -5,10 +5,7 @@ package IK.doubleIK;
 import java.util.ArrayList;
 
 import IK.doubleIK.SegmentedArmature.WorkingBone;
-import data.EWBIKLoader;
-import data.EWBIKSaver;
 import math.doubleV.AbstractAxes;
-import math.doubleV.MRotation;
 import math.doubleV.MathUtils;
 import math.doubleV.Rot;
 import math.doubleV.SGVec_3d;
@@ -293,7 +290,7 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 		limitingAxes.updateGlobal();
 		boneRay.p1().set(limitingAxes.origin_()); boneRay.p2().set(toSet.y_().p2());
 		Vec3d<?> bonetip = limitingAxes.getLocalOf(toSet.y_().p2());
-		Vec3d<?> inLimits = this.pointInLimits(bonetip, inBounds);
+		Vec3d<?> inLimits = this.pointInLimits(bonetip, inBounds, AbstractLimitCone.BOUNDARY);
 		
 		if (inBounds[0] == -1 && inLimits != null) {     
 			constrainedRay.p1().set(boneRay.p1()); constrainedRay.p2().set(limitingAxes.getGlobalOf(inLimits)); 
@@ -359,6 +356,7 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 		if(!axiallyConstrained) return 0d;
 		Rot invRot = limitingAxes.getGlobalMBasis().getInverseRotation();
 		Rot alignRot = invRot.applyTo(toSet.getGlobalMBasis().rotation);
+		
 		Rot[] decomposition = alignRot.getSwingTwist(new SGVec_3d(0,1,0));
 		double angleDelta2 = decomposition[1].getAngle() * decomposition[1].getAxis().y*-1d; 
 		angleDelta2 = toTau(angleDelta2);

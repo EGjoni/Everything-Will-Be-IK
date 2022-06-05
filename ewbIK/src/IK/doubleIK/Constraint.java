@@ -1,13 +1,8 @@
 package IK.doubleIK;
 
 import math.doubleV.AbstractAxes;
-import math.doubleV.Rot;
-import math.doubleV.SGVec_3d;
 import math.doubleV.Vec3d;
-import asj.LoadManager;
-import asj.SaveManager;
 import asj.Saveable;
-import asj.data.JSONObject;
 
 public interface Constraint extends Saveable{
 	

@@ -1,26 +1,12 @@
 package data;
-import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Vector;
 import java.util.WeakHashMap;
 
-import IK.doubleIK.AbstractArmature;
-import IK.doubleIK.AbstractBone;
-import IK.doubleIK.AbstractIKPin;
-import IK.doubleIK.AbstractKusudama;
-import IK.doubleIK.AbstractLimitCone;
 import asj.Saveable;
 import asj.data.JSONArray;
 import asj.data.JSONObject;
 import asj.data.StringFuncs;
-import math.doubleV.Rot;
-import math.doubleV.SGVec_3d;
-import math.floatV.SGVec_3f;
 import asj.SaveManager;
 
 
