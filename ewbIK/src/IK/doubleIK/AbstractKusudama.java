@@ -248,7 +248,7 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 		double[] inBounds = {1d}; 
 		/**
 		 * Basic idea: 
-		 * We treat our hard and soft boundaries as if they were two separate kusudamas. 
+		 * We treat our hard and soft boundaries as if they were two seperate kusudamas. 
 		 * First we check if we have exceeded our soft boundaries, if so, 
 		 * we find the closest point on the soft boundary and the closest point on the same segment 
 		 * of the hard boundary. 

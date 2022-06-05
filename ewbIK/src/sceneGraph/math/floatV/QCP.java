@@ -1,7 +1,5 @@
 package math.floatV;
 
-import math.floatV.Rot;
-
 public class QCP {
 
 	/**

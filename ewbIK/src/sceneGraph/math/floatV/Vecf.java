@@ -17,7 +17,6 @@
 package math.floatV;
 
 import math.Vec;
-import math.floatV.Vec3f;
 
 /** Encapsulates a general vector. Allows chaining operations by returning a reference to itself in all modification methods. See
  * {@link SGVec_2f} and {@link SGVec_3f} for specific imlementations.

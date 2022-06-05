@@ -19,19 +19,12 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 package IK.floatIK;
 import java.util.ArrayList;
 
-import com.sun.org.apache.xalan.internal.xsltc.compiler.Template;
-
 import IK.IKExceptions;
 import IK.IKExceptions.NullParentForBoneException;
 import IK.floatIK.AbstractBone;
-import IK.floatIK.AbstractIKPin;
-import IK.floatIK.Constraint;
 import IK.floatIK.SegmentedArmature.WorkingBone;
-import data.EWBIKLoader;
-import data.EWBIKSaver;
 import math.floatV.AbstractAxes;
 import math.floatV.MRotation;
-import math.floatV.MathUtils;
 import math.floatV.Rot;
 import math.floatV.RotationOrder;
 import math.floatV.SGVec_3f;

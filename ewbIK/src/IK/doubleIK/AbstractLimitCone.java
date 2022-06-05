@@ -18,9 +18,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 package IK.doubleIK;
-import math.doubleV.AbstractAxes;
-import math.doubleV.CartesianAxes;
-import math.doubleV.MathUtils;
 import math.doubleV.Rot;
 import math.doubleV.SGVec_3d;
 import math.doubleV.Vec3d;
@@ -530,7 +527,7 @@ public abstract class AbstractLimitCone implements Saveable {
 		}
 		if(tangentCircleCenterNext2 == null) {
 			tangentCircleCenterNext2 = SGVec_3d.mult(tangentCircleCenterNext1, -1).normalize();
-			cushionTangentCircleCenterNext2 = SGVec_3d.mult(cushionTangentCircleCenterNext2, -1).normalize();
+			cushionTangentCircleCenterNext2 = SGVec_3d.mult(cushionTangentCircleCenterNext1, -1).normalize();
 		}
 		if(next != null)
 			computeTriangles(next); 
@@ -659,7 +656,7 @@ public abstract class AbstractLimitCone implements Saveable {
 	 * Value of 1 creates a hard boundary. Value of 0 means it will always be the case that the closer a joint in the allowable region 
 	 * is to the boundary, the more any further rotation in the direction of that boundary will be avoided.   
 	 */
-	public void setCushionBoundary(double cushion) {
+	public void setCushionRadius(double cushion) {
 		double adjustedCushion = Math.min(1d, Math.max(0.001d, cushion));
 		this.cushionRadius = this.radius * adjustedCushion;
 		this.cushionCosine = Math.cos(cushionRadius);

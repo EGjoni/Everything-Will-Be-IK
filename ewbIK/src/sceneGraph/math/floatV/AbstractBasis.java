@@ -1,12 +1,5 @@
 package math.floatV;
 
-import asj.*;
-import asj.*;
-import asj.data.*;
-import math.*;
-import math.floatV.*;
-import math.floatV.Vec3f;
-
 
 /**
  * Minimal implementation of basis transformations. 

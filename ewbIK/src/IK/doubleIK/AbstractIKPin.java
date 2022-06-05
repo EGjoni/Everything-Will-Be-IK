@@ -2,14 +2,8 @@ package IK.doubleIK;
 
 import java.util.ArrayList;
 
-import data.EWBIKLoader;
-import data.EWBIKSaver;
 import math.doubleV.AbstractAxes;
-import math.doubleV.MathUtils;
-import math.doubleV.Rot;
-import math.doubleV.SGVec_3d;
 import math.doubleV.Vec3d;
-import math.doubleV.sgRayd;
 import asj.LoadManager;
 import asj.SaveManager;
 import asj.Saveable;

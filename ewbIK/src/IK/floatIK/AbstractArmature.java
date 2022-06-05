@@ -17,18 +17,13 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
  */
 package IK.floatIK;
-import java.nio.channels.SeekableByteChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import IK.floatIK.SegmentedArmature;
-import IK.floatIK.SegmentedArmature.WorkingBone;
 import asj.LoadManager;
 import asj.SaveManager;
 import asj.Saveable;
 import asj.data.JSONObject;
-import data.EWBIKLoader;
-import data.EWBIKSaver;
 import math.floatV.AbstractAxes;
 import math.floatV.MathUtils;
 import math.floatV.Rot;

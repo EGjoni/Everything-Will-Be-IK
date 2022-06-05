@@ -1,11 +1,6 @@
 package math.doubleV;
 
 
-import asj.*;
-import asj.*;
-import asj.data.*;
-import math.*;
-import math.doubleV.*;
 import math.floatV.Vec3f;
 
 

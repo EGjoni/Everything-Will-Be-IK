@@ -1,8 +1,6 @@
 package math.doubleV;
 
-import math.floatV.SGVec_3f;
 import math.floatV.Vec3f;
-import math.doubleV.Rot;
 
 public class QCP {
 
@@ -191,6 +189,7 @@ public class QCP {
 				wsum = moved.length;
 			}
 		}
+		//calcRmsd(moved, target);
 
 	}
 
@@ -262,7 +261,8 @@ public class QCP {
 		Rot result = null;
 		if (!transformationCalculated) {
 			if (!innerProductCalculated)
-				innerProduct( target, moved);			
+				innerProduct( target, moved);	
+			
 			result = calcRotation();
 			transformationCalculated = true;
 		}
@@ -286,8 +286,7 @@ public class QCP {
 			rmsdCalculated = true;
 		} else {
 			if (!innerProductCalculated)
-				innerProduct(y, x);
-			calcRmsd(wsum);
+				innerProduct(y, x);			
 		}
 	}
 

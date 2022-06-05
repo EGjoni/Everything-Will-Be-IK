@@ -62,7 +62,7 @@ public abstract class AbstractArmature implements Saveable {
 	public double IKSolverStability = 0d; 
 	PerformanceStats performance = new PerformanceStats(); 
 
-	public int defaultStabilizingPassCount  = 1; 
+	public int defaultStabilizingPassCount  = 0; 
 
 
 	AbstractAxes fauxParent;
