@@ -168,7 +168,10 @@ public class SegmentedArmature {
 		}	
 	}
 
-	void recursivelyCreatePenaltyArray(SegmentedArmature from, ArrayList<ArrayList<Double>> weightArray, ArrayList<WorkingBone> pinSequence, double currentFalloff) {
+	void recursivelyCreatePenaltyArray(SegmentedArmature from, 
+			ArrayList<ArrayList<Double>> weightArray, 
+			ArrayList<WorkingBone> pinSequence, 
+			double currentFalloff) {
 		if(currentFalloff == 0) {
 			return;
 		} else {
@@ -205,7 +208,10 @@ public class SegmentedArmature {
 					innerWeightArray.add(subTargetWeight);
 					innerWeightArray.add(subTargetWeight);
 				}
-				pinSequence.add(pin.forBone().parentArmature.boneSegmentMap.get(pin.forBone()).simulatedBones.get(pin.forBone())); 
+				pinSequence.add(
+						pin.forBone().parentArmature.boneSegmentMap.get(
+								pin.forBone()
+						).simulatedBones.get(pin.forBone())); 
 			}
 			double thisFalloff = pin == null ? 1d : pin.getDepthFalloff();
 			for(SegmentedArmature s : from.childSegments) { 				

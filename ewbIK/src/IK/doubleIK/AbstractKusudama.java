@@ -364,7 +364,7 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 		angleDelta2 = toTau(angleDelta2);
 		double fromMinToAngleDelta = toTau(signedAngleDifference(angleDelta2, TAU - this.minAxialAngle())); 
 
-		if(fromMinToAngleDelta <  TAU - range ) {                          
+		if(fromMinToAngleDelta <  TAU - range) {                          
 			double distToMin = Math.abs(signedAngleDifference(angleDelta2, TAU-this.minAxialAngle()));
 			double distToMax =  Math.abs(signedAngleDifference(angleDelta2, TAU-(this.minAxialAngle()+range)));
 			double turnDiff = 1d; 
@@ -480,7 +480,7 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 			for (int i =0; i<limitCones.size() -1; i++) {
 				AbstractLimitCone currCone = limitCones.get(i);
 				AbstractLimitCone nextCone = limitCones.get(i+1);
-				
+				  
 				thisBoundDist  = currCone.getCushionedOnGreatTangentTriangle(nextCone, point);
 				if(thisBoundDist > closestBoundDist) {
 					closestBoundDist = thisBoundDist;			

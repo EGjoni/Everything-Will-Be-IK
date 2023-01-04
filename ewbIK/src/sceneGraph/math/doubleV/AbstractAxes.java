@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.WeakHashMap;
 import java.util.function.Consumer;
+import math.doubleV.sgRayd;
 
 import asj.LoadManager;
 import asj.SaveManager;

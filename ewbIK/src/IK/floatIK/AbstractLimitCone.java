@@ -362,7 +362,8 @@ public abstract class AbstractLimitCone implements Saveable {
 			//the axis of this cone, scaled to minimize its distance to the tangent  contact points. 
 			Vec3f<?> scaledAxisA =  SGVec_3f.mult(A, MathUtils.cos(boundaryPlusTangentRadiusA));
 			//a point on the plane running through the tangent contact points
-			Vec3f<?> planeDir1A = new Rot(arcNormal, boundaryPlusTangentRadiusA).applyToCopy(A);
+			Rot arot = new Rot(arcNormal, boundaryPlusTangentRadiusA);
+			Vec3f<?> planeDir1A = arot.applyToCopy(A);
 			//another poiint on the same plane
 			Vec3f<?> planeDir2A = new Rot(A, MathUtils.PI/2f).applyToCopy(planeDir1A);			
 			

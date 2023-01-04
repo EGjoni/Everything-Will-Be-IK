@@ -35,6 +35,7 @@ import math.doubleV.AbstractAxes;
 import math.doubleV.Rot;
 import math.doubleV.SGVec_3d;
 import math.doubleV.Vec3d;
+import math.doubleV.sgRayd;
 
 
 /**

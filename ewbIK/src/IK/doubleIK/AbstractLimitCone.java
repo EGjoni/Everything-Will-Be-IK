@@ -18,6 +18,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 package IK.doubleIK;
+import math.doubleV.MathUtils;
 import math.doubleV.Rot;
 import math.doubleV.SGVec_3d;
 import math.doubleV.Vec3d;
@@ -322,7 +323,15 @@ public abstract class AbstractLimitCone implements Saveable {
 	 * between two cones if the point is out of bounds and applicable for rectification.
 	 */
 	public <V extends Vec3d<?>> double  getCushionedOnGreatTangentTriangle(AbstractLimitCone next, V input) {
-		Vec3d c1xc2 = controlPoint.crossCopy(next.controlPoint);		
+		Double result = null;
+		return result; 
+		
+		
+		//TODO: figure out best way to get get cushion ratio. 
+		// when on a path between cones, cushion is defined as a cone with its own direction 
+		// and arc angle greater than that of the tangent cone (so as to bleed into the path) 
+		// 
+		/*Vec3d c1xc2 = controlPoint.crossCopy(next.controlPoint);		
 		double c1c2dir = input.dot(c1xc2);
 		if(c1c2dir < 0.0) { 
 			Vec3d nextCushionTangentCenter = this.getTangentCircleCenterNext1(CUSHION) ;
@@ -360,7 +369,7 @@ public abstract class AbstractLimitCone implements Saveable {
 			else {
 				return null;
 			}
-		}
+		}*/
 	}
 	
 
@@ -643,7 +652,7 @@ public abstract class AbstractLimitCone implements Saveable {
 		this.parentKusudama.constraintUpdateNotification();
 	}
 	
-	public double getCushionBoundary() {
+	public double getCushionRadius() {
 		return this.cushionRadius/this.radius;
 	}
 	
