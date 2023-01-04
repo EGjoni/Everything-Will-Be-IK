@@ -6,6 +6,7 @@ import java.util.ArrayList;
 
 import IK.doubleIK.SegmentedArmature.WorkingBone;
 import math.doubleV.AbstractAxes;
+import math.doubleV.MRotation;
 import math.doubleV.MathUtils;
 import math.doubleV.Rot;
 import math.doubleV.SGVec_3d;
@@ -24,7 +25,8 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	public static final double TAU = Math.PI*2;
 	public static final double PI = Math.PI;
 	protected AbstractAxes limitingAxes; 
-	protected double painfullness; 
+	protected double painfullness = -1d; 
+	protected double cushionRatio = 0.1d;	
 
 	/**
 	 * An array containing all of the Kusudama's limitCones. The kusudama is built up
@@ -52,6 +54,9 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	protected Double strength = 1d; 
 
 	protected AbstractBone attachedTo;  
+	Rot twistMinRot = new Rot();
+	Rot twistMaxRot = new Rot();
+	Rot twistCenterRot = new Rot();
 
 
 	public AbstractKusudama() {
@@ -144,7 +149,7 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	public void snapToLimits() {
 		//System.out.println("snapping to limits");
 		if(orientationallyConstrained) {
-			setAxesToOrientationSnap(attachedTo().localAxes(), limitingAxes, 0);
+			setAxesToOrientationSnap(attachedTo().localAxes(), limitingAxes);
 		}
 		if(axiallyConstrained) {
 			snapToTwistLimits(attachedTo().localAxes(), limitingAxes);
@@ -157,10 +162,10 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	 * 
 	 * @param toSet
 	 */
-	public void setAxesToSnapped(AbstractAxes toSet, AbstractAxes limitingAxes, double cosHalfAngleDampen) {
+	public void setAxesToSnapped(AbstractAxes toSet, AbstractAxes limitingAxes) {
 		if(limitingAxes != null) {					
 			if(orientationallyConstrained) {
-				setAxesToOrientationSnap(toSet, limitingAxes, cosHalfAngleDampen);
+				setAxesToOrientationSnap(toSet, limitingAxes);
 			} 		
 			if(axiallyConstrained) {
 				snapToTwistLimits(toSet, limitingAxes);
@@ -170,7 +175,7 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	
 	
 	public void setAxesToReturnfulled(AbstractAxes toSet, AbstractAxes limitingAxes, double cosHalfReturnfullness, double angleReturnfullness) {
-		if(limitingAxes != null && painfullness >0d) {
+		if(limitingAxes != null && painfullness > 0d) {
 			if(orientationallyConstrained) {				
 				Vec3d<?> origin = toSet.origin_();
 				Vec3d<?> inPoint = toSet.y_().p2().copy();
@@ -190,17 +195,17 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	}
 	
 	/**
-	 * A value between (ideally between 0 and 1) dictating 
+	 * A value between between 0 and 1 dictating 
 	 * how much the bone to which this kusudama belongs 
 	 * prefers to be away from the edges of the kusudama  
 	 * if it can. This is useful for avoiding unnatural poses,
 	 * as the kusudama will push bones back into their more
 	 * "comfortable" regions. Leave this value at its default of 
-	 * 0 unless you empircal observations show you need it. 
+	 * -1 unless your empirical observations show you need it, as its computation isn't free. 
 	 * Setting this value to anything higher than 0.4 is probably overkill
 	 * in most situations.
 	 *  
-	 * @param amt
+	 * @param amt set to a value outside of 0-1 to disable
 	 */
 	public void setPainfullness(double amt) {
 		painfullness = amt;
@@ -222,7 +227,7 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	 * prefers to be away from the edges of the kusudama  
 	 * if it can. 
 	 */
-	public double getPainfullness() {
+	public double getPainfulness() {
 		return painfullness;
 	}
 
@@ -283,10 +288,8 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	 * 
 	 * @param toSet
 	 */
-	public void setAxesToOrientationSnap(AbstractAxes toSet, AbstractAxes limitingAxes, double cosHalfAngleDampen) {
+	public void setAxesToOrientationSnap(AbstractAxes toSet, AbstractAxes limitingAxes) {
 		double[] inBounds = {1d}; 
-		//boneRay.p1().set(toSet.origin_()); boneRay.p2().set(toSet.y_().p2());    
-		//Vec3d<?> inLimits = this.pointInLimits(boneRay.p2(), inBounds, limitingAxes);
 		limitingAxes.updateGlobal();
 		boneRay.p1().set(limitingAxes.origin_()); boneRay.p2().set(toSet.y_().p2());
 		Vec3d<?> bonetip = limitingAxes.getLocalOf(toSet.y_().p2());
@@ -295,8 +298,6 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 		if (inBounds[0] == -1 && inLimits != null) {     
 			constrainedRay.p1().set(boneRay.p1()); constrainedRay.p2().set(limitingAxes.getGlobalOf(inLimits)); 
 			Rot rectifiedRot = new Rot(boneRay.heading(), constrainedRay.heading());
-			
-			//rectifiedRot.rotation.clampToQuadranceAngle(cosHalfAngleDampen);
 			toSet.rotateBy(rectifiedRot);
 			toSet.updateGlobal();			
 		}		
@@ -322,6 +323,13 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 			return true;
 		}*/
 	}
+	private Vec3d<?> twistMinVec;
+	private Vec3d<?> twistMaxVec;
+	private Vec3d<?> twistTan;
+	private Vec3d<?> twistCenterVec;
+	private double twistHalfRangeHalfCos;
+	private boolean flippedBounds = false;
+	
 
 
 	/**
@@ -337,13 +345,58 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	 */
 	public void setAxialLimits(double minAngle, double inRange) {
 		minAxialAngle = minAngle;
-		range = toTau(inRange);
+		range = inRange;
+		Vec3d<?> y_axis = new SGVec_3d(0,1,0);
+		twistMinRot = new Rot(y_axis, minAxialAngle);
+		twistMinVec = twistMinRot.applyToCopy(new SGVec_3d(0,0,1));
+		twistCenterVec = twistMinRot.applyToCopy(twistMinVec);
+		twistCenterRot = new Rot(new SGVec_3d(0,0,1), twistCenterVec);
+		twistTan = twistCenterVec.crossCopy(y_axis);
+		twistHalfRangeHalfCos = Math.cos(inRange/4); //for quadrance angle. We need half the range angle since starting from the center, and half of that since quadrance takes cos(angle/2)
+		twistMaxVec = new Rot(y_axis, range).applyToCopy(twistMinVec);
+		twistMaxRot = new Rot(new SGVec_3d(0,0,1), twistMaxVec);
+		Vec3d<?> maxcross = twistMaxVec.crossCopy(y_axis);
+		flippedBounds = twistTan.crossCopy(maxcross).y < 0;
 		constraintUpdateNotification();
 	}
-
+	
+	
+	
+	/**
+	 * sets the twist angle of the bone this kusudama constrains
+	 * 
+	 * @param ratio, value from 0-1, with 0 being equivalent to the minimum boundary, and 1 the maximum boundary
+	 * */
+	
+	public void setTwist(double ratio) {
+		this.setTwist(ratio, this.attachedTo.localAxes());
+	
+	}
+	public void setTwist(double ratio, AbstractAxes toSet) {
+		Rot alignRot = limitingAxes.getGlobalMBasis().inverseRotation.applyTo(toSet.getGlobalMBasis().rotation); 
+		Rot[] decomposition = alignRot.getSwingTwist(new SGVec_3d(0,1,0));
+		decomposition[1] = new Rot(Rot.slerp(ratio, twistMinRot.rotation, twistMaxRot.rotation));
+		Rot recomposition = decomposition[0].applyTo(decomposition[1]);
+		toSet.getParentAxes().getGlobalMBasis().inverseRotation.applyTo(limitingAxes.getGlobalMBasis().rotation.applyTo(recomposition), toSet.localMBasis.rotation);
+		toSet.markDirty();
+	}
+	
+	/**
+	 * gets the current twist ratio of the bone this kusudama constrains
+	 * 
+	 */
+	public double getTwistRatio(AbstractAxes toSet) {
+		Rot alignRot = limitingAxes.getGlobalMBasis().inverseRotation.applyTo(toSet.getGlobalMBasis().rotation); 
+		Rot[] decomposition = alignRot.getSwingTwist(new SGVec_3d(0,1,0));
+		SGVec_3d twistZ = decomposition[1].applyToCopy(new SGVec_3d(0,0,1));
+		Rot minToZ = new Rot(twistMinVec, twistZ);
+		Rot minToMax = new Rot(twistMinVec, twistMaxVec);
+		double minToZAngle = minToZ.getAngle();
+		double minToMaxAngle = minToMax.getAngle(); 
+		double flipper = minToMax.getAxis().dot(minToZ.getAxis()) < 0 ? -1 : 1;
+		return (minToZAngle*flipper)/minToMaxAngle;
+	}
 	//protected CartesianAxes limitLocalAxes;
-
-
 	
 	/**
 	 * 
@@ -352,34 +405,15 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	 * @return radians of twist required to snap bone into twist limits (0 if bone is already in twist limits)
 	 */
 	public double snapToTwistLimits(AbstractAxes toSet, AbstractAxes limitingAxes) {
-
 		if(!axiallyConstrained) return 0d;
-		Rot invRot = limitingAxes.getGlobalMBasis().getInverseRotation();
-		Rot alignRot = invRot.applyTo(toSet.getGlobalMBasis().rotation);
-		
-		Rot[] decomposition = alignRot.getSwingTwist(new SGVec_3d(0,1,0));
-		double angleDelta2 = decomposition[1].getAngle() * decomposition[1].getAxis().y*-1d; 
-		angleDelta2 = toTau(angleDelta2);
-		double fromMinToAngleDelta = toTau(signedAngleDifference(angleDelta2, TAU - this.minAxialAngle())); 
-
-		if(fromMinToAngleDelta <  TAU - range ) {                          
-			double distToMin = Math.abs(signedAngleDifference(angleDelta2, TAU-this.minAxialAngle()));
-			double distToMax =  Math.abs(signedAngleDifference(angleDelta2, TAU-(this.minAxialAngle()+range)));
-			double turnDiff = 1d; 
-			//uncomment the next line for reflectable axis  support (removed for performance reasons) 
-			turnDiff *= limitingAxes.getGlobalChirality(); 
-			if(distToMin < distToMax){
-				turnDiff = turnDiff*(fromMinToAngleDelta);
-				toSet.rotateAboutY(turnDiff, true);                                                                                                         
-			} else {                              
-				turnDiff = turnDiff*(range - (TAU-fromMinToAngleDelta));
-				toSet.rotateAboutY(turnDiff, true);
-			}
-			return turnDiff < 0 ? turnDiff*-1 : turnDiff;
-		} else {
-			return 0;
-		}
-		//return 0;
+		Rot globTwistCent = limitingAxes.getGlobalMBasis().rotation.applyTo(twistCenterRot);//create a temporary orientation representing globalOf((0,0,1)) represents the middle of the allowable twist range in global space
+		Rot alignRot = globTwistCent.applyInverseTo(toSet.getGlobalMBasis().rotation); 
+		Rot[] decomposition = alignRot.getSwingTwist(new SGVec_3d(0,1,0)); //decompose the orientation to a swing and twist away from globTwistCent's global basis
+		decomposition[1].rotation.clampToQuadranceAngle(twistHalfRangeHalfCos);
+		Rot recomposition = decomposition[0].applyTo(decomposition[1]);
+		toSet.getParentAxes().getGlobalMBasis().inverseRotation.applyTo(globTwistCent.applyTo(recomposition), toSet.localMBasis.rotation);
+		toSet.markDirty();
+		return 0;
 	}
 	
 	
@@ -387,14 +421,17 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 
 		if(!axiallyConstrained) return 0d;
 
-		Rot alignRot = limitingAxes.getGlobalMBasis().getInverseRotation().applyTo(toSet.getGlobalMBasis().rotation);
+		Rot invRot = limitingAxes.getGlobalMBasis().getInverseRotation();
+		Rot alignRot = invRot.applyTo(toSet.getGlobalMBasis().rotation);
+		//Rot alignRot = limitingAxes.getGlobalMBasis().getInverseRotation().applyTo(toSet.getGlobalMBasis().rotation);
 		Rot[] decomposition = alignRot.getSwingTwist(new SGVec_3d(0,1,0));
-		double angleDelta2 = decomposition[1].getAngle() * decomposition[1].getAxis().y*-1d; 
+		SGVec_3d twistedDir = decomposition[1].applyToCopy(new SGVec_3d(0,0,1));
+		Rot toMid = new Rot(twistedDir, twistCenterVec);
+		/*double angleDelta2 = decomposition[1].getAngle() * decomposition[1].getAxis().y*-1d; 
 		angleDelta2 = toTau(angleDelta2);
 		              
-		double distToMid =  signedAngleDifference(angleDelta2, TAU-(this.minAxialAngle()+(range/2d)));
-		return distToMid;	
-		
+		double distToMid =  signedAngleDifference(angleDelta2, TAU-(this.minAxialAngle()+(range/2d)));*/
+		return toMid.getAngle() * toMid.getAxis().y;	
 	}
 
 	public boolean inTwistLimits(AbstractAxes boneAxes, AbstractAxes limitingAxes) {

@@ -290,19 +290,23 @@ public class Rot {
 	 * @see <a href="http://www.euclideanspace.com/maths/geometry/rotations/for/decomposition">calculation</a> */
 	public Rot[] getSwingTwist ( SGVec_3d axis) {
 		Rot twistRot= new Rot(new MRotation(rotation.getQ0(), rotation.getQ1(), rotation.getQ2(), rotation.getQ3()));
-		final double d = SGVec_3d.dot(twistRot.rotation.getQ1(), twistRot.rotation.getQ2(), twistRot.rotation.getQ3(), axis.x, axis.y, axis.z);
+		final double d = SGVec_3d.dot(
+				twistRot.rotation.getQ1(), 
+				twistRot.rotation.getQ2(), 
+				twistRot.rotation.getQ3(), axis.x, axis.y, axis.z);
 		twistRot.rotation.set(rotation.getQ0(), axis.x * d, axis.y * d, axis.z * d, true);
 		if (d < 0) twistRot.rotation.multiply(-1d);
 		
 		Rot swing = new Rot(twistRot.rotation);
 		swing.rotation.setToConjugate();
-		swing.rotation = MRotation.multiply(twistRot.rotation, swing.rotation);
+		swing.rotation = MRotation.multiply(swing.rotation, this.rotation);
 		
 		Rot[] result = new Rot[2];
 		result[0] = swing;
 		result[1] = twistRot;
 		return result;
 	}
+	
 	
 	public static MRotation slerp(double amount, MRotation value1, MRotation value2)
 	{

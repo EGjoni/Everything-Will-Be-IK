@@ -37,7 +37,11 @@ public abstract class AbstractLimitCone implements Saveable {
 	private double radius; 
 	private double cushionRadius;
 	private double cushionCosine; 
-	private double currentCushion = 1d;
+	/**
+	 * a value of 0 means the cushion radius will be 0, 
+	 * a value of 1 means the cushion radius will be equal to the cone radius
+	 */
+	private double cushionRatio = 0.8d;
 
 	public AbstractKusudama parentKusudama;
 
@@ -89,8 +93,8 @@ public abstract class AbstractLimitCone implements Saveable {
 
 		this.radius = Math.max(Double.MIN_VALUE, rad);
 		this.radiusCosine = Math.cos(radius);
-		this.cushionRadius = this.radius;
-		this.cushionCosine = this.radiusCosine;
+		this.cushionRadius = this.radius * Math.min(1, Math.abs(this.cushionRatio));
+		this.cushionCosine = Math.cos(cushionRadius);
 		parentKusudama = attachedTo;
 	}
 	
@@ -110,8 +114,8 @@ public abstract class AbstractLimitCone implements Saveable {
 
 		this.radius = Math.max(Double.MIN_VALUE, rad);
 		this.radiusCosine = Math.cos(radius);
-		double adjustedCushion = Math.min(1d, Math.max(0.001d, cushion));
-		this.cushionRadius = this.radius * adjustedCushion;
+		this.cushionRatio = Math.min(1, Math.abs(cushion));		 
+		this.cushionRadius = this.radius * this.cushionRatio;
 		this.cushionCosine = Math.cos(cushionRadius);
 		parentKusudama = attachedTo;
 	}
@@ -396,9 +400,9 @@ public abstract class AbstractLimitCone implements Saveable {
 			 * one of which has a unique radius.  
 			 * 
 			 * However, we want the radius of our tangent circles to obey the following properties: 
-			 *   1) When the radius of A + B == 0, our tangent circle's radius should = 90.
+			 *   1) When the radius of A + B == 0 radians, our tangent circle's radius should = pi/2 radians.
 			 *   	In other words, the tangent circle should span a hemisphere. 
-			 *   2) When the radius of A + B == 180, our tangent circle's radius should = 0. 
+			 *   2) When the radius of A + B == pi radians, our tangent circle's radius should = 0 radians. 
 			 *   	In other words, when A + B combined are capable of spanning the entire sphere, 
 			 *   	our tangentCircle should be nothing.   
 			 *   
@@ -488,7 +492,7 @@ public abstract class AbstractLimitCone implements Saveable {
 	private void setTangentCircleRadiusNext(double rad, int mode ) {
 		if(mode==CUSHION) {
 			this.cushionTangentCircleRadiusNext = rad; 
-			this.cushionTangentCircleRadiusNext = Math.cos(cushionTangentCircleRadiusNextCos);
+			this.cushionTangentCircleRadiusNextCos = Math.cos(cushionTangentCircleRadiusNext);
 		} else {
 				this.tangentCircleRadiusNext = rad;
 				this.tangentCircleRadiusNextCos = Math.cos(tangentCircleRadiusNext);
@@ -588,13 +592,13 @@ public abstract class AbstractLimitCone implements Saveable {
 	
 	/**
 	 * @param cushion range 0-1, how far toward the boundary to begin slowing down the rotation if soft constraints are enabled.
-	 * Value of 1 creates a hard boundary. Value of 0 means it will always be the case that the closer a joint in the allowable region 
-	 * is to the boundary, the more any further rotation in the direction of that boundary will be avoided.   
+	 * Value of 1 is equivalent to no cushion. Value of 0 means the cushion will begin at the center of the cone 
 	 */
-	public void setCushionRadius(double cushion) {
+	public void setCushionRatio(double cushion) {
 		double adjustedCushion = Math.min(1d, Math.max(0.001d, cushion));
 		this.cushionRadius = this.radius * adjustedCushion;
 		this.cushionCosine = Math.cos(cushionRadius);
+		this.getParentKusudama().updateTangentRadii();
 	}
 
 	public AbstractKusudama getParentKusudama() {
