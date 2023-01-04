@@ -15,6 +15,7 @@ public interface Constraint extends Saveable{
 	//false otherwise.
 	public <V extends Vec3d<?>>boolean isInLimits_(V globalPoint);
 	public <A extends AbstractAxes> A limitingAxes();
+	public double getPainfulness();
 	
 	/**
 	 * @return a measure of the rotational freedom afforded by this constraint. 

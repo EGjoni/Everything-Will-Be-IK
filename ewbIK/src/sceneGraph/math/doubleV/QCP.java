@@ -173,6 +173,8 @@ public class QCP {
 		rmsdCalculated = false;
 		transformationCalculated = false;
 		innerProductCalculated = false;
+		movedCenter.set(0,0,0);
+		targetCenter.set(0,0,0);
 
 		if (translate) {
 			moveToWeightedCenter(this.moved, weight, movedCenter);
@@ -527,11 +529,15 @@ public class QCP {
 	public <V extends Vec3d<?>> V moveToWeightedCenter(V[] toCenter, double[] weight, V center) {
 
 		if (weight != null) {
+			for(int i = 0; i < toCenter.length; i++) {
+				wsum += weight[i];
+			}
+		}
+		if(weight != null && wsum != 0) {
 			for (int i = 0; i < toCenter.length; i++) {
 				center.mulAdd(toCenter[i], weight[i]);
 				wsum += weight[i];
 			}
-
 			center.div(wsum);
 		} else {
 			for (int i = 0; i < toCenter.length; i++) {

@@ -115,8 +115,12 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 		updateGlobal(false);
 	}
 	
-	/**,
-	 * @param force will non-recursively update the global transformation cache even if it isn't dirty. Meaning, the update won't also be forced on any ancestors. 
+	/**
+	 * Updates the global coordinates of this transform
+	 * @param The force boolean is to help you do things you really probably shouldn't, 
+	 * and will non-recursively update the global transformation cache even if it isn't dirty. 
+	 * (Meaning, the update won't also be forced on any ancestors.)
+	 *  
 	 */
 	public void updateGlobal(boolean force) {
 		if(this.dirty || force) {
@@ -211,8 +215,8 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 	public void forEachDependent(Consumer<AxisDependency> action) {		
 		Iterator i = dependentsSet.iterator();
 		while (i.hasNext()) {
-			if(AbstractAxes.debug)
-				System.out.print(".");
+			//if(AbstractAxes.debug)
+				//System.out.print(".");
 			AxisDependency dr = (AxisDependency) i.next();
 			if(dr != null) {
 				action.accept(dr);
@@ -638,6 +642,11 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 		} else {
 			this.getLocalMBasis().rotateTo(rotation);
 		}
+		this.markDirty();
+	}
+	
+	public void setLocalOrientationTo(Rot rotation) {
+		this.getLocalMBasis().rotateTo(rotation);
 		this.markDirty();
 	}
 

@@ -471,9 +471,9 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	 * you are unlikely to need to use this, and at the moment 
 	 * it presumes KusudamaExample constraints 
 	 */
-	public void setAxesToSnapped(AbstractAxes toSet, AbstractAxes limitingAxes, double cosHalfAngleDampen) {
+	public void setAxesToSnapped(AbstractAxes toSet, AbstractAxes limitingAxes) {
 		if(constraints != null && AbstractKusudama.class.isAssignableFrom(constraints.getClass())) {
-			((AbstractKusudama)constraints).setAxesToSnapped(toSet, limitingAxes, cosHalfAngleDampen);
+			((AbstractKusudama)constraints).setAxesToSnapped(toSet, limitingAxes);
 		}
 	}
 	

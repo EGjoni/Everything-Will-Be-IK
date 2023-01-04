@@ -52,8 +52,6 @@ public class MRotation {
 
 		if(needsNormalization) setToNormalized();
 
-
-
 	}
 
 	/**
@@ -155,7 +153,7 @@ public class MRotation {
 			double inverseCoeff = Math.sqrt(((1d-(cosHalfAngle*cosHalfAngle))/squaredSine));
 			inverseCoeff = newAngle < 0 ? -inverseCoeff : inverseCoeff;
 
-			q0 = q0<0 ? -cosHalfAngle : cosHalfAngle;
+			q0 = q0 < 0 ? -cosHalfAngle : cosHalfAngle;
 			q1 = inverseCoeff * q1;
 			q2 = inverseCoeff * q2;
 			q3 = inverseCoeff * q3;
@@ -187,12 +185,12 @@ public class MRotation {
 	}
 
 	public void clampToQuadranceAngle(double cosHalfAngle) {
-		double newCoeff = 1d-(cosHalfAngle*cosHalfAngle);
-		double currentCoeff =q1 * q1 + q2 * q2 + q3 * q3;
-		if(newCoeff>currentCoeff) 
+		double newCoeff = 1d-(cosHalfAngle*Math.abs(cosHalfAngle));
+		double currentCoeff = q1 * q1 + q2 * q2 + q3 * q3;
+		if(newCoeff >= currentCoeff) 
 			return;
 		else {
-			q0 = q0<0 ? -cosHalfAngle : cosHalfAngle;
+			q0 = q0 < 0 ? -cosHalfAngle : cosHalfAngle;
 			double compositeCoeff = Math.sqrt(newCoeff / currentCoeff); 
 			q1*= compositeCoeff;
 			q2*= compositeCoeff;
@@ -594,7 +592,6 @@ public class MRotation {
 		q2 = composed.q2;
 		q3 = composed.q3;
 	}
-
 
 
 	/**
@@ -1349,6 +1346,14 @@ public class MRotation {
 	}
 
 	/** Apply the instance to another rotation.
+	 * 
+	 * TLDR:
+	 * vec u = someVector;
+	 * Vec v = r.applyTo(u);
+	 * Vec w = this.applyTo(v);
+	 * 
+	 * this.applyTo(r).applyTo(u) == w
+	 * 
 	 * Applying the instance to a rotation is computing the composition
 	 * in an order compliant with the following rule : let u be any
 	 * vector and v its image by r (i.e. r.applyTo(u) = v), let w be the image
