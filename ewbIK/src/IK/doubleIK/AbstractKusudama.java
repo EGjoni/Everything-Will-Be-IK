@@ -57,9 +57,9 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	protected Double strength = 1d; 
 
 	protected AbstractBone attachedTo;  
-	Rot twistMinRot = new Rot();
-	Rot twistMaxRot = new Rot();
-	Rot twistCenterRot = new Rot();
+	protected Rot twistMinRot = new Rot();
+	protected Rot twistMaxRot = new Rot();
+	protected Rot twistCenterRot = new Rot();
 
 
 	public AbstractKusudama() {
@@ -326,12 +326,12 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 			return true;
 		}*/
 	}
-	private Vec3d<?> twistMinVec;
-	private Vec3d<?> twistMaxVec;
-	private Vec3d<?> twistTan;
-	private Vec3d<?> twistCenterVec;
-	private double twistHalfRangeHalfCos;
-	private boolean flippedBounds = false;
+	protected  Vec3d<?> twistMinVec;
+	protected Vec3d<?> twistMaxVec;
+	protected Vec3d<?> twistTan;
+	protected Vec3d<?> twistCenterVec;
+	protected double twistHalfRangeHalfCos;
+	protected boolean flippedBounds = false;
 	
 
 
@@ -384,9 +384,15 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 		toSet.markDirty();
 	}
 	
+	
 	/**
 	 * gets the current twist ratio of the bone this kusudama constrains
-	 * 
+	 */
+	public double getTwistRatio() {
+		return getTwistRatio(this.attachedTo().localAxes());
+	}
+	/**
+	 * gets the current twist ratio of the bone this kusudama constrains
 	 */
 	public double getTwistRatio(AbstractAxes toSet) {
 		Rot alignRot = limitingAxes.getGlobalMBasis().inverseRotation.applyTo(toSet.getGlobalMBasis().rotation); 
@@ -438,7 +444,7 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	}
 
 	public boolean inTwistLimits(AbstractAxes boneAxes, AbstractAxes limitingAxes) {
-
+		System.out.println(this.getTwistRatio());
 		Rot invRot = limitingAxes.getGlobalMBasis().getInverseRotation();
 		Rot alignRot = invRot.applyTo(boneAxes.getGlobalMBasis().rotation);
 		Rot[] decomposition = alignRot.getSwingTwist(new SGVec_3d(0,1,0));

@@ -324,9 +324,11 @@ public abstract class AbstractArmature implements Saveable {
 	 *                          -1 if you want to use the armature's default.
 	 */
 	public void IKSolver(AbstractBone bone, double dampening, int iterations, int stabilizingPasses) {
-		performance.startPerformanceMonitor();
-		flatTraveseSolver(bone, dampening, iterations, stabilizingPasses);// (bone, dampening, iterations);
-		performance.solveFinished(iterations == -1 ? this.IKIterations : iterations);
+		if(traversalArray != null && traversalArray.length > 0) {
+			performance.startPerformanceMonitor();
+			flatTraveseSolver(bone, dampening, iterations, stabilizingPasses);// (bone, dampening, iterations);
+			performance.solveFinished(iterations == -1 ? this.IKIterations : iterations);
+		}
 	}
 
 	/**
@@ -400,8 +402,10 @@ public abstract class AbstractArmature implements Saveable {
 		stabilizationPasses = stabilizationPasses == -1 ? this.defaultStabilizingPassCount : stabilizationPasses;
 		if (startFrom != null) {
 			forSegment = boneSegmentMap.get(startFrom);
-			AbstractBone endOnBone = forSegment.segmentRoot;
-			endOnIndex = traversalIndex.get(endOnBone);
+			if(forSegment != null) {
+				AbstractBone endOnBone = forSegment.segmentRoot;
+				endOnIndex = traversalIndex.get(endOnBone);
+			}
 		}
 
 		iterativelyAlignSimAxesToBones(traversalArray, endOnIndex);
@@ -500,14 +504,15 @@ public abstract class AbstractArmature implements Saveable {
 	}
 
 	private void buildTraversalArrayFromChains(SegmentedArmature chain, ArrayList<WorkingBone> boneList, ArrayList<WorkingBone> returnfulList) {
-		if (chain.childSegments == null && !chain.isTipPinned()) {
+		if ((chain.childSegments == null || chain.childSegments.size() == 0) && !chain.isTipPinned()) {
 			return;
 		} else if (!chain.isTipPinned()) {
 			for (SegmentedArmature c : chain.childSegments) {
 				buildTraversalArrayFromChains(c, boneList, returnfulList);
 			}
 		}
-		pushSegmentBonesToTraversalArray(chain, boneList, returnfulList);
+		if(chain.isTipPinned() || chain.pinnedDescendants.size() > 0)
+			pushSegmentBonesToTraversalArray(chain, boneList, returnfulList);
 	}
 
 	private void pushSegmentBonesToTraversalArray(SegmentedArmature chain, ArrayList<WorkingBone> boneList, ArrayList<WorkingBone> returnfulList) {
