@@ -65,10 +65,10 @@ public class SegmentedArmature {
 	public AbstractAxes debugTipAxes;
 	public AbstractAxes debugTargetAxes;
 
-	SGVec_3d[] boneCenteredTargetHeadings;
-	SGVec_3d[] boneCenteredTipHeadings;
-	SGVec_3d[] uniform_boneCenteredTipHeadings;
-	double[] weights;
+	public SGVec_3d[] boneCenteredTargetHeadings;
+	public SGVec_3d[] boneCenteredTipHeadings;
+	public SGVec_3d[] uniform_boneCenteredTipHeadings;
+	public double[] weights;
 
 	public SegmentedArmature(AbstractBone rootBone) {
 		segmentRoot = armatureRootBone(rootBone);
@@ -218,7 +218,6 @@ public class SegmentedArmature {
 			for (SegmentedArmature s : from.childSegments) {
 				recursivelyCreatePenaltyArray(s, weightArray, pinSequence, currentFalloff * thisFalloff);
 			}
-
 		}
 	}
 
@@ -416,7 +415,7 @@ public class SegmentedArmature {
 
 		sb.simLocalAxes.updateGlobal();
 
-		sb.forBone.setAxesToSnapped(sb.simLocalAxes, sb.simConstraintAxes);
+		//sb.forBone.setAxesToSnapped(sb.simLocalAxes, sb.simConstraintAxes);
 		sb.simLocalAxes.translateByGlobal(translateBy);
 		sb.simConstraintAxes.translateByGlobal(translateBy);
 	}
@@ -457,12 +456,11 @@ public class SegmentedArmature {
 						double scaledDampenedAngle = dampenedAngle
 								* ((totaliterationssq - (iteration * iteration)) / totaliterationssq);
 						double cosHalfAngle = Math.cos(0.5 * scaledDampenedAngle);
-						sb.forBone.setAxesToReturnfulled(sb.simLocalAxes, sb.simConstraintAxes, cosHalfAngle,
-								scaledDampenedAngle);
+						//sb.forBone.setAxesToReturnfulled(sb.simLocalAxes, sb.simConstraintAxes, cosHalfAngle,scaledDampenedAngle);
 					} else {
-						sb.forBone.setAxesToReturnfulled(sb.simLocalAxes, sb.simConstraintAxes,
+						/*sb.forBone.setAxesToReturnfulled(sb.simLocalAxes, sb.simConstraintAxes,
 								sb.cosHalfReturnfullnessDampened_iterated[iteration],
-								sb.halfReturnfullnessDampened_iterated[iteration]);
+								sb.halfReturnfullnessDampened_iterated[iteration]);*/
 					}
 					upateTipHeadings(boneCenteredTipHeadings, thisBoneAxes);
 					newRMSD = getManualMSD(boneCenteredTipHeadings, boneCenteredTargetHeadings, weights);
@@ -950,7 +948,7 @@ public class SegmentedArmature {
 
 			simLocalAxes.updateGlobal();
 
-			forBone.setAxesToSnapped(simLocalAxes, simConstraintAxes);
+			//forBone.setAxesToSnapped(simLocalAxes, simConstraintAxes);
 			simLocalAxes.translateByGlobal(translateBy);
 			simConstraintAxes.translateByGlobal(translateBy);
 		}
@@ -967,7 +965,7 @@ public class SegmentedArmature {
 					halfDamp = halfReturnfullnessDampened_iterated[iteration];
 					coshalfDamp = cosHalfReturnfullnessDampened_iterated[iteration];
 				}
-				forBone.setAxesToReturnfulled(simLocalAxes, simConstraintAxes, coshalfDamp, halfDamp);
+				//forBone.setAxesToReturnfulled(simLocalAxes, simConstraintAxes, coshalfDamp, halfDamp);
 				onChain.previousDeviation = Double.POSITIVE_INFINITY;
 			}
 		}

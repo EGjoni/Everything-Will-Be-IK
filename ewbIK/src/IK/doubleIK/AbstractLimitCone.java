@@ -578,7 +578,7 @@ public abstract class AbstractLimitCone implements Saveable {
 	 * @param mode
 	 * @return
 	 */
-	protected Vec3d<?> getTangentCircleCenterNext1(int mode) {
+	public Vec3d<?> getTangentCircleCenterNext1(int mode) {
 		if(mode == CUSHION)
 				return cushionTangentCircleCenterNext1;
 		return tangentCircleCenterNext1;
@@ -590,7 +590,7 @@ public abstract class AbstractLimitCone implements Saveable {
 		return tangentCircleRadiusNext;
 	}
 	
-	protected double getTangentCircleRadiusNextCos(int mode) {
+	public double getTangentCircleRadiusNextCos(int mode) {
 		if(mode == CUSHION) 
 				return cushionTangentCircleRadiusNextCos; 
 		return tangentCircleRadiusNextCos;
@@ -602,7 +602,7 @@ public abstract class AbstractLimitCone implements Saveable {
 	 * @param mode
 	 * @return
 	 */
-	protected Vec3d<?> getTangentCircleCenterNext2(int mode) {
+	public Vec3d<?> getTangentCircleCenterNext2(int mode) {
 		if(mode == CUSHION)
 			return cushionTangentCircleCenterNext2;
 		return tangentCircleCenterNext2;

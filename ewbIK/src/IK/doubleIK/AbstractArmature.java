@@ -26,6 +26,8 @@ import javax.swing.JInternalFrame;
 
 import IK.doubleIK.SegmentedArmature;
 import IK.doubleIK.SegmentedArmature.WorkingBone;
+import IK.doubleIK.solver.ShadowSkeleton;
+import IK.doubleIK.solver.SkeletonState;
 import asj.LoadManager;
 import asj.SaveManager;
 import asj.Saveable;
@@ -127,7 +129,7 @@ public abstract class AbstractArmature implements Saveable {
 	 */
 	public void setDefaultIterations(int iter) {
 		this.IKIterations = iter;
-		updateArmatureSegments();
+		regenerateShadowSkelton();
 	}
 
 	/**
@@ -145,7 +147,7 @@ public abstract class AbstractArmature implements Saveable {
 	 */
 	public void setDefaultDampening(double damp) {
 		this.dampening = Math.min(Math.PI * 3d, Math.max(Math.abs(Double.MIN_VALUE), Math.abs(damp)));
-		updateArmatureSegments();
+		regenerateShadowSkelton();
 	}
 
 	/**
@@ -201,7 +203,7 @@ public abstract class AbstractArmature implements Saveable {
 		if (bones.contains(abstractBone)) {
 			bones.remove(abstractBone);
 			tagBoneMap.remove(abstractBone);
-			this.updateArmatureSegments();
+			this.regenerateShadowSkelton();
 		}
 	}
 
@@ -242,17 +244,26 @@ public abstract class AbstractArmature implements Saveable {
 	 * public boolean isInverseWeighted() { return this.inverseWeighted; }
 	 */
 
+	ShadowSkeleton shadowSkel;
+	SkeletonState skelState;
 	/**
-	 * this method should be called whenever a bone in this armature has been pinned
-	 * or unpinned.
+	 * This method should be called whenever a structural change has been made to the armature prior to calling the solver.
+	 * A structural change is basically any change other than a rotation/translation/scale of a bone or a target. 
+	 * Structural changes include things like, 
+	 *		1. reparenting / adding / removing bones. 
+	 * 	2. marking a bone as an effector (aka "pinning / unpinning a bone"
+	 * 	3. adding / removing a constraint on a bone.
+	 * 	4. modifying a pin's fallOff to non-zero if it was zero, or zero if it was non-zero
+	 * 	5. modifying a bone's stiffness to 1 if it was less than one, or to less than 1 if it was 1
 	 * 
-	 * for the most part, the abstract classes call this when necessary. But if you
-	 * are extending classes more than you would reasonably expect this library to
-	 * reasonably expect and getting weird results, you might try calling this
-	 * method after making any substantial structural changes to the armature.
+	 * You should NOT call this function if you have only modified a translation/rotation/scale of some transform on the armature,
 	 */
-	public void updateArmatureSegments() {
-		segmentedArmature.updateSegmentedArmature();
+	public void regenerateShadowSkelton() {
+		skelState = new SkeletonState();
+		for(AbstractBone b: bones) {
+			registerBoneWithShadowSkeleton(b);
+		}
+		/*segmentedArmature.updateSegmentedArmature();
 		boneSegmentMap.clear();
 		recursivelyUpdateBoneSegmentMapFrom(segmentedArmature);
 		SegmentedArmature.recursivelyCreateHeadingArraysFor(segmentedArmature);
@@ -266,7 +277,44 @@ public abstract class AbstractArmature implements Saveable {
 		}
 		for (int i = 0; i < returnfulArray.length; i++) {
 			returnfulIndex.put(returnfulArray[i].forBone, i);
-		}
+		}*/
+	}
+	
+	private void registerBoneWithShadowSkeleton(AbstractBone bone) { 
+		String parBoneId = (bone.getParent() == null) ? null : bone.getParent().getIdentityHash(); 
+		Constraint constraint = bone.getConstraint();
+		String constraintId = (constraint == null) ? null : constraint.getIdentityHash(); 
+		AbstractIKPin target = bone.getIKPin();
+		String targetId = (target == null || target.getPinWeight() == 0 || target.isEnabled() == false) ? null : target.getIdentityHash();
+		skelState.addBone(bone.getIdentityHash(), bone.localAxes().getIdentityHash(), parBoneId, constraintId, bone.getStiffness(), targetId);
+		registerAxesWithShadowSkeleton(bone.localAxes(), bone.getParent() == null);
+		if(targetId != null) registerTargetWithShadowSkeleton(target);
+		if(constraintId != null) registerConstraintWithShadowSkeleton(constraint);
+		
+	}
+	private void registerTargetWithShadowSkeleton(AbstractIKPin ikPin) {
+		
+	}
+	private void registerConstraintWithShadowSkeleton(Constraint constraint) {
+		
+	}
+	/**
+	 * @param axes
+	 * @param rebase if true, this function will not provide a parent_id for these axes.
+	 * This is mostly usefu l for ensuring that targetAxes are always implicitly defined in skeleton space when calling the solver.
+	 * You should always set this to true when giving the axes of an IKPin, as well as when giving the axes of the root bone. 
+	 * see the skelState.addTransform documentation for more info. 
+	 */
+	private void registerAxesWithShadowSkeleton(AbstractAxes axes, boolean unparent) {
+		String parent_id  = unparent || axes.getParentAxes() == null ? null : axes.getParentAxes().getIdentityHash();
+		Vec3d<?> translate = axes.getLocalMBasis().translate;
+		Rot rotation = axes.getLocalMBasis().rotation;
+		skelState.addTransform(
+				axes.getIdentityHash(), 
+				new double[]{translate.getX(), translate.getY(), translate.getZ()}, 
+				rotation.toArray(), 
+				new double[]{1.0,1.0,1.0}, 
+				parent_id, axes);
 	}
 
 	private void recursivelyUpdateBoneSegmentMapFrom(SegmentedArmature startFrom) {
@@ -292,7 +340,7 @@ public abstract class AbstractArmature implements Saveable {
 
 		for (AbstractBone b : pinnedBones) {
 			b.notifyAncestorsOfPin(false);
-			updateArmatureSegments();
+			regenerateShadowSkelton();
 		}
 	}
 
@@ -426,60 +474,6 @@ public abstract class AbstractArmature implements Saveable {
 		iterativelyNotifyBonesOfCompletedIKSolution(tipIndex, endOnIndex);
 	}
 
-	/**
-	 * @param startFrom
-	 * @param dampening
-	 * @param iterations
-	 */
-
-	/*public void iteratedImprovedSolver(AbstractBone startFrom, double dampening, int iterations,
-			int stabilizationPasses) {
-		SegmentedArmature armature = boneSegmentMap.get(startFrom);
-
-		if (armature != null) {
-			SegmentedArmature pinnedRootChain = armature.getPinnedRootChainFromHere();
-			armature = pinnedRootChain == null ? armature.getAncestorSegmentContaining(rootBone) : pinnedRootChain;
-			if (armature != null && armature.pinnedDescendants.size() > 0) {
-				armature.alignSimulationAxesToBones();
-
-				iterations = iterations == -1 ? IKIterations : iterations;
-				double totalIterations = iterations;
-				// dampening = dampening == -1? this.dampening : dampening;
-				stabilizationPasses = stabilizationPasses == -1 ? this.defaultStabilizingPassCount
-						: stabilizationPasses;
-				if (!armature.isBasePinned() && armature.getParentSegment() == null) {
-					// alignSegmentTipOrientationsFor(armature, dampening);
-					//
-					// this condition translates the rootmost chain to a location that maximizes the
-					// other chain's ability to reach their target.
-					// If this translation behavior isn't desired, simply set the rootmost bone to
-					// be an effector, in which case, the root bone will always end up
-					// aligning to the specific transformation specified by its target.
-					//
-					
-					armature.updateOptimalRotationToPinnedDescendants(armature.segmentRoot, Math.PI * 2, true,
-							stabilizationPasses, 0, totalIterations);
-					// armature.setProcessed(false);
-					for (int i = 0; i < iterations; i++) {
-						for (SegmentedArmature c : armature.childSegments) {
-							groupedRecursiveSegmentSolver(c, dampening, stabilizationPasses, i, totalIterations);
-						}
-						// outwardRecursiveSegmentSolver(armature, dampening);
-						// alignSegmentTipOrientationsFor(armature, dampening);
-					}
-
-				} else {
-					for (int i = 0; i < iterations; i++) {
-						groupedRecursiveSegmentSolver(armature, dampening, stabilizationPasses, i, totalIterations);
-						// outwardRecursiveSegmentSolver(armature, dampening);
-						// alignSegmentTipOrientationsFor(armature, dampening);
-					}
-				}
-				armature.recursivelyAlignBonesToSimAxesFrom(armature.segmentRoot);
-				recursivelyNotifyBonesOfCompletedIKSolution(armature);
-			}
-		}
-	}*/
 
 	/**returns a two element array of WorkingBone arrays in the order which they should be traversed in
 	 * the 0th element is for trying to reach targets, the 1st element is for trying to reach comfort.
@@ -813,7 +807,7 @@ public abstract class AbstractArmature implements Saveable {
 	public void notifyOfLoadCompletion() {
 		this.createRootBone(rootBone);
 		refreshArmaturePins();
-		updateArmatureSegments();
+		regenerateShadowSkelton();
 	}
 
 	@Override

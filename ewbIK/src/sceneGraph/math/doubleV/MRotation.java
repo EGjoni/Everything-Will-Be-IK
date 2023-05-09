@@ -90,7 +90,6 @@ public class MRotation {
 	 * @exception MathIllegalArgumentException if the axis norm is zero
 	 */
 	public <V extends Vec3d<?>> MRotation(V axis, double angle)  {
-
 		double norm = axis.mag();
 		if (norm == 0) {
 			try {
@@ -1074,9 +1073,24 @@ public class MRotation {
 					Math.acos(v2.z),
 					Math.atan2(v2.y, -v2.x)
 			};
-
 		}
-
+	}
+	
+	/**
+	 * @return this rotation as an array of 4 numbers corresponding to the W (aka scalar), X, Y, and Z values in that order.
+	 */
+	public double[] toArray() {
+		return new double[]{q0, q1, q2, q3};
+	}
+	
+	/**
+	 * @param updates container to have values representing this rotation as an array of 4 numbers corresponding to the W (aka scalar), X, Y, and Z values in that order.
+	 */
+	public void setToArray(double[] container) {
+		container[0] = q0;
+		container[1]  = q1; 
+		container[2] = q2;
+		container[3] = q3;
 	}
 
 	/** Get an array representing the 3X3 matrix corresponding to this rotation instance

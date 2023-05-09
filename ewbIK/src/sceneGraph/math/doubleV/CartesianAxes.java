@@ -63,17 +63,26 @@ public class CartesianAxes extends AbstractAxes {
 		return new CartesianAxes(getGlobalMBasis(), this.getParentAxes());
 	}
 
-
 	@Override
 	public AbstractAxes relativeTo(AbstractAxes in) {
-		// TODO Auto-generated method stub
-		return null;
+		CartesianAxes result = 
+				new CartesianAxes(workingVector, 
+						this.getLocalMBasis().getXRay().heading(), 
+						this.getLocalMBasis().getYRay().heading(), 
+						this.getLocalMBasis().getZRay().heading(), 
+						null);
+		result.setParent(in);
+		return result;
 	}
 
 	@Override
 	public AbstractAxes getLocalOf(AbstractAxes input) {
-		// TODO Auto-generated method stub
-		return null;
+		this.updateGlobal();
+		CartesianBasis newBasis = new CartesianBasis((CartesianBasis)input.getLocalMBasis());
+		this.getGlobalMBasis().setToLocalOf(input.getGlobalMBasis(), newBasis);
+		return new CartesianAxes(
+			newBasis, 
+			null); 	
 	}
 
 	@Override

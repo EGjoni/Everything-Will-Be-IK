@@ -19,7 +19,9 @@ public abstract class AbstractIKPin implements Saveable {
 	double pinWeight  = 1;
 	byte modeCode = 6; 
 	int subTargetCount = 4; 	
-	static final short XDir = 1, YDir = 2, ZDir = 4;
+	public static final short XDir = 1;
+	public static final short YDir = 2;
+	public static final short ZDir = 4;
 	protected double xPriority =1d , yPriority =2d, zPriority = 1d;
 	double depthFalloff= 0d;
 	
@@ -66,17 +68,16 @@ public abstract class AbstractIKPin implements Saveable {
 	 * they care with each level down.  
 	 * 
 	 * Presuming all descendants of this pin have a falloff of 1, then:
-	 * A pin falloff of 0 on this pin means only this pin is reported to ancestors. 
-	 * A pin falloff of 1 on this pin means ancestors care about all descendant pins equally (after accounting for their pinWeight), 
-	 * regardless of how many levels down they are.
-	 * A pin falloff of 0.5 means each descendant pin is cared about half as much as its ancestor. 
+	 * A pin falloff of 0 on this pin means ONLY this pin and its effector are reported to ancestor bones. 
+	 * A pin falloff of 1 on this pin means ancestor bones care about this pin / effector and all of its descendant effectors descendant from thi's pins effector as if this pin/effector were a sibling of theirs 
+	 * A pin falloff of 0.5 means ancestor bones care about this pin/effector twice as much as they care about direct descendants pins/effectors of this pin's effctor. 
 	 * 
 	 * With each level, the pin falloff of a descendant is taken account for each level.
 	 *  Meaning, if this pin has a falloff of 1, and its descendent has a falloff of 0.5
 	 *  then this pin will be reported with full weight, 
 	 *  it descendant will be reported with full weight, 
 	 *  the descendant of that pin will be reported with half weight. 
-	 *  the desecendant of that one's descendant will be reported with quarter weight.   
+	 *  the descendant of that one's descendant will be reported with half weight.   
 	 * 
 	 * @param depth
 	 */

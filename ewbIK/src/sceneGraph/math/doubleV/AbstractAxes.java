@@ -101,9 +101,6 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 		//this.updateChiralities();
 	}
 
-	
-
-
 	public AbstractAxes getParentAxes() {
 		if(this.parent == null) 
 			return null;
@@ -332,7 +329,13 @@ public abstract class AbstractAxes implements AxisDependency, Saveable {
 		return new sgRayd(this.getGlobalOf( in.p1()), this.getGlobalOf( in.p2()));
 	}
 	
-	
+	/**
+	 * resets this AbstractAxes to be equivalent to the identity transform and marks it dirty 
+	 */
+	public void toIdentity() {
+		this.localMBasis.setIdentity();
+		this.markDirty();
+	}
 	
 
 	/**

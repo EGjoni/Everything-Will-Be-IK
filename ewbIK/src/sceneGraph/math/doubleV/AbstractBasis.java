@@ -114,7 +114,19 @@ public abstract class AbstractBasis {
 		Vec3d<?> zDirNew = z.heading().copy(); 		
 		xDirNew.normalize(); yDirNew.normalize(); zDirNew.normalize();		
 		set(xDirNew, yDirNew, zDirNew);
-		
+	}
+	
+	/**
+	 * @param translation an array of THREE numbers corresponding to the translation of this transform  in the space of its parent transform
+	 * @param rotation an array of FOUR numbers corresponding to the rotation of this transform in the space of its parent bone's transform. 
+	 * The four numbers should be a Hamilton quaternion representation (not JPL, important!), in the form [W, X, Y, Z], where W is the scalar quaternion component
+	 * @param scale an array of THREE numbers corresponding to scale of the X, Y, and Z components of this transform. The convention is that a value of [1,1,1] indicates
+	 */
+	public void set(double[] translation, double[] rotation, double[] scale) {
+		this.translate.set(translation);
+		this.xBase.set(scale[0], 0, 0); this.yBase.set(0, scale[1], 0); this.zBase.set(0, 0, scale[2]);
+		this.rotation.rotation.set(rotation[0], rotation[1], rotation[2], rotation[3], true);
+		this.refreshPrecomputed();
 	}
 	
 	private <V extends Vec3d<?>> void set(V x, V y, V z) {

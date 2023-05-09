@@ -35,10 +35,6 @@ public class Rot {
 				MRotation.IDENTITY.getQ3(), false);
 	};
 	
-
-	
-
-	
 	public Rot(MRotation r) {
 		this.rotation = new MRotation(r.getQ0(), r.getQ1(), r.getQ2(), r.getQ3());
 	}
@@ -51,7 +47,19 @@ public class Rot {
 		//}
 	}
 
+	/**
+	 * @return this rotation as an array of 4 numbers corresponding to the W (aka scalar), X, Y, and Z values in that order.
+	 */
+	public double[] toArray() {
+		return this.toArray();
+	}
 	
+	/**
+	 * @param updates container to have values representing this rotation as an array of 4 numbers corresponding to the W (aka scalar), X, Y, and Z values in that order.
+	 */
+	public void setToArray(double[] container) {
+		this.rotation.setToArray(container);
+	}
 	public <V extends Vec3d<?>> Rot( V  axis, double angle) {		
 		//try {
 			rotation = new MRotation(axis, angle); 

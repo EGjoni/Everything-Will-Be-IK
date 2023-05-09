@@ -26,6 +26,5 @@ public interface Constraint extends Saveable{
 	 * a bone cannot be in as defined by its representation as a point on the surface of a hypersphere. 
 	 */
 	public double getRotationalFreedom();
-	
-
+	public void setAxesToSnapped(AbstractAxes toSet, AbstractAxes swingAxes, AbstractAxes twistAxes);
 }

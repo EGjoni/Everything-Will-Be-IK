@@ -471,15 +471,15 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	 * you are unlikely to need to use this, and at the moment 
 	 * it presumes KusudamaExample constraints 
 	 */
-	public void setAxesToSnapped(AbstractAxes toSet, AbstractAxes limitingAxes) {
+	public void setAxesToSnapped(AbstractAxes toSet, AbstractAxes swingAxes, AbstractAxes  twistAxes) {
 		if(constraints != null && AbstractKusudama.class.isAssignableFrom(constraints.getClass())) {
-			((AbstractKusudama)constraints).setAxesToSnapped(toSet, limitingAxes);
+			((AbstractKusudama)constraints).setAxesToSnapped(toSet, swingAxes, twistAxes);
 		}
 	}
 	
-	public void setAxesToReturnfulled(AbstractAxes toSet, AbstractAxes limitingAxes, double cosHalfAngleDampen, double angleDampen) {
+	public void setAxesToReturnfulled(AbstractAxes toSet, AbstractAxes swingAxes,AbstractAxes  twistAxes, double cosHalfAngleDampen, double angleDampen) {
 		if(constraints != null && AbstractKusudama.class.isAssignableFrom(constraints.getClass())) {
-			((AbstractKusudama)constraints).setAxesToReturnfulled(toSet, limitingAxes, cosHalfAngleDampen, angleDampen);
+			((AbstractKusudama)constraints).setAxesToReturnfulled(toSet, swingAxes, twistAxes, cosHalfAngleDampen, angleDampen);
 		}
 	}
 
@@ -842,7 +842,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 		if (this.parent != null) {
 			parent.addToEffectored(this);
 		}		
-		if(updateSegments) parentArmature.updateArmatureSegments(); 
+		if(updateSegments) parentArmature.regenerateShadowSkelton(); 
 	}
 
 	public void notifyAncestorsOfPin() { 
@@ -853,7 +853,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 		if (this.parent != null) {
 			parent.removeFromEffectored(this);
 		}
-		parentArmature.updateArmatureSegments();
+		parentArmature.regenerateShadowSkelton();
 	}
 
 	public void addToEffectored(AbstractBone abstractBone) {
@@ -891,7 +891,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	}
 
 	public void  updateSegmentedArmature() {
-		this.parentArmature.updateArmatureSegments();
+		this.parentArmature.regenerateShadowSkelton();
 	}
 
 
@@ -1001,7 +1001,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 		if(this.freeChildren.indexOf(bone) == -1) {
 			freeChildren.add(bone);
 		}
-		parentArmature.updateArmatureSegments();
+		parentArmature.regenerateShadowSkelton();
 	}
 
 	public void addEffectoredChild(AbstractBone bone) {		

@@ -28,6 +28,7 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	public static final double TAU = Math.PI*2;
 	public static final double PI = Math.PI;
 	protected AbstractAxes limitingAxes; 
+	protected AbstractAxes twistAxes; 
 	protected double painfullness = -1d; 
 	protected double cushionRatio = 0.1d;	
 
@@ -68,6 +69,7 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	public AbstractKusudama(AbstractBone forBone) {
 		this.attachedTo = forBone; 
 		this.limitingAxes = forBone.getMajorRotationAxes();
+		this.twistAxes = this.limitingAxes.attachedCopy(false);
 		this.attachedTo.addConstraint(this);
 		this.enable();
 	}
@@ -165,24 +167,24 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	 * 
 	 * @param toSet
 	 */
-	public void setAxesToSnapped(AbstractAxes toSet, AbstractAxes limitingAxes) {
+	public void setAxesToSnapped(AbstractAxes toSet, AbstractAxes limitingAxes, AbstractAxes twistAxes) {
 		if(limitingAxes != null) {					
 			if(orientationallyConstrained) {
 				setAxesToOrientationSnap(toSet, limitingAxes);
 			} 		
 			if(axiallyConstrained) {
-				snapToTwistLimits(toSet, limitingAxes);
+				snapToTwistLimits(toSet, twistAxes);
 			}		
 		}
 	}
 	
 	
-	public void setAxesToReturnfulled(AbstractAxes toSet, AbstractAxes limitingAxes, double cosHalfReturnfullness, double angleReturnfullness) {
-		if(limitingAxes != null && painfullness > 0d) {
+	public void setAxesToReturnfulled(AbstractAxes toSet, AbstractAxes swingAxes, AbstractAxes twistAxes, double cosHalfReturnfullness, double angleReturnfullness) {
+		if(swingAxes != null && painfullness > 0d) {
 			if(orientationallyConstrained) {				
 				Vec3d<?> origin = toSet.origin_();
 				Vec3d<?> inPoint = toSet.y_().p2().copy();
-				Vec3d<?> pathPoint = pointOnPathSequence(inPoint, limitingAxes);
+				Vec3d<?> pathPoint = pointOnPathSequence(inPoint, swingAxes);
 				inPoint.sub(origin);
 				pathPoint.sub(origin);				
 				Rot toClamp = new Rot(inPoint, pathPoint);				
@@ -190,7 +192,7 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 				toSet.rotateBy(toClamp);
 			}
 			if(axiallyConstrained) {
-				double angleToTwistMid = angleToTwistCenter(toSet, limitingAxes);
+				double angleToTwistMid = angleToTwistCenter(toSet, twistAxes);
 				double clampedAngle = MathUtils.clamp(angleToTwistMid, -angleReturnfullness, angleReturnfullness);
 				toSet.rotateAboutY(clampedAngle, false);
 			}
@@ -336,10 +338,14 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 
 
 	/**
-	 * Kusudama constraints decompose the bone orientation into a swing component, and a twist component. 
-	 * The "Swing" component is the final direction of the bone. The "Twist" component represents how much 
-	 * the bone is rotated about its own final direction. Where limit cones allow you to constrain the "Swing" 
-	 * component, this method lets you constrain the "twist" component. 
+	 * Kusudama constraints decompose the bone orientation into a swing component and a twist component.
+	 * One way to visualize the swing and twist is by imagining that the bone has a canonical default transorm such that when it is in this default pose, it is pointing straight up along the y-axis.
+	 * The swing twist decomposition corresponds to 
+	 *  1. first "twisting" the bone along that y-axis, then 
+	 *  2. "swinging" it away from the y-axis until it is in its desired non-canonical pose. 
+	 * Where LimitCones let you constrain how far you can "swing" away from that y-axis on step 2, 
+	 * The axialLimits define how much you can "twist" clockwis or counterclockwise along that y-axis on step 1.
+	 * 
 	 * 
 	 * @param minAnlge some angle in radians about the major rotation frame's y-axis to serve as the first angle within the range that the bone is allowed to twist. 
 	 * @param inRange some angle in radians added to the minAngle. if the bone's local Z goes maxAngle radians beyond the minAngle, it is considered past the limit. 
@@ -376,11 +382,11 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	
 	}
 	public void setTwist(double ratio, AbstractAxes toSet) {
-		Rot alignRot = limitingAxes.getGlobalMBasis().inverseRotation.applyTo(toSet.getGlobalMBasis().rotation); 
+		Rot alignRot = twistAxes.getGlobalMBasis().inverseRotation.applyTo(toSet.getGlobalMBasis().rotation); 
 		Rot[] decomposition = alignRot.getSwingTwist(new SGVec_3d(0,1,0));
 		decomposition[1] = new Rot(Rot.slerp(ratio, twistMinRot.rotation, twistMaxRot.rotation));
 		Rot recomposition = decomposition[0].applyTo(decomposition[1]);
-		toSet.getParentAxes().getGlobalMBasis().inverseRotation.applyTo(limitingAxes.getGlobalMBasis().rotation.applyTo(recomposition), toSet.localMBasis.rotation);
+		toSet.getParentAxes().getGlobalMBasis().inverseRotation.applyTo(twistAxes.getGlobalMBasis().rotation.applyTo(recomposition), toSet.localMBasis.rotation);
 		toSet.markDirty();
 	}
 	
@@ -395,7 +401,7 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	 * gets the current twist ratio of the bone this kusudama constrains
 	 */
 	public double getTwistRatio(AbstractAxes toSet) {
-		Rot alignRot = limitingAxes.getGlobalMBasis().inverseRotation.applyTo(toSet.getGlobalMBasis().rotation); 
+		Rot alignRot = twistAxes.getGlobalMBasis().inverseRotation.applyTo(toSet.getGlobalMBasis().rotation); 
 		Rot[] decomposition = alignRot.getSwingTwist(new SGVec_3d(0,1,0));
 		SGVec_3d twistZ = decomposition[1].applyToCopy(new SGVec_3d(0,0,1));
 		Rot minToZ = new Rot(twistMinVec, twistZ);
@@ -410,12 +416,12 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	/**
 	 * 
 	 * @param toSet
-	 * @param limitingAxes
+	 * @param twistAxes
 	 * @return radians of twist required to snap bone into twist limits (0 if bone is already in twist limits)
 	 */
-	public double snapToTwistLimits(AbstractAxes toSet, AbstractAxes limitingAxes) {
+	public double snapToTwistLimits(AbstractAxes toSet, AbstractAxes twistAxes) {
 		if(!axiallyConstrained) return 0d;
-		Rot globTwistCent = limitingAxes.getGlobalMBasis().rotation.applyTo(twistCenterRot);//create a temporary orientation representing globalOf((0,0,1)) represents the middle of the allowable twist range in global space
+		Rot globTwistCent = twistAxes.getGlobalMBasis().rotation.applyTo(twistCenterRot);//create a temporary orientation representing globalOf((0,0,1)) represents the middle of the allowable twist range in global space
 		Rot alignRot = globTwistCent.applyInverseTo(toSet.getGlobalMBasis().rotation); 
 		Rot[] decomposition = alignRot.getSwingTwist(new SGVec_3d(0,1,0)); //decompose the orientation to a swing and twist away from globTwistCent's global basis
 		decomposition[1].rotation.clampToQuadranceAngle(twistHalfRangeHalfCos);
@@ -426,11 +432,11 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	}
 	
 	
-	public double angleToTwistCenter(AbstractAxes toSet, AbstractAxes limitingAxes) {
+	public double angleToTwistCenter(AbstractAxes toSet, AbstractAxes twistAxes) {
 
 		if(!axiallyConstrained) return 0d;
 
-		Rot invRot = limitingAxes.getGlobalMBasis().getInverseRotation();
+		Rot invRot = twistAxes.getGlobalMBasis().getInverseRotation();
 		Rot alignRot = invRot.applyTo(toSet.getGlobalMBasis().rotation);
 		//Rot alignRot = limitingAxes.getGlobalMBasis().getInverseRotation().applyTo(toSet.getGlobalMBasis().rotation);
 		Rot[] decomposition = alignRot.getSwingTwist(new SGVec_3d(0,1,0));
@@ -812,9 +818,9 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 
 	/**
 	 * attaches the Kusudama to the BoneExample. If the 
-	 * kusudama has its own limiting axes specified,
+	 * kusudama has its own limitingAxes specified,
 	 * replaces the bone's major rotation 
-	 * axes with the Kusudamas limiting axes. 
+	 * axes with the Kusudamas limitingAxes. 
 	 * 
 	 * otherwise, this function will set the kusudama's
 	 * limiting axes to the major rotation axes specified by the bone.
@@ -829,6 +835,7 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 			forBone.setFrameofRotation(this.limitingAxes);
 			this.limitingAxes = forBone.getMajorRotationAxes();
 		}
+		this.twistAxes = this.limitingAxes.attachedCopy(false);
 	}
 
 	/**for IK solvers. Defines the weight ratio between the unconstrained IK solved orientation and the constrained orientation for this bone 
