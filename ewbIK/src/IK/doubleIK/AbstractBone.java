@@ -175,19 +175,17 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 			AbstractAxes tempAxes = par.localAxes().getGlobalCopy();
 			Rot newRot = new Rot(new MRotation(RotationOrder.XZY, xAngle, yAngle, zAngle));
 			tempAxes.rotateBy(newRot);			
-
 			this.parent = par;
 			this.parentArmature = this.parent.parentArmature;
-			parentArmature.addToBoneList(this);
-
+			
 			generateAxes(parent.getTip_(), tempAxes.x_().heading(), tempAxes.y_().heading(), tempAxes.z_().heading());
-			//this.localAxes.orthoNormalize(true);
 			localAxes.setParent(parent.localAxes);			
 			previousOrientation = localAxes.attachedCopy(true);
-
 			majorRotationAxes = parent.localAxes().getGlobalCopy(); 
 			majorRotationAxes.translateTo(parent.getTip_());
 			majorRotationAxes.setParent(parent.localAxes);
+			
+			parentArmature.addToBoneList(this);
 
 			this.parent.addFreeChild(this);
 			this.parent.addChild(this);
@@ -329,20 +327,13 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 			tempX.normalize();
 			tempTip.normalize();
 			tempRoll.normalize();
-
-			this.parentArmature = parArma;
-			parentArmature.addToBoneList(this);	
-
+			this.parentArmature = parArma;			
 			generateAxes(parentArmature.localAxes.origin_(), tempX, tempTip, tempRoll);
-			//this.localAxes.orthoNormalize(true);
 			localAxes.setParent(parentArmature.localAxes);
-			previousOrientation = localAxes.attachedCopy(true);
-
 			majorRotationAxes = parentArmature.localAxes().getGlobalCopy(); 
 			majorRotationAxes.setParent(parentArmature.localAxes());
-
-
-
+			parentArmature.addToBoneList(this);	
+			previousOrientation = localAxes.attachedCopy(true);
 			this.boneHeight = inputBoneHeight;
 			this.updateAncestorCount();
 			//this.updateSegmentedArmature();	
@@ -456,8 +447,8 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 
 	/**
 	 * Called whenever this bone's orientation has changed due to an Inverse Kinematics computation. 
-	 * This function is called only once per IK solve, not per iteration. Meaning one call to Solve IK **SHOULD NOT** 
-	 * results in  more than one call to each affected bone. 
+	 * This function is called only once per IK solve, not per iteration. Meaning one call to Solve IK **WILL NOT** 
+	 * result in  more than one call to each affected bone. 
 	 */
 	public void IKUpdateNotification() {
 
@@ -500,6 +491,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	 */
 	public Constraint addConstraint(Constraint newConstraint) {
 		constraints = newConstraint;
+		this.parentArmature.regenerateShadowSkeleton();
 		return constraints;
 	}
 
@@ -842,7 +834,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 		if (this.parent != null) {
 			parent.addToEffectored(this);
 		}		
-		if(updateSegments) parentArmature.regenerateShadowSkelton(); 
+		if(updateSegments) parentArmature.regenerateShadowSkeleton(); 
 	}
 
 	public void notifyAncestorsOfPin() { 
@@ -853,7 +845,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 		if (this.parent != null) {
 			parent.removeFromEffectored(this);
 		}
-		parentArmature.regenerateShadowSkelton();
+		parentArmature.regenerateShadowSkeleton();
 	}
 
 	public void addToEffectored(AbstractBone abstractBone) {
@@ -891,7 +883,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	}
 
 	public void  updateSegmentedArmature() {
-		this.parentArmature.regenerateShadowSkelton();
+		this.parentArmature.regenerateShadowSkeleton();
 	}
 
 
@@ -983,6 +975,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	 */
 	public void setIKOrientationLock(boolean val) {
 		this.orientationLock = val;
+		this.parentArmature.updateShadowSkelRateInfo();
 	}
 
 	public boolean getIKOrientationLock() {
@@ -1000,15 +993,14 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	public void addFreeChild(AbstractBone bone) {		
 		if(this.freeChildren.indexOf(bone) == -1) {
 			freeChildren.add(bone);
-		}
-		parentArmature.regenerateShadowSkelton();
+		}		
 	}
 
 	public void addEffectoredChild(AbstractBone bone) {		
 		if(this.effectoredChildren.indexOf(bone) == -1) {
 			this.effectoredChildren.add(bone);
 		}
-
+		parentArmature.regenerateShadowSkeleton();
 	}
 
 	public void addDescendantsToArmature() {
@@ -1037,6 +1029,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	 * @return a value between 1 and 0. 
 	 */
 	public double getStiffness() {
+		if(this.getIKOrientationLock()) return 1d;
 		return stiffnessScalar; 
 	}
 
@@ -1052,13 +1045,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	public void setStiffness(double stiffness) {
 		stiffnessScalar = stiffness;
 		if(parentArmature != null) {
-			SegmentedArmature s = parentArmature.boneSegmentMap.get(this);
-			if(s != null ) {
-				WorkingBone wb = s.simulatedBones.get(this);
-				if(wb != null) {
-					wb.updateCosDampening();
-				}
-			}
+			parentArmature.updateShadowSkelRateInfo();
 		}
 	}
 

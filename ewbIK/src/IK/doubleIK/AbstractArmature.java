@@ -28,6 +28,10 @@ import IK.doubleIK.SegmentedArmature;
 import IK.doubleIK.SegmentedArmature.WorkingBone;
 import IK.doubleIK.solver.ShadowSkeleton;
 import IK.doubleIK.solver.SkeletonState;
+import IK.doubleIK.solver.SkeletonState.BoneState;
+import IK.doubleIK.solver.SkeletonState.ConstraintState;
+import IK.doubleIK.solver.SkeletonState.TargetState;
+import IK.doubleIK.solver.SkeletonState.TransformState;
 import asj.LoadManager;
 import asj.SaveManager;
 import asj.Saveable;
@@ -35,6 +39,7 @@ import asj.data.JSONObject;
 import data.EWBIKLoader;
 import data.EWBIKSaver;
 import math.doubleV.AbstractAxes;
+import math.doubleV.AbstractBasis;
 import math.doubleV.Rot;
 import math.doubleV.SGVec_3d;
 import math.doubleV.Vec3d;
@@ -48,10 +53,12 @@ import math.doubleV.sgRayd;
  */
 public abstract class AbstractArmature implements Saveable {
 
+	private int IKIterations = 30;
 	protected AbstractAxes localAxes;
 	protected AbstractAxes tempWorkingAxes;
 	protected ArrayList<AbstractBone> bones = new ArrayList<AbstractBone>();
 	protected HashMap<String, AbstractBone> tagBoneMap = new HashMap<String, AbstractBone>();
+	
 	protected HashMap<AbstractBone, SegmentedArmature> boneSegmentMap = new HashMap<AbstractBone, SegmentedArmature>();
 	protected AbstractBone rootBone;
 	protected WorkingBone[] traversalArray;
@@ -62,8 +69,7 @@ public abstract class AbstractArmature implements Saveable {
 	// public StrandedArmature strandedArmature;
 	protected String tag;
 
-	// protected int IKType = ORIENTATIONAWARE;
-	protected int IKIterations = 15;
+	
 	protected double dampening = Math.toRadians(5d);
 	private boolean abilityBiasing = false;
 
@@ -129,7 +135,7 @@ public abstract class AbstractArmature implements Saveable {
 	 */
 	public void setDefaultIterations(int iter) {
 		this.IKIterations = iter;
-		regenerateShadowSkelton();
+		regenerateShadowSkeleton();
 	}
 
 	/**
@@ -147,7 +153,7 @@ public abstract class AbstractArmature implements Saveable {
 	 */
 	public void setDefaultDampening(double damp) {
 		this.dampening = Math.min(Math.PI * 3d, Math.max(Math.abs(Double.MIN_VALUE), Math.abs(damp)));
-		regenerateShadowSkelton();
+		regenerateShadowSkeleton();
 	}
 
 	/**
@@ -192,6 +198,7 @@ public abstract class AbstractArmature implements Saveable {
 		if (!bones.contains(abstractBone)) {
 			bones.add(abstractBone);
 			tagBoneMap.put(abstractBone.getTag(), abstractBone);
+			this.regenerateShadowSkeleton();
 		}
 	}
 
@@ -203,7 +210,7 @@ public abstract class AbstractArmature implements Saveable {
 		if (bones.contains(abstractBone)) {
 			bones.remove(abstractBone);
 			tagBoneMap.remove(abstractBone);
-			this.regenerateShadowSkelton();
+			this.regenerateShadowSkeleton();
 		}
 	}
 
@@ -244,8 +251,34 @@ public abstract class AbstractArmature implements Saveable {
 	 * public boolean isInverseWeighted() { return this.inverseWeighted; }
 	 */
 
-	ShadowSkeleton shadowSkel;
+	private boolean dirtySkelState = false;
+	private boolean dirtyRate = false;
 	SkeletonState skelState;
+	
+	/**
+	 * a list of the bones used by the solver, in the same order they appear in the skelState after validation.
+	 * This is to very quickly update the scene with the solver's results, without incurring hashmap lookup penalty. 
+	 * **/
+	protected AbstractBone[] skelStateBoneList = new AbstractBone[0];
+	
+	ShadowSkeleton shadowSkel;
+	private void _regenerateShadowSkeleton() {
+		skelState = new SkeletonState();
+		for(AbstractBone b: bones) {
+			registerBoneWithShadowSkeleton(b);
+		}
+		skelState.validate();
+		shadowSkel = new ShadowSkeleton(skelState, this);
+		skelStateBoneList = new AbstractBone[skelState.getBoneCount()];
+		for(int i=0; i<bones.size(); i++) {
+			BoneState bonestate = skelState.getBoneStateById(bones.get(i).getIdentityHash());
+			if(bonestate != null)
+				skelStateBoneList[bonestate.getIndex()] = bones.get(i);
+		}
+		dirtySkelState = false;
+	}
+	
+	
 	/**
 	 * This method should be called whenever a structural change has been made to the armature prior to calling the solver.
 	 * A structural change is basically any change other than a rotation/translation/scale of a bone or a target. 
@@ -254,15 +287,26 @@ public abstract class AbstractArmature implements Saveable {
 	 * 	2. marking a bone as an effector (aka "pinning / unpinning a bone"
 	 * 	3. adding / removing a constraint on a bone.
 	 * 	4. modifying a pin's fallOff to non-zero if it was zero, or zero if it was non-zero
-	 * 	5. modifying a bone's stiffness to 1 if it was less than one, or to less than 1 if it was 1
 	 * 
-	 * You should NOT call this function if you have only modified a translation/rotation/scale of some transform on the armature,
+	 * You should NOT call this function if you have only modified a translation/rotation/scale of some transform on the armature
+	 * 
+	 * For skeletal modifications that are likely to effect the solver behavior but do not fall 
+	 * under any of the above (generally things like changing bone stiffness, depth falloff, targetweight, etc) to intermediary values, 
+	 * you should (but don't have to) call updateShadowSkelRateInfo() for maximum efficiency.
 	 */
-	public void regenerateShadowSkelton() {
-		skelState = new SkeletonState();
-		for(AbstractBone b: bones) {
-			registerBoneWithShadowSkeleton(b);
-		}
+	public void regenerateShadowSkeleton() {
+		this.regenerateShadowSkeleton(false);
+	}
+	 /**
+	 * @param force by default, callign this function sets a flag notifying the solver that it needs to regenerate the shadow skeleton before
+	 * attempting a solve. If you set this to "true", the shadow skeleton will be regenerated immediately. 
+	 * (useful if you do solves in a separate thread from structure updates)
+	 */
+	public void regenerateShadowSkeleton(boolean force) {
+		dirtySkelState = true;
+		if(force) 
+			this._regenerateShadowSkeleton();
+		dirtyRate = true;
 		/*segmentedArmature.updateSegmentedArmature();
 		boneSegmentMap.clear();
 		recursivelyUpdateBoneSegmentMapFrom(segmentedArmature);
@@ -280,22 +324,57 @@ public abstract class AbstractArmature implements Saveable {
 		}*/
 	}
 	
+	public void updateShadowSkelRateInfo() {
+		dirtyRate = true;
+	}
+	
+	private void _updateShadowSkelRateInfo() {
+		BoneState[] bonestates = skelState.getBonesArray();
+		for(int i=0; i<skelStateBoneList.length; i++) {
+			AbstractBone b = skelStateBoneList[i];
+			BoneState bs = bonestates[i];
+			bs.setStiffness(b.getStiffness());
+		}
+	}
+	
 	private void registerBoneWithShadowSkeleton(AbstractBone bone) { 
 		String parBoneId = (bone.getParent() == null) ? null : bone.getParent().getIdentityHash(); 
 		Constraint constraint = bone.getConstraint();
 		String constraintId = (constraint == null) ? null : constraint.getIdentityHash(); 
 		AbstractIKPin target = bone.getIKPin();
 		String targetId = (target == null || target.getPinWeight() == 0 || target.isEnabled() == false) ? null : target.getIdentityHash();
-		skelState.addBone(bone.getIdentityHash(), bone.localAxes().getIdentityHash(), parBoneId, constraintId, bone.getStiffness(), targetId);
+		skelState.addBone(
+				bone.getIdentityHash(), 
+				bone.localAxes().getIdentityHash(), 
+				parBoneId, 
+				constraintId, 
+				bone.getStiffness(),
+				targetId);
 		registerAxesWithShadowSkeleton(bone.localAxes(), bone.getParent() == null);
 		if(targetId != null) registerTargetWithShadowSkeleton(target);
 		if(constraintId != null) registerConstraintWithShadowSkeleton(constraint);
 		
 	}
 	private void registerTargetWithShadowSkeleton(AbstractIKPin ikPin) {
-		
+		skelState.addTarget(ikPin.getIdentityHash(), 
+				ikPin.getAxes().getIdentityHash(), 
+				ikPin.forBone().getIdentityHash(),
+				new double[] {ikPin.getXPriority(), ikPin.getYPriority(), ikPin.getZPriority()}, 
+				ikPin.getDepthFalloff(),
+				ikPin.getPinWeight());
+		registerAxesWithShadowSkeleton(ikPin.getAxes(), true);
 	}
 	private void registerConstraintWithShadowSkeleton(Constraint constraint) {
+		AbstractAxes twistAxes = constraint.twistOrientationAxes() == null ? null : constraint.twistOrientationAxes();
+		skelState.addConstraint(
+				constraint.getIdentityHash(),
+				constraint.attachedTo().getIdentityHash(),
+				constraint.swingOrientationAxes().getIdentityHash(),
+				twistAxes == null ? null : twistAxes.getIdentityHash(),
+				constraint);
+		registerAxesWithShadowSkeleton(constraint.swingOrientationAxes(), false);
+		if(twistAxes != null)
+			registerAxesWithShadowSkeleton(twistAxes, false);
 		
 	}
 	/**
@@ -307,14 +386,77 @@ public abstract class AbstractArmature implements Saveable {
 	 */
 	private void registerAxesWithShadowSkeleton(AbstractAxes axes, boolean unparent) {
 		String parent_id  = unparent || axes.getParentAxes() == null ? null : axes.getParentAxes().getIdentityHash();
-		Vec3d<?> translate = axes.getLocalMBasis().translate;
-		Rot rotation = axes.getLocalMBasis().rotation;
+		AbstractBasis basis = getSkelStateRelativeBasis(axes, unparent);
+		Vec3d<?> translate = basis.translate;
+		Rot rotation =basis.rotation;
 		skelState.addTransform(
 				axes.getIdentityHash(), 
 				new double[]{translate.getX(), translate.getY(), translate.getZ()}, 
 				rotation.toArray(), 
 				new double[]{1.0,1.0,1.0}, 
 				parent_id, axes);
+	}
+	
+	/**
+	 *
+	 * @param axes
+	 * @param unparent if true, will return a COPY of the basis in Armature space, otherwise, will return a reference to axes.localMBasis
+	 * @return
+	 */
+	private AbstractBasis getSkelStateRelativeBasis(AbstractAxes axes, boolean unparent) {
+		AbstractBasis basis = axes.getLocalMBasis(); 
+		if(unparent) {
+			basis = basis.copy();
+			this.localAxes().getGlobalMBasis().setToLocalOf(axes.getGlobalMBasis(), basis);
+		}
+		return basis;
+	}
+	
+	private void updateskelStateTransforms() {
+		BoneState[] bonestates = skelState.getBonesArray();
+		for(int i=0; i<skelStateBoneList.length; i++) {
+			AbstractBone b = skelStateBoneList[i];
+			BoneState bs = bonestates[i];
+			updateSkelStateBone(b, bs);
+		}
+	}
+	
+	private void updateSkelStateBone(AbstractBone b, BoneState bs) {
+		updateSkelStateAxes(b.localAxes(), bs.getTransform(), b.getParent() == null);
+		if(b.getConstraint() != null) {
+			updateSkelStateConstraint(b.getConstraint(), bs.getConstraint());
+		}
+		TargetState ts = bs.getTarget(); 
+		if(ts != null) {
+			updateSkelStateTarget(b.getIKPin(), ts);
+		}
+	}
+	
+	private void updateSkelStateConstraint(Constraint c, ConstraintState cs) {
+		AbstractAxes swing = c.swingOrientationAxes();
+			updateSkelStateAxes(swing, cs.getSwingTransform(), false);
+		AbstractAxes twist = c.twistOrientationAxes();
+		if(twist != null)
+			updateSkelStateAxes(twist, cs.getTwistTransform(), false);
+	}	
+	
+	private void updateSkelStateTarget(AbstractIKPin p, TargetState ts) {
+		updateSkelStateAxes(p.getAxes(), ts.getTransform(), true);
+	}
+	
+	private void updateSkelStateAxes(AbstractAxes a, TransformState ts, boolean unparent) {
+		AbstractBasis basis = getSkelStateRelativeBasis(a, unparent);
+		ts.rotation= basis.rotation.toArray(); 
+		ts.translation = basis.translate.get();
+		if(!a.forceOrthoNormality) {
+			ts.scale[0] = basis.getXHeading().mag() * ( basis.isAxisFlipped(AbstractAxes.X) ? -1d : 1d);
+			ts.scale[1] = basis.getYHeading().mag() * ( basis.isAxisFlipped(AbstractAxes.Y) ? -1d : 1d); 
+			ts.scale[2] = basis.getZHeading().mag() * ( basis.isAxisFlipped(AbstractAxes.Z) ? -1d : 1d);
+		} else {
+			ts.scale[0] = basis.isAxisFlipped(AbstractAxes.X) ? -1d : 1d;
+			ts.scale[1] = basis.isAxisFlipped(AbstractAxes.Y) ? -1d : 1d; 
+			ts.scale[2] = basis.isAxisFlipped(AbstractAxes.Z) ? -1d : 1d;
+		}
 	}
 
 	private void recursivelyUpdateBoneSegmentMapFrom(SegmentedArmature startFrom) {
@@ -340,7 +482,7 @@ public abstract class AbstractArmature implements Saveable {
 
 		for (AbstractBone b : pinnedBones) {
 			b.notifyAncestorsOfPin(false);
-			regenerateShadowSkelton();
+			regenerateShadowSkeleton();
 		}
 	}
 
@@ -372,11 +514,43 @@ public abstract class AbstractArmature implements Saveable {
 	 *                          -1 if you want to use the armature's default.
 	 */
 	public void IKSolver(AbstractBone bone, double dampening, int iterations, int stabilizingPasses) {
-		if(traversalArray != null && traversalArray.length > 0) {
-			performance.startPerformanceMonitor();
-			flatTraveseSolver(bone, dampening, iterations, stabilizingPasses);// (bone, dampening, iterations);
-			performance.solveFinished(iterations == -1 ? this.IKIterations : iterations);
+		if(dirtySkelState) 
+			_regenerateShadowSkeleton();
+		if(dirtyRate) {
+			_updateShadowSkelRateInfo();
+			shadowSkel.updateRates();
+			dirtyRate = false;
 		}
+		//if(traversalArray != null && traversalArray.length > 0) {
+		performance.startPerformanceMonitor();
+		this.updateskelStateTransforms();
+		shadowSkel.solve(dampening, iterations, stabilizingPasses, (bonestate) -> alignBoneToSolverResult(bonestate));
+		//alignBonesListToSolverResults();
+		//flatTraveseSolver(bone, dampening, iterations, stabilizingPasses);// (bone, dampening, iterations);
+		performance.solveFinished(iterations == -1 ? this.IKIterations : iterations);
+		//}
+	}
+	
+	/**
+	 * read back the solver results from the SkeletonState object. 
+	 * The solver only ever modifies the transforms of the bones themselves, and only 
+	 * ever in local coordinates, so we only need to read back the bones in local space and mark their transforms dirty.
+	 */
+	private void alignBonesListToSolverResults() {
+		BoneState[] bonestates = skelState.getBonesArray();
+		for(int i=0; i<bonestates.length; i++) {
+			alignBoneToSolverResult(bonestates[i]);
+		}
+	}
+	
+	private void alignBoneToSolverResult(BoneState bs) {
+		int bsi = bs.getIndex();
+		AbstractBone currBone = skelStateBoneList[bsi];
+		AbstractAxes currBoneAx = currBone.localAxes();
+		TransformState ts = bs.getTransform();
+		currBoneAx.getLocalMBasis().set(ts.translation, ts.rotation, ts.scale);
+		currBoneAx._exclusiveMarkDirty();
+		currBone.IKUpdateNotification();
 	}
 
 	/**
@@ -807,7 +981,7 @@ public abstract class AbstractArmature implements Saveable {
 	public void notifyOfLoadCompletion() {
 		this.createRootBone(rootBone);
 		refreshArmaturePins();
-		regenerateShadowSkelton();
+		regenerateShadowSkeleton();
 	}
 
 	@Override
@@ -821,5 +995,7 @@ public abstract class AbstractArmature implements Saveable {
 		// TODO Auto-generated method stub
 
 	}
+
+	
 
 }

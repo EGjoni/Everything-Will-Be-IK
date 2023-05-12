@@ -1,6 +1,7 @@
 package IK.doubleIK.solver;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Objects;
 
@@ -55,10 +56,19 @@ public class SkeletonState {
 		this.assumeValid = assumeValid;
 	}
 	
+	/**
+	 * @return the array of TransformState objects. (full access instead of a getter for a crucial .000001% increase in speed)
+	 */
+	public TransformState[] getTransformsArray() {return this.transforms;}
+	/**
+	 * @return the array of BoneState objects. (full access instead of a getter for a crucial .000001% increase in speed)
+	 */
 	public BoneState getBoneState(int index ) {return this.bones[index];}
+	public BoneState getBoneStateById(String id) {return this.boneMap.get(id);}
 	public int getBoneCount() {return this.bones.length;}
 	public TransformState getTransformState(int index ) {return this.transforms[index];}
-	public int getTransformCount() {return this.transforms.length;}
+	public int getTransformCount() {return this.transforms.length;}	
+	public BoneState[] getBonesArray() {return this.bones;}
 	public ConstraintState getConstraintState(int index) {return this.constraints[index];}
 	public int getConstraintCount() {return this.constraints.length;}
 	public TargetState getTargetState(int index) {return this.targets[index];}
@@ -98,15 +108,23 @@ public class SkeletonState {
 	 * reindex and reconnects everything
 	 */
 	private void prune() {
-		ArrayList<BoneState> leafBones = new ArrayList<>(); 
-		for(BoneState bs : bones) {
-			if(bs.getChildCount() == 0) leafBones.add(bs);
-		}
-		for(BoneState leaf: leafBones) {
-			BoneState currentLeaf =  leaf;
-			while(currentLeaf.target_id == null) {
-				currentLeaf.prune();
-				currentLeaf = currentLeaf.getParent();
+		int leafCount = 1;
+		while(leafCount > 0) {
+			ArrayList<BoneState> leafBones = new ArrayList<>(); 
+			for(BoneState bs : boneMap.values()) {
+				if(bs.getTempChildCount() == 0 && bs.target_id == null) leafBones.add(bs);
+			}
+			leafCount = leafBones.size();
+			for(BoneState leaf: leafBones) {
+				BoneState currentLeaf =  leaf;
+				while(currentLeaf != null && currentLeaf.target_id == null) {
+					if(currentLeaf.getTempChildCount() == 0) {
+						currentLeaf.prune();
+						currentLeaf = currentLeaf.getParent();
+					} else {
+						break;
+					}
+				}
 			}
 		}
 		this.optimize();
@@ -216,6 +234,8 @@ public class SkeletonState {
 		constraints = constraintsList.stream().filter(Objects::nonNull).toArray(ConstraintState[]::new);
 		targets = targetsList.stream().filter(Objects::nonNull).toArray(TargetState[]::new);
 		
+		for(int i=0; i<bones.length; i++) bones[i].clearChildList();
+		
 		for(int i=0; i<bones.length; i++) {
 			BoneState bs = bones[i];
 			bs.setIndex(i);
@@ -246,7 +266,7 @@ public class SkeletonState {
 		String target_id = null;
 		String constraint_id = null;
 		private double stiffness = 0.0;
-		private ArrayList<Integer> childIdxsList = new ArrayList<>();
+		private HashMap<String, Integer> childMap = new HashMap<>();
 		private int index;
 		private int parentIdx = -1;
 		private int[] childIndices = null;
@@ -273,16 +293,31 @@ public class SkeletonState {
 			return stiffness;
 		}
 		public BoneState getParent() {
-			return bones[this.parentIdx];
+			if(this.parentIdx >= 0)
+				return bones[this.parentIdx];
+			return null;
+		}
+		public BoneState getChild(String id) {
+			return bones[this.childMap.get(id)];
 		}
 		public BoneState getChild(int index) {
 			return bones[this.childIndices[index]];
 		}
+		public void clearChildList() {
+			this.childMap.clear();
+			this.childIndices = new int[] {};
+		}
 		public int getChildCount() {
-			return bones.length;
+			return childIndices.length;
+		}
+		
+		private int getTempChildCount() {
+			return this.childMap.values().size();
 		}
 		public ConstraintState getConstraint() {
-			return constraints[this.constraintIdx];
+			if(this.constraintIdx >= 0)
+				return constraints[this.constraintIdx];
+			return null;
 		}
 		
 		private void prune() {
@@ -290,23 +325,34 @@ public class SkeletonState {
 			boneMap.remove(this.id);
 			this.getTransform().prune();
 			if(this.getConstraint() != null) this.getConstraint().prune();
-		}
-		
+			if(this.parent_id != null) {
+				boneMap.get(this.parent_id).childMap.remove(this.id);
+			}
+			if(rootBoneState == this)
+				rootBoneState = null;
+		}		
 		private void setIndex(int index) {
 			this.index = index;
 			if(this.parent_id != null) {
 				BoneState parentBone = boneMap.get(this.parent_id);
-				parentBone.addChild(this.index);
+				parentBone.addChild(this.id, this.index);
 			}
 		}
-		private void  addChild(int childIndex) {
-			this.childIdxsList.add(childIndex);
+		private void  addChild(String id, int childIndex) {
+			this.childMap.put(id, childIndex);
 		}
 		private void optimize() {
-			this.childIndices = new int[childIdxsList.size()];
-			for(int i=0; i<childIdxsList.size(); i++) childIndices[i] = childIdxsList.get(i);
-			this.parentIdx = boneMap.get(this.parent_id).index;
+			Integer[] tempChildren = childMap.values().toArray(new Integer[0]);
+			this.childIndices = new int[tempChildren.length];
+			int j = 0;
+			for(int i=0; i<tempChildren.length; i++) childIndices[i] = tempChildren[i];
+			if(this.parent_id != null)
+				this.parentIdx = boneMap.get(this.parent_id).index;
 			this.transformIdx = transformMap.get(this.transform_id).getIndex();
+			if(this.constraint_id != null)
+				this.constraintIdx = constraintMap.get(this.constraint_id).getIndex();
+			if(this.target_id != null)
+				this.targetIdx = targetMap.get(this.target_id).getIndex();
 		}
 
 		private void validate() {
@@ -349,10 +395,10 @@ public class SkeletonState {
 				}
 			}	      		
 			if(this.constraint_id != null) { //if this bone has a constraint, ensure the following:
-				ConstraintState constraint = constraintMap.get(constraint_id) ;
+				ConstraintState constraint = constraintMap.get(this.constraint_id) ;
 				if(constraint == null)//check that the constraint has been registered
-					throw new RuntimeException("Bone '"+this.id+"' claims to be constrained by '"+constraint.id+"', but no such constraint has been registered with this SkeletonState");
-				if(constraint.forBone_id != this.id) {
+					throw new RuntimeException("Bone '"+this.id+"' claims to be constrained by '"+this.constraint_id+"', but no such constraint has been registered with this SkeletonState");
+				if(!constraint.forBone_id.equals(this.id)) {
 					throw new RuntimeException("Bone '"+this.id+"' claims to be constrained by '"+constraint.id+"', but constraint of id '"+constraint.id+"' claims to be constraining bone with id '"+constraint.forBone_id+"'");
 				}
 			}
@@ -363,14 +409,17 @@ public class SkeletonState {
 		public String getIdString() {
 			return this.id;
 		}
+		public void setStiffness(double stiffness) {
+			this.stiffness = stiffness;
+		}
 		
 	}	
 
 	public class TransformState {
 		String id;
-		double[] translation;
-		double[] rotation;
-		double[] scale;
+		public double[] translation;
+		public double[] rotation;
+		public double[] scale;
 		String parent_id;
 		Object directReference = null;
 		private int index;
@@ -418,7 +467,9 @@ public class SkeletonState {
 		public void optimize() {
 			this.childIndices = new int[childIdxsList.size()];
 			for(int i=0; i<childIdxsList.size(); i++) childIndices[i] = childIdxsList.get(i);
-			this.parentIdx = transformMap.get(this.parent_id).getIndex();
+			TransformState ax = transformMap.get(this.parent_id);
+			if(this.parent_id != null)
+				this.parentIdx = transformMap.get(this.parent_id).getIndex();
 		}
 		public void validate() {
 			if(assumeValid) return;
@@ -512,6 +563,10 @@ public class SkeletonState {
 			return this.weight;
 		}
 		
+		public int getIndex() {
+			return this.index;
+		}
+		
 		/**
 		 * @param basisDirection
 		 * @return  the priority of the requested AbstractIKPin.XDir, AbstractIKPin.YDir, or AbstractIKPin.ZDir
@@ -545,14 +600,14 @@ public class SkeletonState {
 		private int twistTransform_idx = -1;
 
 		private ConstraintState(String id, String forBone_id, String swingOrientationTransform_id, String twistOrientationTransform_id, Constraint directReference) {
-			this.init(id, forBone_id, swingOrientationTransform_id, twistOrientationTransform_id, directReference);
-		}		
-		private void init(String id, String forBone_id, String swingOrientationTransform_id, String twistOrientationTransform_id, Constraint directReference) {
 			this.forBone_id = forBone_id;
+			this.swingOrientationTransform_id = swingOrientationTransform_id;
+			this.twistOrientationTransform_id = twistOrientationTransform_id;
+			this.directReference = directReference;
 		}
 		public void prune() {
 			if(this.getTwistTransform() != null) this.getTwistTransform().prune();
-			this.getTwistTransform().prune();
+			this.getSwingTransform().prune();
 			constraintMap.remove(this.id);
 			constraintsList.set(this.index, null);
 		}
@@ -565,6 +620,9 @@ public class SkeletonState {
 		}		
 		private void setIndex(int index) {
 			this.index = index;
+		}
+		public int getIndex() {
+			return this.index;
 		}
 		private void optimize() {
 			if(this.twistOrientationTransform_id != null) {

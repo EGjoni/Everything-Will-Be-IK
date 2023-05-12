@@ -508,7 +508,6 @@ public class SegmentedArmature {
 				hdx += 2;
 			}
 		}
-
 	}
 
 	public void upateTipHeadings(Vec3d<?>[] localizedTipHeadings, AbstractAxes thisBoneAxes) {

@@ -2,7 +2,7 @@
 <classpath>
 	<classpathentry exported="true" kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry excluding="sceneGraph/|sceneGraph/asj/" kind="src" path="src"/>
-	<classpathentry excluding="asj/" kind="src" path="src/sceneGraph"/>
 	<classpathentry kind="src" path="src/sceneGraph/asj"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/QScene"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

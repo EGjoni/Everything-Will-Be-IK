@@ -14,7 +14,9 @@ public interface Constraint extends Saveable{
 	//returns true if the ray from the constraint origin to the globalPoint is within the constraint's limits
 	//false otherwise.
 	public <V extends Vec3d<?>>boolean isInLimits_(V globalPoint);
-	public <A extends AbstractAxes> A limitingAxes();
+	public <A extends AbstractAxes> A swingOrientationAxes();
+	public <A extends AbstractAxes> A twistOrientationAxes();
+	public <B extends AbstractBone> B attachedTo();
 	public double getPainfulness();
 	
 	/**
