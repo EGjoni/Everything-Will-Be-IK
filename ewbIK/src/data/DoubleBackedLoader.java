@@ -147,7 +147,7 @@ public class DoubleBackedLoader extends LoadManager {
 	public  void updateArmatureSegments() {
 		Collection<AbstractArmature> armatures = armatureLoadObjects.values();		
 		for(AbstractArmature a : armatures) {
-			a.refreshArmaturePins();			
+			a.regenerateShadowSkeleton();		
 		}
 	}
 

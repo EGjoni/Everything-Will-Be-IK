@@ -6,31 +6,32 @@ import java.util.function.Consumer;
 
 import IK.doubleIK.AbstractArmature;
 import IK.doubleIK.AbstractBone;
-import IK.doubleIK.SegmentedArmature;
 import IK.doubleIK.solver.ArmatureSegment.WorkingBone;
 import IK.doubleIK.solver.SkeletonState.BoneState;
 import IK.doubleIK.solver.SkeletonState.TransformState;
 import math.doubleV.AbstractAxes;
+import math.doubleV.AbstractBasis;
+import math.doubleV.CartesianAxes;
 
 /**
  * builds maintains an IKSolver specific representation of the Armature topology
  * @author rufsketch1
  */
 public class ShadowSkeleton {
-	AbstractArmature forArmature = null;
 	AbstractAxes[] simTransforms = null;
 	AbstractAxes shadowSpace = null;
 	WorkingBone[] traversalArray;
 	ArmatureSegment rootSegment = null;
-	SkeletonState skelState =null;
-	
-
+	SkeletonState skelState = null;
+	double baseDampening = Math.PI;
 	/**
 	 * builds a shadowSkeleton from the given SkeletonState object
+	 * @param SkeletonState the skeletnState object to write results into / read state from 
 	 * */
-	public ShadowSkeleton(SkeletonState skelState, AbstractArmature forArmature) {
-		this.forArmature = forArmature;
+	public ShadowSkeleton(SkeletonState skelState, double baseDampening) {
 		this.skelState = skelState;
+		this.shadowSpace = new CartesianAxes();
+		this.baseDampening = baseDampening;
 		this.buildSimTransformsHierarchy();
 		this.buildArmaturSegmentHierarchy();
 		this.buildTraversalArray();
@@ -41,26 +42,23 @@ public class ShadowSkeleton {
 	 * Called once per solve, per bone. NOT once per iteration.
 	 * This can be used to take advantage of parallelism, so that you can update your Bone transforms while this is still writing into the skelState TransformState list
 	 */
-	public void solve(double dampening, int iterations, int stabilizationPasses, Consumer<BoneState> notifier) {
+	public void solve(int iterations, int stabilizationPasses, Consumer<BoneState> notifier) {
 		int endOnIndex = traversalArray.length - 1;
 		//int returnfullEndOnIndex = returnfulArray.length > 0 ? returnfulIndex.get(startFrom);  
 		int tipIndex = 0;
 		ArmatureSegment forSegment = rootSegment;
-		iterations = iterations == -1 ? forArmature.getDefaultIterations() : iterations;
-		double totalIterations = iterations;
-		stabilizationPasses = stabilizationPasses == -1 ? forArmature.defaultStabilizingPassCount : stabilizationPasses;
-
 		alignSimAxesToBoneStates();
-
 		for (int i = 0; i < iterations; i++) {
-			//if(i < totalIterations - 1) {
-				for (int j = 0; j <= endOnIndex; j++) {
-					traversalArray[j].pullBackTowardAllowableRegion(i, iterations);
-				}
-			//}
 			for (int j = 0; j <= endOnIndex; j++) {
-				traversalArray[j].fastUpdateOptimalRotationToPinnedDescendants(dampening,
-						j == endOnIndex && endOnIndex == traversalArray.length - 1);
+				traversalArray[j].pullBackTowardAllowableRegion(i, iterations);
+				if(traversalArray[j].isSegmentRoot) 
+					break;
+			}
+			for (int j = 0; j <= endOnIndex; j++) {
+				WorkingBone wb = traversalArray[j];
+				wb.fastUpdateOptimalRotationToPinnedDescendants(stabilizationPasses, j == endOnIndex && endOnIndex == traversalArray.length - 1);
+				if(wb.isSegmentRoot && wb.hasPinnedAncestor)
+					break;
 			}		
 		}
 
@@ -75,7 +73,6 @@ public class ShadowSkeleton {
 			this.simTransforms[i] ._exclusiveMarkDirty(); //we're marking the entire hierarchy dirty anyway, so avoid the recursion
 		}
 	}
-	
 	
 	private void alignBoneStatesToSimAxes() {
 		for(int i=0; i<traversalArray.length; i++) {
@@ -103,8 +100,6 @@ public class ShadowSkeleton {
 		if(transformCount == 0) return;
 		
 		this.simTransforms = new AbstractAxes[transformCount];
-		this.shadowSpace = forArmature.localAxes().freeCopy();
-		shadowSpace.toIdentity();
 		for(int i=0; i<transformCount; i++) {
 			TransformState ts = skelState.getTransformState(i);
 			AbstractAxes newTransform = shadowSpace.freeCopy(); 
@@ -139,6 +134,11 @@ public class ShadowSkeleton {
 			this.traversalArray[j] = reversedTraversalArray.get(i);
 			j++;
 		}
+	}
+	
+	public void setDampening(double dampening) {
+		this.baseDampening = dampening;
+		this.updateRates();
 	}
 
 	public void updateRates() {

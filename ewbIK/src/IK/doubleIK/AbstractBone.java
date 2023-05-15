@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import IK.IKExceptions;
 import IK.IKExceptions.NullParentForBoneException;
 import IK.doubleIK.AbstractBone;
-import IK.doubleIK.SegmentedArmature.WorkingBone;
 import math.doubleV.AbstractAxes;
 import math.doubleV.MRotation;
 import math.doubleV.Rot;

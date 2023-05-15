@@ -4,7 +4,6 @@
 package IK.doubleIK;
 import java.util.ArrayList;
 
-import IK.doubleIK.SegmentedArmature.WorkingBone;
 import data.EWBIKLoader;
 import data.EWBIKSaver;
 import math.doubleV.AbstractAxes;
@@ -29,7 +28,7 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	public static final double PI = Math.PI;
 	protected AbstractAxes limitingAxes; 
 	protected AbstractAxes twistAxes; 
-	protected double painfullness = 0.9d; 
+	protected double painfullness = 0.5d; 
 	protected double cushionRatio = 0.1d;	
 
 	/**
@@ -91,59 +90,52 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 	 */
 	public void optimizeLimitingAxes() {
 		AbstractAxes originalLimitingAxes = twistAxes.getGlobalCopy();
-	
-			ArrayList<Vec3d<?>> directions = new ArrayList<>(); 
-			if(getLimitCones().size() == 1) {
-				directions.add((limitCones.get(0).getControlPoint()).copy());
-			} else {
-				for(int i = 0; i<getLimitCones().size()-1; i++) {
-					Vec3d<?> thisC = getLimitCones().get(i).getControlPoint().copy();
-					Vec3d<?> nextC = getLimitCones().get(i+1).getControlPoint().copy();
-					Rot thisToNext = new Rot(thisC, nextC); 
-					Rot halfThisToNext = new Rot(thisToNext.getAxis(), thisToNext.getAngle()/2d); 
+		ArrayList<Vec3d<?>> directions = new ArrayList<>(); 
+		if(getLimitCones().size() == 1) {
+			directions.add((limitCones.get(0).getControlPoint()).copy());
+		} else {
+			for(int i = 0; i<getLimitCones().size()-1; i++) {
+				Vec3d<?> thisC = getLimitCones().get(i).getControlPoint().copy();
+				Vec3d<?> nextC = getLimitCones().get(i+1).getControlPoint().copy();
+				Rot thisToNext = new Rot(thisC, nextC); 
+				Rot halfThisToNext = new Rot(thisToNext.getAxis(), thisToNext.getAngle()/2d); 
 
-					Vec3d<?> halfAngle = halfThisToNext.applyToCopy(thisC);
-					halfAngle.normalize(); halfAngle.mult(thisToNext.getAngle());
-					directions.add(halfAngle);
-				}	
-			}
+				Vec3d<?> halfAngle = halfThisToNext.applyToCopy(thisC);
+				halfAngle.normalize(); halfAngle.mult(thisToNext.getAngle());
+				directions.add(halfAngle);
+			}	
+		}
 
-			Vec3d<?> newY = new SGVec_3d();
-			for(Vec3d<?> dv: directions) {
-				newY.add(dv); 
-			}
+		Vec3d<?> newY = new SGVec_3d();
+		for(Vec3d<?> dv: directions) {
+			newY.add(dv); 
+		}
 
-			newY.div(directions.size()); 
-			if(newY.mag() != 0 && !Double.isNaN(newY.y)) {
-				newY.normalize();
-			} else {
-				newY = new SGVec_3d(0,1d,0);
-			}
+		newY.div(directions.size()); 
+		if(newY.mag() != 0 && !Double.isNaN(newY.y)) {
+			newY.normalize();
+		} else {
+			newY = new SGVec_3d(0,1d,0);
+		}
 
-			sgRayd newYRay = new sgRayd(new SGVec_3d(0,0,0), newY);
+		sgRayd newYRay = new sgRayd(new SGVec_3d(0,0,0), newY);
 
-			Rot oldYtoNewY = new Rot(twistAxes.y_().heading(), originalLimitingAxes.getGlobalOf(newYRay).heading());
-			twistAxes.rotateBy(oldYtoNewY);
+		Rot oldYtoNewY = new Rot(twistAxes.y_().heading(), originalLimitingAxes.getGlobalOf(newYRay).heading());
+		twistAxes.rotateBy(oldYtoNewY);
 
-			for(AbstractLimitCone lc : getLimitCones()) {
-				originalLimitingAxes.setToGlobalOf(lc.controlPoint, lc.controlPoint);
-				twistAxes.setToLocalOf(lc.controlPoint, lc.controlPoint);
-				lc.controlPoint.normalize(); 
-			}
-
-			this.updateTangentRadii();			
+		for(AbstractLimitCone lc : getLimitCones()) {
+			originalLimitingAxes.setToGlobalOf(lc.controlPoint, lc.controlPoint);
+			twistAxes.setToLocalOf(lc.controlPoint, lc.controlPoint);
+			lc.controlPoint.normalize(); 
+		}
+		this.updateTangentRadii();			
 	}
-
-
 	public void updateTangentRadii() {
-
 		for (int i=0; i<limitCones.size(); i++) {      
 			AbstractLimitCone next = i<limitCones.size() -1 ? limitCones.get(i+1) : null;
 			limitCones.get(i).updateTangentHandles(next);
 		}
 	}
-
-
 	
 	sgRayd boneRay = new sgRayd(new SGVec_3d(), new SGVec_3d());
 	sgRayd constrainedRay = new sgRayd(new SGVec_3d(), new SGVec_3d());
@@ -177,7 +169,6 @@ public abstract class AbstractKusudama implements Constraint, Saveable {
 			}		
 		}
 	}
-	
 	
 	public void setAxesToReturnfulled(AbstractAxes toSet, AbstractAxes swingAxes, AbstractAxes twistAxes, double cosHalfReturnfullness, double angleReturnfullness) {
 		if(swingAxes != null && painfullness > 0d) {

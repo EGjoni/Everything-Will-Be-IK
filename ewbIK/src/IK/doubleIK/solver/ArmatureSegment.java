@@ -4,8 +4,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 
-import com.sun.xml.internal.bind.v2.runtime.unmarshaller.XsiNilLoader.Array;
-
 import IK.doubleIK.AbstractArmature;
 import IK.doubleIK.AbstractIKPin;
 import IK.doubleIK.AbstractKusudama;
@@ -21,11 +19,17 @@ import math.doubleV.Rot;
 import math.doubleV.SGVec_3d;
 import math.doubleV.Vec3d;
 import math.doubleV.sgRayd;
-
+/**
+ * A segment is defined as any set of bones all solving for the same targets.
+ * A segment may have subsegments, which are all bones solving for one or more strict subsets 
+ * of the targets the segment solves for.
+ * A segment may have child segments, which do not solve for any of the same targets as the parent segment,
+ * but whose bones are all descendants of the bones in the parent segment.
+ * @author Eron Gjoni
+ */
 public class ArmatureSegment {
 	private ShadowSkeleton shadowSkel;
 	public AbstractAxes[] simTransforms;
-	public AbstractArmature forArmature;
 	//segments which are part of this segment
 	private ArrayList<ArmatureSegment> subSegments = new ArrayList<>();
 	//segments which are descendants of but not a part of this segment
@@ -47,21 +51,27 @@ public class ArmatureSegment {
 	public double[] weights;
 	public WorkingBone[] pinnedBones;
 	boolean isRootPinned = false;
+	boolean hasPinnedAncestor = false;
 	public double previousDeviation = Double.POSITIVE_INFINITY;
 	QCP qcpConverger = new QCP(MathUtils.DOUBLE_ROUNDING_ERROR, MathUtils.DOUBLE_ROUNDING_ERROR);
 	public WorkingBone wb_segmentTip;
 	public ArmatureSegment parentSegment;
 
-
 	public ArmatureSegment(ShadowSkeleton shadowSkel, BoneState startingFrom, ArmatureSegment parentSegment, boolean isRootPined) {
 		this.shadowSkel = shadowSkel;			
 		this.simTransforms = shadowSkel.simTransforms;
-		this.forArmature = shadowSkel.forArmature;
 		this.parentSegment = parentSegment;
-		this.isRootPinned = isRootPined || (parentSegment != null && parentSegment.isRootPinned);	
+		this.isRootPinned = isRootPined;
+		this.hasPinnedAncestor = (parentSegment != null && (parentSegment.isRootPinned || parentSegment.hasPinnedAncestor));
 		buildSegment(startingFrom);
+		if(this.isRootPinned)
+			this.wb_segmentRoot.setAsSegmentRoot();
 		buildReverseTraversalArray();
 		createHeadingArrays();
+	}
+	
+	public double getDampening() {
+		return shadowSkel.baseDampening;
 	}
 	
 	public void buildSegment(BoneState startingFrom) {
@@ -163,18 +173,18 @@ public class ArmatureSegment {
 				if (maxPinWeight == 0d)
 					maxPinWeight = 1d;
 
-				if ((modeCode & AbstractIKPin.XDir) != 0) {
-					double subTargetWeight = target.getWeight() * (target.getPriority(AbstractIKPin.XDir) / maxPinWeight) * currentFalloff;
+				if ((modeCode & TargetState.XDir) != 0) {
+					double subTargetWeight = target.getWeight() * (target.getPriority(TargetState.XDir) / maxPinWeight) * currentFalloff;
 					innerWeightArray.add(subTargetWeight);
 					innerWeightArray.add(subTargetWeight);
 				}
-				if ((modeCode & AbstractIKPin.YDir) != 0) {
-					double subTargetWeight = target.getWeight() * (target.getPriority(AbstractIKPin.YDir) / maxPinWeight) * currentFalloff;
+				if ((modeCode & TargetState.YDir) != 0) {
+					double subTargetWeight = target.getWeight() * (target.getPriority(TargetState.YDir) / maxPinWeight) * currentFalloff;
 					innerWeightArray.add(subTargetWeight);
 					innerWeightArray.add(subTargetWeight);
 				}
-				if ((modeCode & AbstractIKPin.ZDir) != 0) {
-					double subTargetWeight = target.getWeight() * (target.getPriority(AbstractIKPin.ZDir) / maxPinWeight) * currentFalloff;
+				if ((modeCode & TargetState.ZDir) != 0) {
+					double subTargetWeight = target.getWeight() * (target.getPriority(TargetState.ZDir) / maxPinWeight) * currentFalloff;
 					innerWeightArray.add(subTargetWeight);
 					innerWeightArray.add(subTargetWeight);
 				}
@@ -218,11 +228,8 @@ public class ArmatureSegment {
 		return manualRMSD;
 	}
 	
-
 	/**
 	 * Holds working information for the given bone.
-	 * 
-	 * @author Eron Gjoni
 	 */
 	class WorkingBone {
 		BoneState forBone;
@@ -237,38 +244,10 @@ public class ArmatureSegment {
 		double cosHalfDampen = 0d;
 		double cosHalfReturnDamp = 0d;
 		double returnDamp = 0d;
-		double cosHalfReturnfullnessDampened_iterated[];
-		double halfReturnfullnessDampened_iterated[];
 		boolean springy = false;
-
-		/**hypothetical QCP-based constraint logic
-		 * 1. do a regular solve.
-		 * 2. determine which tangent cones 
-		 */
-
-		double conePreferenceWeights[];
-		/**
-		 * EXPERIMENTAL: 
-		 * all of these vectors point in the same direction (the one the bone is pointing in),
-		 * each of them corresponds to a tangent cone which the bone should prefer to avoid.
-		 */
-		SGVec_3d boneTipVectors[];
-		/**
-		 * EXPERIMENTAL: 
-		 * each of these correspond either to tangent cone the bone should prefer to avoid,
-		 * or a limit cone the bone should prefer to be in the region of
-		 * 
-		 * order is: 
-		 * controlpoint, tan1, tan2, ... controlpoint
-		 */
-		SGVec_3d conePreferenceVectors[]; 
-
-		SGVec_3d limitConeLocalDirectionCache[];
-		double cosineRadiiCache[];
-
-		SGVec_3d tipHeadings_internalconcat[];
-		SGVec_3d targetHeadings_internalconcat[];
-		double weights_internalconcat[];
+		/**set to true if this WorkingBone's chain is not a subsegment, and this bone is its root*/
+		boolean isSegmentRoot = false;
+		boolean hasPinnedAncestor = false;
 
 		public WorkingBone(BoneState toSimulate, ArmatureSegment chain) {
 			forBone = toSimulate;
@@ -279,8 +258,9 @@ public class ArmatureSegment {
 				this.targetState = forBone.getTarget();
 				this.simTargetAxes = simTransforms[targetState.getTransform().getIndex()];
 			}
+			this.hasPinnedAncestor = onChain.hasPinnedAncestor;
 			double predamp = 1d - forBone.getStiffness();
-			double defaultDampening = forArmature.getDampening();
+			double defaultDampening = onChain.getDampening();
 			double dampening = forBone.getParent() == null ? MathUtils.PI : predamp * defaultDampening;
 			cosHalfDampen = Math.cos(dampening / 2d);
 			if(cnstrntstate != null) {
@@ -290,84 +270,26 @@ public class ArmatureSegment {
 				AbstractKusudama k = ((AbstractKusudama) cnstrntstate.getDirectReference());
 				if (k != null && k.getPainfulness() > 0d) {
 					springy = true;
-					populateReturnDampeningIterationArray(k);
 				} else {
 					springy = false;
 				}
-				if(k!= null) {
-					ArrayList<? extends AbstractLimitCone> abl = k.getLimitCones();
-					int coneCount = (abl.size()*3)-2;
-					conePreferenceWeights = new double[coneCount];
-					boneTipVectors = new SGVec_3d[coneCount];
-					conePreferenceVectors = new SGVec_3d[coneCount];
-					cosineRadiiCache = new double[coneCount];
-					limitConeLocalDirectionCache = new SGVec_3d[coneCount];
-					for (int i=0, j=0; i<abl.size(); i++, j+=3) {
-						AbstractLimitCone lc = abl.get(i);
-						boneTipVectors[j] = new SGVec_3d();
-						conePreferenceVectors[j] = new SGVec_3d();
-						limitConeLocalDirectionCache[j] = (SGVec_3d) lc.getControlPoint().multCopy(-1d);
-						cosineRadiiCache[j] = abl.get(i).getRadiusCosine();
-						if(lc.getTangentCircleCenterNext1(0) != null && j < coneCount-1) {
-							boneTipVectors[j+1] = new SGVec_3d();
-							boneTipVectors[j+2] = new SGVec_3d();
-							conePreferenceVectors[j+1] = new SGVec_3d();
-							conePreferenceVectors[j+2] = new SGVec_3d();
-							limitConeLocalDirectionCache[j+1] = (SGVec_3d) lc.getTangentCircleCenterNext1(0).copy();
-							cosineRadiiCache[j+1] = 1d-lc.getTangentCircleRadiusNextCos(0);
-							limitConeLocalDirectionCache[j+2] = (SGVec_3d) lc.getTangentCircleCenterNext2(0).copy();
-							cosineRadiiCache[j+2] = 1d-lc.getTangentCircleRadiusNextCos(0);				
-						}
-					}
-				}
 			}
 		}
-
-		public void updateConePreference_concatenatedArrays(Vec3d<?>[] localizedTipHeadings, Vec3d<?>[] localizedTargetHeadings, double[] weights) {
-			simLocalAxes.updateGlobal();
-			
-			SGVec_3d boneDir = (SGVec_3d) simLocalAxes.y_().heading().normalize();
-			int i=0;
-			for(; i<localizedTargetHeadings.length; i++) {
-				weights_internalconcat[i] = weights[i];
-				tipHeadings_internalconcat[i].set(localizedTipHeadings[i]);
-				targetHeadings_internalconcat[i].set(localizedTargetHeadings[i]);
-			}
-			if(tipHeadings_internalconcat[tipHeadings_internalconcat.length-1] == null) {
-				for(int j = i, cp=0; cp<conePreferenceVectors.length; j++, cp++) {
-					tipHeadings_internalconcat[j] = new SGVec_3d();
-					targetHeadings_internalconcat[j] = new SGVec_3d();
-				}
-			}
-			if(simConstraintSwingAxes == null) return;
-			simConstraintSwingAxes.updateGlobal();
-			for(int j=0; i<targetHeadings_internalconcat.length; i++, j++) {
-				//boneTipVectors[i].set(boneDir);
-				//conePreferenceVectors[i].set(simConstraintAxes.getGlobalOf(limitConeLocalDirectionCache[i]));
-				tipHeadings_internalconcat[i].set(boneDir);
-				targetHeadings_internalconcat[i].set(simConstraintSwingAxes.getGlobalOf(limitConeLocalDirectionCache[j]).sub(simConstraintSwingAxes.origin_()));
-				weights_internalconcat[i] = 0d*cosineRadiiCache[j];
-			}
+		
+		public void setAsSegmentRoot() {
+			this.isSegmentRoot = true;
 		}
 
-		public void fastUpdateOptimalRotationToPinnedDescendants(double dampening, boolean translate) {
-
+		public void fastUpdateOptimalRotationToPinnedDescendants(int stabilizePasses, boolean translate) {
 			simLocalAxes.updateGlobal();
-
-			double newDampening = -1;
-			if (translate == true) {
-				newDampening = MathUtils.PI2;
-			}
 			updateTargetHeadings(onChain.boneCenteredTargetHeadings, onChain.weights);			
 			Rot prevOrientation = new Rot(simLocalAxes.getLocalMBasis().rotation.rotation);
 			boolean gotCloser = true;
-			for (int i = 0; i <= forArmature.defaultStabilizingPassCount; i++) {
+			for (int i = 0; i <= stabilizePasses; i++) {
 				updateTipHeadings(onChain.boneCenteredTipHeadings, true);
-				//updateConePreference_concatenatedArrays(onChain.boneCenteredTipHeadings, onChain.boneCenteredTargetHeadings, onChain.weights);
-				//updateOptimalRotationToPinnedDescendants(newDampening, translate, tipHeadings_internalconcat, targetHeadings_internalconcat, weights_internalconcat);
-				updateOptimalRotationToPinnedDescendants(newDampening, translate, onChain.boneCenteredTipHeadings,
+				updateOptimalRotationToPinnedDescendants(translate, onChain.boneCenteredTipHeadings,
 						onChain.boneCenteredTargetHeadings, weights);
-				if (forArmature.defaultStabilizingPassCount > 0) {
+				if (stabilizePasses > 0) {
 					updateTipHeadings(onChain.uniform_boneCenteredTipHeadings, false);
 					double currentmsd = onChain.getManualMSD(onChain.uniform_boneCenteredTipHeadings, onChain.boneCenteredTargetHeadings,
 							onChain.weights);
@@ -376,7 +298,6 @@ public class ArmatureSegment {
 						gotCloser = true;
 						break;
 					} else gotCloser = false;
-
 				}
 			}
 			if(!gotCloser)
@@ -387,22 +308,16 @@ public class ArmatureSegment {
 			simLocalAxes.markDirty();
 		}
 
-		private void updateOptimalRotationToPinnedDescendants(double dampening, boolean translate,
+		private void updateOptimalRotationToPinnedDescendants(boolean translate,
 				SGVec_3d[] localizedTipHeadings, SGVec_3d[] localizedTargetHeadings, double[] weights) {
 
 			Rot qcpRot = onChain.qcpConverger.weightedSuperpose(localizedTipHeadings, localizedTargetHeadings, weights,
 					translate);
 
-
 			SGVec_3d translateBy = onChain.qcpConverger.getTranslation();
 			double boneDamp = cosHalfDampen;
-			// sb.forBone.getIKPin().modeCode = 6;
-			if (dampening != -1) {
-				boneDamp = dampening;
-				qcpRot.rotation.clampToAngle(boneDamp);
-			} else {
+			if(!translate)
 				qcpRot.rotation.clampToQuadranceAngle(boneDamp);
-			}
 			simLocalAxes.rotateBy(qcpRot);
 			if(translate) {
 				simLocalAxes.translateByGlobal(translateBy);
@@ -424,16 +339,6 @@ public class ArmatureSegment {
 
 		public void pullBackTowardAllowableRegion(int iteration, int totalIterations) {
 			if (springy && constraint != null && AbstractKusudama.class.isAssignableFrom(constraint.getClass())) {
-				/*double coshalfDamp;
-				double halfDamp;
-				if (totalIterations != forArmature.getDefaultIterations()) {
-					halfDamp = computeIterateReturnfulness((double) iteration, (double) totalIterations,
-							forBone.getConstraint().getDirectReference());
-					coshalfDamp = Math.cos(halfDamp / 2d);
-				} else {
-					halfDamp = halfReturnfullnessDampened_iterated[iteration];
-					coshalfDamp = cosHalfReturnfullnessDampened_iterated[iteration];
-				}*/
 				((AbstractKusudama)constraint).setAxesToReturnfulled(simLocalAxes, simConstraintSwingAxes, simConstraintTwistAxes, cosHalfReturnDamp, returnDamp/2d);
 				onChain.previousDeviation = Double.POSITIVE_INFINITY;
 			}
@@ -441,16 +346,6 @@ public class ArmatureSegment {
 
 		public void updateTargetHeadings(Vec3d<?>[] localizedTargetHeadings, double[] weights) {
 			int hdx = 0;
-			if(targetHeadings_internalconcat == null || targetHeadings_internalconcat.length != localizedTargetHeadings.length) {
-				int pad = boneTipVectors == null ? 0 : boneTipVectors.length;
-				targetHeadings_internalconcat = new SGVec_3d[localizedTargetHeadings.length + pad];
-				tipHeadings_internalconcat = new SGVec_3d[localizedTargetHeadings.length + pad];
-				weights_internalconcat = new double[weights.length + pad];
-				for (int i = 0; i < localizedTargetHeadings.length; i++) {
-					targetHeadings_internalconcat[i] = new SGVec_3d();
-					tipHeadings_internalconcat[i] = new SGVec_3d();
-				}
-			}
 			for (int i = 0; i < onChain.pinnedBones.length; i++) {
 				WorkingBone sb = onChain.pinnedBones[i];
 				AbstractAxes targetAxes = sb.simTargetAxes;
@@ -459,20 +354,19 @@ public class ArmatureSegment {
 				localizedTargetHeadings[hdx].set(targetAxes.origin_()).sub(origin);
 				byte modeCode = sb.targetState.getModeCode();
 				hdx++;
-
-				if ((modeCode & AbstractIKPin.XDir) != 0) {
+				if ((modeCode & TargetState.XDir) != 0) {
 					sgRayd xTarget = targetAxes.x_().getRayScaledBy(weights[hdx]);
 					localizedTargetHeadings[hdx].set(xTarget.p2()).sub(origin);
 					xTarget.setToInvertedTip(localizedTargetHeadings[hdx + 1]).sub(origin);
 					hdx += 2;
 				}
-				if ((modeCode & AbstractIKPin.YDir) != 0) {
+				if ((modeCode & TargetState.YDir) != 0) {
 					sgRayd yTarget = targetAxes.y_().getRayScaledBy(weights[hdx]);
 					localizedTargetHeadings[hdx] = Vec3d.sub(yTarget.p2(), origin);
 					yTarget.setToInvertedTip(localizedTargetHeadings[hdx + 1]).sub(origin);
 					hdx += 2;
 				}
-				if ((modeCode & AbstractIKPin.ZDir) != 0) {
+				if ((modeCode & TargetState.ZDir) != 0) {
 					sgRayd zTarget = targetAxes.z_().getRayScaledBy(weights[hdx]);
 					localizedTargetHeadings[hdx] = Vec3d.sub(zTarget.p2(), origin);
 					zTarget.setToInvertedTip(localizedTargetHeadings[hdx + 1]).sub(origin);
@@ -504,19 +398,19 @@ public class ArmatureSegment {
 				double scaleBy = scale ? simLocalAxes.origin_().dist(targetAxes.origin_()) : 1d;
 				hdx++;
 
-				if ((modeCode & AbstractIKPin.XDir) != 0) {
+				if ((modeCode & TargetState.XDir) != 0) {
 					sgRayd xTip = tipAxes.x_().getRayScaledBy(scaleBy);
 					localizedTipHeadings[hdx].set(xTip.p2()).sub(origin);
 					xTip.setToInvertedTip(localizedTipHeadings[hdx + 1]).sub(origin);
 					hdx += 2;
 				}
-				if ((modeCode & AbstractIKPin.YDir) != 0) {
+				if ((modeCode & TargetState.YDir) != 0) {
 					sgRayd yTip = tipAxes.y_().getRayScaledBy(scaleBy);
 					localizedTipHeadings[hdx].set(yTip.p2()).sub(origin);
 					yTip.setToInvertedTip(localizedTipHeadings[hdx + 1]).sub(origin);
 					hdx += 2;
 				}
-				if ((modeCode & AbstractIKPin.ZDir) != 0) {
+				if ((modeCode & TargetState.ZDir) != 0) {
 					sgRayd zTip = tipAxes.z_().getRayScaledBy(scaleBy);
 					localizedTipHeadings[hdx].set(zTip.p2()).sub(origin);
 					zTip.setToInvertedTip(localizedTipHeadings[hdx + 1]).sub(origin);
@@ -528,7 +422,7 @@ public class ArmatureSegment {
 
 		public void updateCosDampening() {
 			double predamp = 1d - forBone.getStiffness();
-			double defaultDampening = forArmature.getDampening();
+			double defaultDampening = onChain.getDampening();
 			double dampening = forBone.getParent() == null ? MathUtils.PI : predamp * defaultDampening;
 			cosHalfDampen = Math.cos(dampening / 2d);
 			if(constraint != null) {
@@ -542,34 +436,6 @@ public class ArmatureSegment {
 					springy = false;
 				}
 			}
-		}
-
-		public void populateReturnDampeningIterationArray(AbstractKusudama k) {
-			double iterations = forArmature.getDefaultIterations();
-			halfReturnfullnessDampened_iterated = new double[(int) iterations];
-			cosHalfReturnfullnessDampened_iterated = new double[(int) iterations];
-			for (double i = 0; i < iterations; i++) {
-				int a = 0;
-				double iterationsClamp = computeIterateReturnfulness(i, forArmature.getDefaultIterations(),
-						k);
-				double cosIterationReturnClamp = Math.cos(iterationsClamp / 2d);
-				halfReturnfullnessDampened_iterated[(int) i] = iterationsClamp;
-				cosHalfReturnfullnessDampened_iterated[(int) i] = cosIterationReturnClamp;
-			}
-		}
-
-		public double computeIterateReturnfulness(double iteration, double totalIteration, Constraint k) {
-			double predamp = 1d - forBone.getStiffness();
-			double defaultDampening = forArmature.getDampening();
-			double dampening = forBone.getParent() == null ? MathUtils.PI : predamp * defaultDampening;
-			double returnfullness = k.getPainfulness();
-			double falloff = 0.2;
-			double totalItr = totalIteration;
-			double iterationspow = 1d + Math.pow(totalItr, falloff * totalItr * returnfullness);
-			double iterationScalar = ((iterationspow) - Math.pow(iteration, falloff * totalItr * returnfullness))
-					/ (iterationspow);
-			double iterationReturnClamp = iterationScalar * returnfullness * dampening;
-			return iterationReturnClamp;
 		}
 	}
 }

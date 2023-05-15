@@ -158,13 +158,13 @@ public class SkeletonState {
 	 * 			A transform specifying the orientation of the twist basis to be used in swing twist decomposition when constraining this bone.
 	 * @param directReference REQUIRED, a reference to the actual Constraint instance so the solver can call its snapToLimitingAxes function.
 	 */
-	public ConstraintState addConstraint(String id, String forBone_id, String swingOrientationTransform_id, String twistOrientationTransform_id, Constraint directReference) {
-		ConstraintState con = new ConstraintState(id, forBone_id, swingOrientationTransform_id, twistOrientationTransform_id, directReference);
+	public ConstraintState addConstraint(String id, String forBone_id, double painfulness, String swingOrientationTransform_id, String twistOrientationTransform_id, Constraint directReference) {
+		ConstraintState con = new ConstraintState(id, forBone_id, painfulness, swingOrientationTransform_id, twistOrientationTransform_id, directReference);
 		constraintMap.put(id, con);
 		return con;
 	}
-	public ConstraintState addConstraint(String id, String forBone_id, String swingOrientationTransform_id, Constraint directReference) {
-		return this.addConstraint(id, forBone_id, swingOrientationTransform_id, null, directReference);
+	public ConstraintState addConstraint(String id, String forBone_id, double painfulness, String swingOrientationTransform_id, Constraint directReference) {
+		return this.addConstraint(id, forBone_id, painfulness, swingOrientationTransform_id, null, directReference);
 	}
 	/**
 	 * @param id a string by which to identify this bone
@@ -500,6 +500,7 @@ public class SkeletonState {
 	}
 
 	public class TargetState {		
+		public static final int XDir = 0, YDir=2, ZDir=4;
 		String id;
 		String transform_id;
 		String forBone_id;
@@ -598,12 +599,14 @@ public class SkeletonState {
 		private int index;
 		private int swingTranform_idx = -1;
 		private int twistTransform_idx = -1;
+		public double painfulness = 0;
 
-		private ConstraintState(String id, String forBone_id, String swingOrientationTransform_id, String twistOrientationTransform_id, Constraint directReference) {
+		private ConstraintState(String id, String forBone_id, double painfulness, String swingOrientationTransform_id, String twistOrientationTransform_id, Constraint directReference) {
 			this.forBone_id = forBone_id;
 			this.swingOrientationTransform_id = swingOrientationTransform_id;
 			this.twistOrientationTransform_id = twistOrientationTransform_id;
 			this.directReference = directReference;
+			this.painfulness = painfulness;
 		}
 		public void prune() {
 			if(this.getTwistTransform() != null) this.getTwistTransform().prune();
@@ -623,6 +626,10 @@ public class SkeletonState {
 		}
 		public int getIndex() {
 			return this.index;
+		}
+		
+		public double getPainfulness() {
+			return this.painfulness;
 		}
 		private void optimize() {
 			if(this.twistOrientationTransform_id != null) {
