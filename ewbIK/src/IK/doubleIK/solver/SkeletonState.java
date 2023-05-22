@@ -9,6 +9,7 @@ import IK.doubleIK.AbstractIKPin;
 import IK.doubleIK.AbstractKusudama;
 import IK.doubleIK.Constraint;
 import math.doubleV.MathUtils;
+import math.doubleV.Rot;
 
 /**
  * This class is used as an intermediary between the IK solver and whatever Armature system you happen to be using.
@@ -140,13 +141,18 @@ public class SkeletonState {
 	 * @param target_id OPTIONAL null if this bone is not an effector, otherwise, the string 
 	 */
 	public BoneState addBone(String id, String transform_id, String parent_id, String constraint_id, double stiffness, String target_id) {
-		BoneState result = new BoneState(id, transform_id, parent_id, target_id, constraint_id, stiffness);
+		BoneState result = new BoneState(id, transform_id, parent_id, target_id, constraint_id, stiffness, null);
+		boneMap.put(id, result);
+		return result;
+	}
+	public BoneState addBone(String id, String transform_id, String parent_id, String constraint_id, double stiffness, String target_id, Object directRef) {
+		BoneState result = new BoneState(id, transform_id, parent_id, target_id, constraint_id, stiffness, directRef);
 		boneMap.put(id, result);
 		return result;
 	}
 	
 	public BoneState addBone(String id, String transform_id, String parent_id, String target_id, String constraint_id) {
-		BoneState result = new BoneState(id, transform_id, parent_id, target_id, constraint_id, 0.0);
+		BoneState result = new BoneState(id, transform_id, parent_id, target_id, constraint_id, 0.0, null);
 		boneMap.put(id, result);
 		return result;
 	}
@@ -273,14 +279,16 @@ public class SkeletonState {
 		private int transformIdx = -1;
 		private int constraintIdx = -1;
 		private int targetIdx = -1;
+		public Object directRef; //direct object reference to help with debugging validation errors
 
-		private BoneState(String id, String transform_id, String parent_id, String target_id, String constraint_id,  double stiffness) {
+		private BoneState(String id, String transform_id, String parent_id, String target_id, String constraint_id,  double stiffness, Object directRef) {
 			this.id = id;
 			this.parent_id = parent_id;
 			this.transform_id  = transform_id;
 			this.target_id = target_id; 
 			this.constraint_id = constraint_id; 
 			this.stiffness = stiffness;
+			this.directRef = directRef;
 		}		
 		public TransformState getTransform() {
 			return transforms[this.transformIdx];
@@ -497,10 +505,16 @@ public class SkeletonState {
 		public String getIdString() {
 			return this.id;
 		}
+		public String toString() {
+			Rot rotation = new Rot(this.rotation);
+			String result = "TransformState: \n origin: (" +String.format("%." + 4 + "f", translation[0]) + "," + String.format("%." + 4 + "f", translation[1])  + "," +String.format("%." + 4 + "f", translation[2])  + ")";
+			result += "\n rotation: " +rotation.toString();
+			return result;
+		}
 	}
 
 	public class TargetState {		
-		public static final int XDir = 0, YDir=2, ZDir=4;
+		public static final int XDir = 1, YDir=2, ZDir=4;
 		String id;
 		String transform_id;
 		String forBone_id;

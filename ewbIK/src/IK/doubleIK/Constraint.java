@@ -18,6 +18,9 @@ public interface Constraint extends Saveable{
 	public <A extends AbstractAxes> A twistOrientationAxes();
 	public <B extends AbstractBone> B attachedTo();
 	public double getPainfulness();
+	public void setPainfulness(double painfulness);
+	public boolean constrainsTwist();
+	public boolean constrainsSwing();
 	
 	/**
 	 * @return a measure of the rotational freedom afforded by this constraint. 

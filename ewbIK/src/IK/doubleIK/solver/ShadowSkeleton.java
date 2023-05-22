@@ -36,6 +36,7 @@ public class ShadowSkeleton {
 		this.buildArmaturSegmentHierarchy();
 		this.buildTraversalArray();
 	}
+	private int previousIterationRequest = 0;
 	
 	/**
 	 * @param notifier a (potentially threaded) function to call every time the solver has updated the transforms for a given bone. 
@@ -46,27 +47,47 @@ public class ShadowSkeleton {
 		int endOnIndex = traversalArray.length - 1;
 		//int returnfullEndOnIndex = returnfulArray.length > 0 ? returnfulIndex.get(startFrom);  
 		int tipIndex = 0;
-		ArmatureSegment forSegment = rootSegment;
 		alignSimAxesToBoneStates();
+		this.pullBack(iterations, false, null); //start all bones closer to a known comfortable pose.
+		previousIterationRequest = iterations;
 		for (int i = 0; i < iterations; i++) {
-			for (int j = 0; j <= endOnIndex; j++) {
-				traversalArray[j].pullBackTowardAllowableRegion(i, iterations);
-				if(traversalArray[j].isSegmentRoot) 
-					break;
-			}
-			for (int j = 0; j <= endOnIndex; j++) {
-				WorkingBone wb = traversalArray[j];
-				wb.fastUpdateOptimalRotationToPinnedDescendants(stabilizationPasses, j == endOnIndex && endOnIndex == traversalArray.length - 1);
-				if(wb.isSegmentRoot && wb.hasPinnedAncestor)
-					break;
-			}		
+			this.solveToTargets(1, false, null);
 		}
-
-		if(notifier == null) alignBoneStatesToSimAxes();
-		else alignBoneStatesToSimAxes(notifier);
-		//iterativelyNotifyBonesOfCompletedIKSolution(tipIndex, endOnIndex);
+		this.conditionalNotify(true, notifier);
 	}
-	private void alignSimAxesToBoneStates() {
+	
+	public void pullBack(int iterations, boolean doNotify, Consumer<BoneState> notifier) {
+		int endOnIndex = traversalArray.length - 1;
+		if(previousIterationRequest != iterations) {
+			for (int j = 0; j <= endOnIndex; j++) {				
+				traversalArray[j].updateReturnfullnessDamp(iterations);
+			}
+		}
+		for (int j = 0; j <= endOnIndex; j++) {			
+			traversalArray[j].pullBackTowardAllowableRegion();
+			if(traversalArray[j].isSegmentRoot) 
+				break;
+		}
+		conditionalNotify(doNotify, notifier);
+	}
+	
+	public void solveToTargets(int stabilizationPasses, boolean doNotify, Consumer<BoneState> notifier) {
+		int endOnIndex = traversalArray.length - 1;
+		for (int j = 0; j <= endOnIndex; j++) {
+			WorkingBone wb = traversalArray[j];
+			wb.fastUpdateOptimalRotationToPinnedDescendants(stabilizationPasses, j == endOnIndex && endOnIndex == traversalArray.length - 1);
+			if(wb.isSegmentRoot && wb.hasPinnedAncestor)
+				break;
+		}
+		conditionalNotify(doNotify, notifier);
+	}
+	public void conditionalNotify(boolean doNotify, Consumer<BoneState> notifier) {
+		if(doNotify) {
+			if(notifier == null) alignBoneStatesToSimAxes();
+			else alignBoneStatesToSimAxes(notifier);
+		}	
+	}
+	public void alignSimAxesToBoneStates() {
 		TransformState[] transforms = skelState.getTransformsArray();
 		for(int i=0; i<transforms.length; i++) {
 			this.simTransforms[i] .getLocalMBasis().set(transforms[i].translation, transforms[i].rotation, transforms[i].scale);
@@ -136,14 +157,15 @@ public class ShadowSkeleton {
 		}
 	}
 	
-	public void setDampening(double dampening) {
+	public void setDampening(double dampening, double defaultIterations) {
 		this.baseDampening = dampening;
-		this.updateRates();
+		this.updateRates(defaultIterations);
 	}
 
-	public void updateRates() {
+	public void updateRates(double iterations) {
 		for (int j = 0; j < traversalArray.length; j++) {
 			traversalArray[j].updateCosDampening();
+			traversalArray[j].updateReturnfullnessDamp(iterations);
 		}
 	}
 	

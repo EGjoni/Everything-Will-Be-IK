@@ -248,7 +248,7 @@ public class ArmatureSegment {
 		/**set to true if this WorkingBone's chain is not a subsegment, and this bone is its root*/
 		boolean isSegmentRoot = false;
 		boolean hasPinnedAncestor = false;
-
+		
 		public WorkingBone(BoneState toSimulate, ArmatureSegment chain) {
 			forBone = toSimulate;
 			cnstrntstate = forBone.getConstraint();			
@@ -267,13 +267,13 @@ public class ArmatureSegment {
 				constraint = cnstrntstate.getDirectReference();
 				simConstraintSwingAxes = simTransforms[cnstrntstate.getSwingTransform().getIndex()];
 				simConstraintTwistAxes = cnstrntstate.getTwistTransform() == null ? null : simTransforms[cnstrntstate.getTwistTransform().getIndex()];
-				AbstractKusudama k = ((AbstractKusudama) cnstrntstate.getDirectReference());
-				if (k != null && k.getPainfulness() > 0d) {
+				if (cnstrntstate.getPainfulness() > 0d) {
 					springy = true;
 				} else {
 					springy = false;
 				}
 			}
+			this.updateCosDampening();
 		}
 		
 		public void setAsSegmentRoot() {
@@ -308,7 +308,7 @@ public class ArmatureSegment {
 			simLocalAxes.markDirty();
 		}
 
-		private void updateOptimalRotationToPinnedDescendants(boolean translate,
+		private Rot updateOptimalRotationToPinnedDescendants(boolean translate,
 				SGVec_3d[] localizedTipHeadings, SGVec_3d[] localizedTargetHeadings, double[] weights) {
 
 			Rot qcpRot = onChain.qcpConverger.weightedSuperpose(localizedTipHeadings, localizedTargetHeadings, weights,
@@ -335,11 +335,12 @@ public class ArmatureSegment {
 					simConstraintTwistAxes.translateByGlobal(translateBy);
 				}
 			}
+			return qcpRot;
 		}
 
-		public void pullBackTowardAllowableRegion(int iteration, int totalIterations) {
+		public void pullBackTowardAllowableRegion() {
 			if (springy && constraint != null && AbstractKusudama.class.isAssignableFrom(constraint.getClass())) {
-				((AbstractKusudama)constraint).setAxesToReturnfulled(simLocalAxes, simConstraintSwingAxes, simConstraintTwistAxes, cosHalfReturnDamp, returnDamp/2d);
+				((AbstractKusudama)constraint).setAxesToReturnfulled(simLocalAxes, simConstraintSwingAxes, simConstraintTwistAxes, cosHalfReturnDamp, returnDamp);
 				onChain.previousDeviation = Double.POSITIVE_INFINITY;
 			}
 		}
@@ -425,10 +426,15 @@ public class ArmatureSegment {
 			double defaultDampening = onChain.getDampening();
 			double dampening = forBone.getParent() == null ? MathUtils.PI : predamp * defaultDampening;
 			cosHalfDampen = Math.cos(dampening / 2d);
-			if(constraint != null) {
-				AbstractKusudama k = ((AbstractKusudama) constraint);
-				if (k.getPainfulness() >= 0d) {
-					returnDamp = Math.max(defaultDampening / 2d, k.getPainfulness() / 2d);
+		}
+		public void updateReturnfullnessDamp(double iterations) {
+			if(cnstrntstate != null) {
+				/**
+				 * determine maximum pullback that would still allow the solver to converge if applied once per pass 
+				 */
+				if (cnstrntstate.getPainfulness() >= 0d) {
+					double dampening = forBone.getParent() == null ? MathUtils.PI : (1d - forBone.getStiffness()) * onChain.getDampening();
+					returnDamp = (dampening - (Math.PI / (2 * ((int) Math.ceil(Math.PI / (iterations * dampening)) * iterations))))*cnstrntstate.getPainfulness();
 					cosHalfReturnDamp = Math.cos(returnDamp / 2d);
 					springy = true;
 					//populateReturnDampeningIterationArray(k);

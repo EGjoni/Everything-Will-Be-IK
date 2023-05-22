@@ -146,7 +146,7 @@ public abstract class AbstractArmature implements Saveable {
 	public void setDefaultDampening(double damp) {
 		this.dampening = Math.min(Math.PI * 3d, Math.max(Math.abs(Double.MIN_VALUE), Math.abs(damp)));
 		if(this.shadowSkel !=null) {
-			this.shadowSkel.setDampening(this.dampening);
+			this.shadowSkel.setDampening(this.dampening, this.getDefaultIterations());
 		}
 	}
 
@@ -164,6 +164,7 @@ public abstract class AbstractArmature implements Saveable {
 	 */
 	public ArrayList<? extends AbstractBone> getBoneList() {
 		this.bones.clear();
+		bones.add(rootBone);
 		rootBone.addDescendantsToArmature();
 		return bones;
 	}
@@ -327,7 +328,8 @@ public abstract class AbstractArmature implements Saveable {
 				parBoneId, 
 				constraintId, 
 				bone.getStiffness(),
-				targetId);
+				targetId, 
+				bone);
 		registerAxesWithShadowSkeleton(bone.localAxes(), bone.getParent() == null);
 		if(targetId != null) registerTargetWithShadowSkeleton(target);
 		if(constraintId != null) registerConstraintWithShadowSkeleton(constraint);
@@ -384,8 +386,9 @@ public abstract class AbstractArmature implements Saveable {
 	private AbstractBasis getSkelStateRelativeBasis(AbstractAxes axes, boolean unparent) {
 		AbstractBasis basis = axes.getLocalMBasis(); 
 		if(unparent) {
-			basis = basis.copy();
-			this.localAxes().getGlobalMBasis().setToLocalOf(axes.getGlobalMBasis(), basis);
+			AbstractBasis resultBasis = basis.copy();
+			this.localAxes().getGlobalMBasis().setToLocalOf(axes.getGlobalMBasis(), resultBasis);
+			return resultBasis;
 		}
 		return basis;
 	}
@@ -467,13 +470,48 @@ public abstract class AbstractArmature implements Saveable {
 			_regenerateShadowSkeleton();
 		if(dirtyRate) {
 			_updateShadowSkelRateInfo();
-			shadowSkel.updateRates();
+			shadowSkel.updateRates(iterations);
 			dirtyRate = false;
 		}
 		performance.startPerformanceMonitor();
 		this.updateskelStateTransforms();
-		shadowSkel.solve(iterations, stabilizingPasses, (bonestate) -> alignBoneToSolverResult(bonestate));
+		shadowSkel.solve(
+				iterations == -1 ? this.getDefaultIterations() : iterations, 
+				stabilizingPasses == -1? this.defaultStabilizingPassCount : stabilizingPasses, 
+				(bonestate) -> alignBoneToSolverResult(bonestate));
 		performance.solveFinished(iterations == -1 ? this.IKIterations : iterations);
+	}
+	
+	/**for debugging purposes, does a single pullback iteration on the shadow skeleton, then updates 
+	 * the bones with the results.
+	 */
+	public void _doSinglePullbackStep() {
+		if(dirtySkelState) 
+			_regenerateShadowSkeleton();
+		if(dirtyRate) {
+			_updateShadowSkelRateInfo();
+			shadowSkel.updateRates(this.getDefaultIterations());
+			dirtyRate = false;
+		}
+		this.updateskelStateTransforms();
+		shadowSkel.alignSimAxesToBoneStates();
+		shadowSkel.pullBack(this.getDefaultIterations(), true, (bonestate) -> alignBoneToSolverResult(bonestate));
+	}
+	
+	/**for debugging purposes, does a single step to move effectors toward their targets on the shadow skeleton, then updates 
+	 * the bones with the results.
+	 */
+	public void _doSingleTowardTargetStep() {
+		if(dirtySkelState) 
+			_regenerateShadowSkeleton();
+		if(dirtyRate) {
+			_updateShadowSkelRateInfo();
+			shadowSkel.updateRates(this.getDefaultIterations());
+			dirtyRate = false;
+		}
+		this.updateskelStateTransforms();
+		shadowSkel.alignSimAxesToBoneStates();
+		shadowSkel.solveToTargets(0, true, (bonestate) -> alignBoneToSolverResult(bonestate));
 	}
 	
 	/**
