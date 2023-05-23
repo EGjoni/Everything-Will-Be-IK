@@ -24,8 +24,6 @@ import java.util.HashMap;
 
 import javax.swing.JInternalFrame;
 
-import IK.doubleIK.SegmentedArmature;
-import IK.doubleIK.SegmentedArmature.WorkingBone;
 import IK.doubleIK.solver.ShadowSkeleton;
 import IK.doubleIK.solver.SkeletonState;
 import IK.doubleIK.solver.SkeletonState.BoneState;
@@ -59,13 +57,9 @@ public abstract class AbstractArmature implements Saveable {
 	protected ArrayList<AbstractBone> bones = new ArrayList<AbstractBone>();
 	protected HashMap<String, AbstractBone> tagBoneMap = new HashMap<String, AbstractBone>();
 	
-	protected HashMap<AbstractBone, SegmentedArmature> boneSegmentMap = new HashMap<AbstractBone, SegmentedArmature>();
 	protected AbstractBone rootBone;
-	protected WorkingBone[] traversalArray;
-	protected WorkingBone[] returnfulArray;
 	protected HashMap<AbstractBone, Integer> traversalIndex;
 	protected HashMap<AbstractBone, Integer> returnfulIndex;
-	public SegmentedArmature segmentedArmature;
 	// public StrandedArmature strandedArmature;
 	protected String tag;
 
@@ -107,7 +101,6 @@ public abstract class AbstractArmature implements Saveable {
 	 */
 	public AbstractBone createRootBone(AbstractBone inputBone) {
 		this.rootBone = inputBone;
-		this.segmentedArmature = new SegmentedArmature(rootBone);
 		fauxParent = rootBone.localAxes().getGlobalCopy();
 
 		return rootBone;
@@ -116,7 +109,6 @@ public abstract class AbstractArmature implements Saveable {
 	private <V extends Vec3d<?>> AbstractBone createRootBone(V tipHeading, V rollHeading, String inputTag,
 			double boneHeight, AbstractBone.frameType coordinateType) {
 		initializeRootBone(this, tipHeading, rollHeading, inputTag, boneHeight, coordinateType);
-		this.segmentedArmature = new SegmentedArmature(rootBone);
 		fauxParent = rootBone.localAxes().getGlobalCopy();
 
 		return rootBone;
@@ -153,7 +145,9 @@ public abstract class AbstractArmature implements Saveable {
 	 */
 	public void setDefaultDampening(double damp) {
 		this.dampening = Math.min(Math.PI * 3d, Math.max(Math.abs(Double.MIN_VALUE), Math.abs(damp)));
-		regenerateShadowSkeleton();
+		if(this.shadowSkel !=null) {
+			this.shadowSkel.setDampening(this.dampening, this.getDefaultIterations());
+		}
 	}
 
 	/**
@@ -170,6 +164,7 @@ public abstract class AbstractArmature implements Saveable {
 	 */
 	public ArrayList<? extends AbstractBone> getBoneList() {
 		this.bones.clear();
+		bones.add(rootBone);
 		rootBone.addDescendantsToArmature();
 		return bones;
 	}
@@ -258,7 +253,7 @@ public abstract class AbstractArmature implements Saveable {
 	/**
 	 * a list of the bones used by the solver, in the same order they appear in the skelState after validation.
 	 * This is to very quickly update the scene with the solver's results, without incurring hashmap lookup penalty. 
-	 * **/
+	 ***/
 	protected AbstractBone[] skelStateBoneList = new AbstractBone[0];
 	
 	ShadowSkeleton shadowSkel;
@@ -268,7 +263,7 @@ public abstract class AbstractArmature implements Saveable {
 			registerBoneWithShadowSkeleton(b);
 		}
 		skelState.validate();
-		shadowSkel = new ShadowSkeleton(skelState, this);
+		shadowSkel = new ShadowSkeleton(skelState, this.dampening);
 		skelStateBoneList = new AbstractBone[skelState.getBoneCount()];
 		for(int i=0; i<bones.size(); i++) {
 			BoneState bonestate = skelState.getBoneStateById(bones.get(i).getIdentityHash());
@@ -277,7 +272,6 @@ public abstract class AbstractArmature implements Saveable {
 		}
 		dirtySkelState = false;
 	}
-	
 	
 	/**
 	 * This method should be called whenever a structural change has been made to the armature prior to calling the solver.
@@ -298,7 +292,7 @@ public abstract class AbstractArmature implements Saveable {
 		this.regenerateShadowSkeleton(false);
 	}
 	 /**
-	 * @param force by default, callign this function sets a flag notifying the solver that it needs to regenerate the shadow skeleton before
+	 * @param force by default, calling this function sets a flag notifying the solver that it needs to regenerate the shadow skeleton before
 	 * attempting a solve. If you set this to "true", the shadow skeleton will be regenerated immediately. 
 	 * (useful if you do solves in a separate thread from structure updates)
 	 */
@@ -307,21 +301,6 @@ public abstract class AbstractArmature implements Saveable {
 		if(force) 
 			this._regenerateShadowSkeleton();
 		dirtyRate = true;
-		/*segmentedArmature.updateSegmentedArmature();
-		boneSegmentMap.clear();
-		recursivelyUpdateBoneSegmentMapFrom(segmentedArmature);
-		SegmentedArmature.recursivelyCreateHeadingArraysFor(segmentedArmature);
-		WorkingBone[][] built = buildTraversalArrayFromGroups(segmentedArmature);
-		traversalArray = built[0];
-		returnfulArray = built[1];
-		traversalIndex = new HashMap<AbstractBone, Integer>();
-		returnfulIndex = new HashMap<AbstractBone, Integer>();
-		for (int i = 0; i < traversalArray.length; i++) {
-			traversalIndex.put(traversalArray[i].forBone, i);
-		}
-		for (int i = 0; i < returnfulArray.length; i++) {
-			returnfulIndex.put(returnfulArray[i].forBone, i);
-		}*/
 	}
 	
 	public void updateShadowSkelRateInfo() {
@@ -349,7 +328,8 @@ public abstract class AbstractArmature implements Saveable {
 				parBoneId, 
 				constraintId, 
 				bone.getStiffness(),
-				targetId);
+				targetId, 
+				bone);
 		registerAxesWithShadowSkeleton(bone.localAxes(), bone.getParent() == null);
 		if(targetId != null) registerTargetWithShadowSkeleton(target);
 		if(constraintId != null) registerConstraintWithShadowSkeleton(constraint);
@@ -369,6 +349,7 @@ public abstract class AbstractArmature implements Saveable {
 		skelState.addConstraint(
 				constraint.getIdentityHash(),
 				constraint.attachedTo().getIdentityHash(),
+				constraint.getPainfulness(),
 				constraint.swingOrientationAxes().getIdentityHash(),
 				twistAxes == null ? null : twistAxes.getIdentityHash(),
 				constraint);
@@ -398,7 +379,6 @@ public abstract class AbstractArmature implements Saveable {
 	}
 	
 	/**
-	 *
 	 * @param axes
 	 * @param unparent if true, will return a COPY of the basis in Armature space, otherwise, will return a reference to axes.localMBasis
 	 * @return
@@ -406,8 +386,9 @@ public abstract class AbstractArmature implements Saveable {
 	private AbstractBasis getSkelStateRelativeBasis(AbstractAxes axes, boolean unparent) {
 		AbstractBasis basis = axes.getLocalMBasis(); 
 		if(unparent) {
-			basis = basis.copy();
-			this.localAxes().getGlobalMBasis().setToLocalOf(axes.getGlobalMBasis(), basis);
+			AbstractBasis resultBasis = basis.copy();
+			this.localAxes().getGlobalMBasis().setToLocalOf(axes.getGlobalMBasis(), resultBasis);
+			return resultBasis;
 		}
 		return basis;
 	}
@@ -459,33 +440,6 @@ public abstract class AbstractArmature implements Saveable {
 		}
 	}
 
-	private void recursivelyUpdateBoneSegmentMapFrom(SegmentedArmature startFrom) {
-		for (AbstractBone b : startFrom.segmentBoneList) {
-			boneSegmentMap.put(b, startFrom);
-		}
-		for (SegmentedArmature c : startFrom.childSegments) {
-			recursivelyUpdateBoneSegmentMapFrom(c);
-		}
-	}
-
-	/**
-	 * If you have created some sort of save / load system for your armatures which
-	 * might make it difficult to notify the armature when a pin has been enabled on
-	 * a bone, you can call this function after all bones and pins have been
-	 * instantiated and associated with one another to index all of the pins on the
-	 * armature.
-	 */
-	public void refreshArmaturePins() {
-		AbstractBone rootBone = this.getRootBone();
-		ArrayList<AbstractBone> pinnedBones = new ArrayList<>();
-		rootBone.addSelfIfPinned(pinnedBones);
-
-		for (AbstractBone b : pinnedBones) {
-			b.notifyAncestorsOfPin(false);
-			regenerateShadowSkeleton();
-		}
-	}
-
 	/**
 	 * automatically solves the IK system of this armature from the given bone using
 	 * the armature's default IK parameters.
@@ -498,7 +452,7 @@ public abstract class AbstractArmature implements Saveable {
 	 * @param bone
 	 */
 	public void IKSolver(AbstractBone bone) {
-		IKSolver(bone, -1, -1, -1);
+		IKSolver(bone, -1, -1);
 	}
 
 	/**
@@ -506,35 +460,64 @@ public abstract class AbstractArmature implements Saveable {
 	 * the given parameters.
 	 * 
 	 * @param bone
-	 * @param dampening         dampening angle in radians. Set this to -1 if you
-	 *                          want to use the armature's default.
 	 * @param iterations        number of iterations to run. Set this to -1 if you
 	 *                          want to use the armature's default.
 	 * @param stabilizingPasses number of stabilization passes to run. Set this to
 	 *                          -1 if you want to use the armature's default.
 	 */
-	public void IKSolver(AbstractBone bone, double dampening, int iterations, int stabilizingPasses) {
+	public void IKSolver(AbstractBone bone, int iterations, int stabilizingPasses) {
 		if(dirtySkelState) 
 			_regenerateShadowSkeleton();
 		if(dirtyRate) {
 			_updateShadowSkelRateInfo();
-			shadowSkel.updateRates();
+			shadowSkel.updateRates(iterations);
 			dirtyRate = false;
 		}
-		//if(traversalArray != null && traversalArray.length > 0) {
 		performance.startPerformanceMonitor();
 		this.updateskelStateTransforms();
-		shadowSkel.solve(dampening, iterations, stabilizingPasses, (bonestate) -> alignBoneToSolverResult(bonestate));
-		//alignBonesListToSolverResults();
-		//flatTraveseSolver(bone, dampening, iterations, stabilizingPasses);// (bone, dampening, iterations);
+		shadowSkel.solve(
+				iterations == -1 ? this.getDefaultIterations() : iterations, 
+				stabilizingPasses == -1? this.defaultStabilizingPassCount : stabilizingPasses, 
+				(bonestate) -> alignBoneToSolverResult(bonestate));
 		performance.solveFinished(iterations == -1 ? this.IKIterations : iterations);
-		//}
+	}
+	
+	/**for debugging purposes, does a single pullback iteration on the shadow skeleton, then updates 
+	 * the bones with the results.
+	 */
+	public void _doSinglePullbackStep() {
+		if(dirtySkelState) 
+			_regenerateShadowSkeleton();
+		if(dirtyRate) {
+			_updateShadowSkelRateInfo();
+			shadowSkel.updateRates(this.getDefaultIterations());
+			dirtyRate = false;
+		}
+		this.updateskelStateTransforms();
+		shadowSkel.alignSimAxesToBoneStates();
+		shadowSkel.pullBack(this.getDefaultIterations(), true, (bonestate) -> alignBoneToSolverResult(bonestate));
+	}
+	
+	/**for debugging purposes, does a single step to move effectors toward their targets on the shadow skeleton, then updates 
+	 * the bones with the results.
+	 */
+	public void _doSingleTowardTargetStep() {
+		if(dirtySkelState) 
+			_regenerateShadowSkeleton();
+		if(dirtyRate) {
+			_updateShadowSkelRateInfo();
+			shadowSkel.updateRates(this.getDefaultIterations());
+			dirtyRate = false;
+		}
+		this.updateskelStateTransforms();
+		shadowSkel.alignSimAxesToBoneStates();
+		shadowSkel.solveToTargets(0, true, (bonestate) -> alignBoneToSolverResult(bonestate));
 	}
 	
 	/**
 	 * read back the solver results from the SkeletonState object. 
-	 * The solver only ever modifies the transforms of the bones themselves, and only 
-	 * ever in local coordinates, so we only need to read back the bones in local space and mark their transforms dirty.
+	 * The solver only ever modifies the transforms of the bones themselves
+	 * so we don't need to bother with constraint or target transforms.
 	 */
 	private void alignBonesListToSolverResults() {
 		BoneState[] bonestates = skelState.getBonesArray();
@@ -543,13 +526,20 @@ public abstract class AbstractArmature implements Saveable {
 		}
 	}
 	
+	/**
+	 * read back the solver results from the given BoneState to the corresponding AbstractBone. 
+	 * The solver only ever modifies things in local space, so we can just markDirty after
+	 * manually updating the local transforms and defer global space updates to be triggered by 
+	 * whatever else in the pipeline happens to need them.
+	 */
+
 	private void alignBoneToSolverResult(BoneState bs) {
 		int bsi = bs.getIndex();
 		AbstractBone currBone = skelStateBoneList[bsi];
 		AbstractAxes currBoneAx = currBone.localAxes();
 		TransformState ts = bs.getTransform();
 		currBoneAx.getLocalMBasis().set(ts.translation, ts.rotation, ts.scale);
-		currBoneAx._exclusiveMarkDirty();
+		currBoneAx.markDirty();
 		currBone.IKUpdateNotification();
 	}
 
@@ -559,13 +549,25 @@ public abstract class AbstractArmature implements Saveable {
 	 * unreachability (due to excessive contortion on orientation constraints), the
 	 * solution might fail to stabilize, resulting in an undulating motion.
 	 * 
-	 * Setting this parameter to "1" will prevent such undulations, with a
-	 * negligible cost to performance. Setting this parameter to a value higher than
-	 * 1 will offer minor benefits in pose quality in situations that would
-	 * otherwise be prone to instability, however, it will do so at a significant
-	 * performance cost.
+	 * If you are porting this library, it is ESSENTIAL THAT YOU KEEP THIS PARAMETER AT 0 WHILE TESTING, 
+	 * as enablling this stabilizer will fool you into thinking the solver is sort-of-working when in fact 
+	 * the stabilizer is just hiding some critical failure in your implementation. 
 	 * 
-	 * You're encourage to experiment with this parameter as per your use case, but
+	 * Setting this parameter to "1" will prevent such undulations, with a
+	 * negligible cost to performance. However, the bones may look like they're grinding against
+	 * their constraint boundaries. 
+	 * 
+	 * The higher you set this parameter greater than 1, the more this grindiness may be alleviated, 
+	 * however note that grindiness you experience while stress-testing is highly unlikely 
+	 * to be encountered in normal operation, and values higher than 1 have a very large 
+	 * performance penalty -- so you should strongly prefer to keep this value no higher than 1.
+	 * 
+	 * DO NOT SET THIS TO 1 IF YOU ARE PORTING AND NOTICE INSTABILITY WHEN SOLVING FOR PERFECTLY REACHABLE TARGETS. 
+	 * DO NOT SET THIS TO 1 IF YOU ARE PORTING AND NOTICE INSTABILITY WHEN SOLVING FOR PERFECTLY REACHABLE TARGETS. 
+	 * DO NOT SET THIS TO 1 IF YOU ARE PORTING AND NOTICE INSTABILITY WHEN SOLVING FOR PERFECTLY REACHABLE TARGETS. 
+	 * DO NOT SET THIS TO 1 IF YOU ARE PORTING AND NOTICE INSTABILITY WHEN SOLVING FOR PERFECTLY REACHABLE TARGETS. 
+	 * 
+	 * You're encouraged to experiment with this parameter as per your use case, but
 	 * you may find the following guiding principles helpful:
 	 * <ul>
 	 * <li>If your armature doesn't have any constraints, then leave this parameter
@@ -594,247 +596,8 @@ public abstract class AbstractArmature implements Saveable {
 		return this.localAxes;
 	}
 	
-	private void iterativelyNotifyBonesOfCompletedIKSolution(int startFrom, int endOn) { 
-		for(int i=startFrom; i>=endOn; i--) {
-			traversalArray[i].forBone.IKUpdateNotification();
-		}
-	}
-	private void recursivelyNotifyBonesOfCompletedIKSolution(SegmentedArmature startFrom) {
-		for (AbstractBone b : startFrom.segmentBoneList) {
-			b.IKUpdateNotification();
-		}
-		for (SegmentedArmature s : startFrom.childSegments) {
-			recursivelyNotifyBonesOfCompletedIKSolution(s);
-		}
-	}
-
 	/**
-	 * @param startFrom
-	 * @param dampening
-	 * @param iterations
-	 */
-
-	public void flatTraveseSolver(AbstractBone startFrom, double dampening, int iterations, int stabilizationPasses) {
-		int endOnIndex = traversalArray.length - 1;
-		//int returnfullEndOnIndex = returnfulArray.length > 0 ? returnfulIndex.get(startFrom);  
-		int tipIndex = 0;
-		SegmentedArmature forSegment = segmentedArmature;
-		iterations = iterations == -1 ? IKIterations : iterations;
-		double totalIterations = iterations;
-		stabilizationPasses = stabilizationPasses == -1 ? this.defaultStabilizingPassCount : stabilizationPasses;
-		if (startFrom != null) {
-			forSegment = boneSegmentMap.get(startFrom);
-			if(forSegment != null) {
-				AbstractBone endOnBone = forSegment.segmentRoot;
-				endOnIndex = traversalIndex.get(endOnBone);
-			}
-		}
-
-		iterativelyAlignSimAxesToBones(traversalArray, endOnIndex);
-
-		for (int i = 0; i < iterations; i++) {
-			for (int j = 0; j <= endOnIndex; j++) {
-				traversalArray[j].fastUpdateOptimalRotationToPinnedDescendants(dampening,
-						j == endOnIndex && endOnIndex == traversalArray.length - 1);
-			}
-			/*if(i < totalIterations - 1) {
-				for (int j = 0; j <= endOnIndex; j++) {
-					traversalArray[j].pullBackTowardAllowableRegion(i, iterations);
-				}
-			}*/
-		}
-
-		iterativelyAlignBonesToSimAxesFrom(traversalArray, endOnIndex);
-		iterativelyNotifyBonesOfCompletedIKSolution(tipIndex, endOnIndex);
-	}
-
-
-	/**returns a two element array of WorkingBone arrays in the order which they should be traversed in
-	 * the 0th element is for trying to reach targets, the 1st element is for trying to reach comfort.
-	 */
-	private WorkingBone[][] buildTraversalArrayFromGroups(SegmentedArmature startFrom) {
-		ArrayList<WorkingBone> boneList = new ArrayList<WorkingBone>();
-		ArrayList<WorkingBone> returnfulList = new ArrayList<WorkingBone>();
-		buildTraversalArrayFromSegments(startFrom, boneList, returnfulList);
-		WorkingBone[] boneListResult = new WorkingBone[boneList.size()];
-		WorkingBone[] returnfulResult = new WorkingBone[returnfulList.size()];
-		WorkingBone[][] result = {boneList.toArray(boneListResult), returnfulList.toArray(returnfulResult)};
-		return result;
-	}
-
-	private void buildTraversalArrayFromSegments(SegmentedArmature startFrom, ArrayList<WorkingBone> boneList, ArrayList<WorkingBone> returnfulList) {
-		for (SegmentedArmature a : startFrom.pinnedDescendants) {
-			for (SegmentedArmature c : a.childSegments) {
-				buildTraversalArrayFromSegments(c, boneList, returnfulList);
-			}
-		}
-		buildTraversalArrayFromChains(startFrom, boneList, returnfulList);
-	}
-
-	private void buildTraversalArrayFromChains(SegmentedArmature chain, ArrayList<WorkingBone> boneList, ArrayList<WorkingBone> returnfulList) {
-		if ((chain.childSegments == null || chain.childSegments.size() == 0) && !chain.isTipPinned()) {
-			return;
-		} else if (!chain.isTipPinned()) {
-			for (SegmentedArmature c : chain.childSegments) {
-				buildTraversalArrayFromChains(c, boneList, returnfulList);
-			}
-		}
-		if(chain.isTipPinned() || chain.pinnedDescendants.size() > 0)
-			pushSegmentBonesToTraversalArray(chain, boneList, returnfulList);
-	}
-
-	private void pushSegmentBonesToTraversalArray(SegmentedArmature chain, ArrayList<WorkingBone> boneList, ArrayList<WorkingBone> returnfulList) {
-		AbstractBone startFrom = debug && lastDebugBone != null ? lastDebugBone : chain.segmentTip;
-		AbstractBone stopAfter = chain.segmentRoot;
-
-		AbstractBone currentBone = startFrom;
-		while (currentBone != null) {
-			boneList.add(chain.simulatedBones.get(currentBone));
-			if(currentBone.getConstraint() != null)
-				if(currentBone.getConstraint().getPainfulness() > 0) {
-					returnfulList.add(chain.simulatedBones.get(currentBone));
-				}
-			if (currentBone == stopAfter)
-				currentBone = null;
-			else
-				currentBone = currentBone.getParent();
-		}
-	}
-
-	public void groupedRecursiveSegmentSolver(SegmentedArmature startFrom, double dampening, int stabilizationPasses,
-			int iteration, double totalIterations) {
-		recursiveSegmentSolver(startFrom, dampening, stabilizationPasses, iteration, totalIterations);
-		for (SegmentedArmature a : startFrom.pinnedDescendants) {
-			for (SegmentedArmature c : a.childSegments) {
-				// alignSegmentTipOrientationsFor(startFrom, dampening);
-				groupedRecursiveSegmentSolver(c, dampening, stabilizationPasses, iteration, totalIterations);
-			}
-		}
-		// alignSegmentTipOrientationsFor(startFrom, dampening);
-	}
-
-	/**
-	 * aligns this bone and all relevant childBones to their coresponding
-	 * simulatedAxes (if any) in the SegmentedArmature
-	 * 
-	 * @param b bone to start from
-	 */
-	public void iterativelyAlignBonesToSimAxesFrom(WorkingBone[] bonelist, int from) {
-		// SegmentedArmature chain = b.parentArmature.boneSegmentMap.get(b);
-		// //getChainFor(b);
-
-		for (int i = from; i >= 0; i--) {
-			WorkingBone sb = bonelist[i];
-			AbstractAxes simulatedLocalAxes = sb.simLocalAxes;
-			AbstractBone b = sb.forBone;
-			/*if (b.parent != null) {
-				// TODO: test robustness / efficiency of avoiding global update
-				b.localAxes().localMBasis.rotateTo(simulatedLocalAxes.localMBasis.rotation);
-				b.localAxes().markDirty();
-				b.localAxes().updateGlobal();
-			} else {*/
-				b.localAxes().alignLocalsTo(simulatedLocalAxes);
-			//}
-		}
-	}
-
-	/**
-	 * align the WorkingBone SimulationAxes to the boneAxes outward from the given
-	 * bone index
-	 **/
-	public void iterativelyAlignSimAxesToBones(WorkingBone[] bonelist, int from) {
-
-		// branching outside of loop in hopes of tiny performance gains
-
-		for (int i = from; i >= 0; i--) {
-			WorkingBone sb = bonelist[i];
-			/*
-			 * if (!sb.onChain.isBasePinned()) { sbAxes.alignGlobalsTo(b.localAxes());
-			 * sbAxes.markDirty(); sbAxes.updateGlobal();
-			 * cAxes.alignGlobalsTo(b.getMajorRotationAxes()); cAxes.markDirty();
-			 * cAxes.updateGlobal(); } else {&=
-			 */
-			sb.simLocalAxes.alignLocalsTo(sb.forBone.localAxes());
-			sb.simConstraintAxes.alignLocalsTo(sb.forBone.getMajorRotationAxes());
-			// }
-		}
-
-	}
-
-	/**
-	 * given a segmented armature, solves each chain from its pinned tips down to
-	 * its pinned root.
-	 * 
-	 * @param armature
-	 */
-	public void recursiveSegmentSolver(SegmentedArmature armature, double dampening, int stabilizationPasses,
-			int iteration, double totalIterations) {
-		if (armature.childSegments == null && !armature.isTipPinned()) {
-			return;
-		} else if (!armature.isTipPinned()) {
-			for (SegmentedArmature c : armature.childSegments) {
-				recursiveSegmentSolver(c, dampening, stabilizationPasses, iteration, totalIterations);
-				// c.setProcessed(true);
-			}
-		}
-		QCPSolver(armature, dampening, false, stabilizationPasses, iteration, totalIterations);
-	}
-
-	boolean debug = true;
-	AbstractBone lastDebugBone = null;
-
-	private void QCPSolver(SegmentedArmature chain, double dampening, boolean inverseWeighting, int stabilizationPasses,
-			int iteration, double totalIterations) {
-
-		debug = false;
-
-		// lastDebugBone = null;
-		AbstractBone startFrom = debug && lastDebugBone != null ? lastDebugBone : chain.segmentTip;
-		AbstractBone stopAfter = chain.segmentRoot;
-
-		AbstractBone currentBone = startFrom;
-		if (debug && chain.simulatedBones.size() < 2) {
-
-		} else {
-			/*
-			 * if(chain.isTipPinned() && chain.segmentTip.getIKPin().getDepthFalloff() ==
-			 * 0d) alignSegmentTipOrientationsFor(chain, dampening);
-			 */
-			// System.out.print("---------");
-			while (currentBone != null) {
-				if (!currentBone.getIKOrientationLock()) {
-					chain.updateOptimalRotationToPinnedDescendants(currentBone, dampening, false, stabilizationPasses,
-							iteration, totalIterations);
-				}
-				if (currentBone == stopAfter)
-					currentBone = null;
-				else
-					currentBone = currentBone.getParent();
-
-				if (debug) {
-					lastDebugBone = currentBone;
-					break;
-				}
-			}
-
-		}
-	}
-
-	void rootwardlyUpdateFalloffCacheFrom(AbstractBone forBone) {
-		SegmentedArmature current = boneSegmentMap.get(forBone);
-		while (current != null) {
-			current.createHeadingArrays();
-			current = current.getParentSegment();
-		}
-	}
-
-	// debug code -- use to set a minimum distance an effector must move
-	// in order to trigger a chain iteration
-	double debugMag = 5f;
-	SGVec_3d lastTargetPos = new SGVec_3d();
-
-	/**
-	 * currently unused
+	 * currently unused, future feature for more natural posing
 	 * 
 	 * @param enabled
 	 */
@@ -844,18 +607,6 @@ public abstract class AbstractArmature implements Saveable {
 
 	public boolean getAbilityBiasing() {
 		return abilityBiasing;
-	}
-
-	/**
-	 * returns the rotation that would bring the right-handed orthonormal axes of a
-	 * into alignment with b
-	 * 
-	 * @param a
-	 * @param b
-	 * @return
-	 */
-	public Rot getRotationBetween(AbstractAxes a, AbstractAxes b) {
-		return new Rot(a.x_().heading(), a.y_().heading(), b.x_().heading(), b.y_().heading());
 	}
 
 	public int getDefaultIterations() {
@@ -926,7 +677,6 @@ public abstract class AbstractArmature implements Saveable {
 			System.out.println("per call = " + (averageSolutionTime) + "ms");
 			System.out.println("per iteration = " + (averageIterationTime) + "ms \n");
 		}
-
 	}
 
 	@Override
@@ -980,7 +730,6 @@ public abstract class AbstractArmature implements Saveable {
 	@Override
 	public void notifyOfLoadCompletion() {
 		this.createRootBone(rootBone);
-		refreshArmaturePins();
 		regenerateShadowSkeleton();
 	}
 

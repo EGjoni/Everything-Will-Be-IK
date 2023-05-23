@@ -82,16 +82,19 @@ public abstract class AbstractIKPin implements Saveable {
 	 * @param depth
 	 */
 	public void setDepthFalloff(double depth) {
-		this.depthFalloff = depth;		
-		this.forBone.parentArmature.rootwardlyUpdateFalloffCacheFrom(forBone);
+		double prevDepth = this.depthFalloff;
+		this.depthFalloff = depth;
+		if((this.depthFalloff == 0 && prevDepth != 0) 
+		|| (this.depthFalloff != 0 && prevDepth == 0)) {
+			this.forBone.parentArmature.regenerateShadowSkeleton();
+		} else {
+			this.forBone.parentArmature.updateShadowSkelRateInfo();
+		}
 	}
 	
 	public double getDepthFalloff() {
 		return depthFalloff;
 	}
-	
-	
-	
 	/**
 	 * Sets  the priority of the orientation bases which effectors reaching for this target will and won't align with. 
 	 * If all are set to 0, then the target is treated as a simple position target. 
@@ -121,7 +124,7 @@ public abstract class AbstractIKPin implements Saveable {
 		this.xPriority = xPriority;
 		this.yPriority = yPriority;
 		this.zPriority = zPriority;
-		this.forBone.parentArmature.rootwardlyUpdateFalloffCacheFrom(forBone);
+		this.forBone.parentArmature.updateShadowSkelRateInfo();
 	}
 	
 	/**
@@ -300,7 +303,7 @@ public abstract class AbstractIKPin implements Saveable {
 	 */
 	public void setPinWeight(double weight) {
 		this.pinWeight = weight;
-		this.forBone.parentArmature.rootwardlyUpdateFalloffCacheFrom(forBone);
+		this.forBone.parentArmature.updateShadowSkelRateInfo();
 	}
 	
 	@Override
