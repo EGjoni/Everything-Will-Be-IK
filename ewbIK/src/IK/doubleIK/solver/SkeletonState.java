@@ -182,7 +182,7 @@ public class SkeletonState {
 	 * back into your desired space.
 	 * @param forBoneid the id string of the effector bone this is a target for
 	 * @param priorities the orientation priorities for this target. For more information see the setTargetPriorities documentation in AbstractIKPin
-	 * @param setDepthFalloff the depthFallOff for this target. value 0-1, with 0 indicating that no effectors 
+	 * @param depthFalloff the depthFallOff for this target. value 0-1, with 0 indicating that no effectors 
 	 * downstream of this once are visible to ancestors of this target's effector, and 1 indicating that all effectors 
 	 * immediately downstream of this one are solved for with equal priority to this one by ancestors bones 
 	 * of this target's effector. For more information, see the depthFallOff documentation in AbstractIKPin
@@ -590,18 +590,35 @@ public class SkeletonState {
 			return priorities[basisDirection/2];
 		}
 		
-		/**@return the priority of whichever direction has the largest priority.*/ 
-		public double getMaxPriority() {
-			double maxPinWeight = 0;
-			if ((modeCode & AbstractIKPin.XDir) != 0)
-				maxPinWeight = MathUtils.max(maxPinWeight, this.getPriority(AbstractIKPin.XDir));
-			if ((modeCode & AbstractIKPin.YDir) != 0)
-				maxPinWeight = MathUtils.max(maxPinWeight, this.getPriority(AbstractIKPin.YDir));
-			if ((modeCode & AbstractIKPin.ZDir) != 0)
-				maxPinWeight = MathUtils.max(maxPinWeight, this.getPriority(AbstractIKPin.ZDir));
-			return maxPinWeight;
+		/**
+		 * sets this target's orientation priorities. Normalizes by the largest priority on store
+		 * @param priorities
+		 */
+		public void setPriorities(double[] priorities) {
+			double totalPriority = 0d;
+			double priorityCount = 0d;
+			double normedPriority = 0d;
+			double maxPriority = 0d;
+			
+			for(int i =0; i<this.priorities.length; i++) {
+				if ((modeCode & i/2) != 0) {
+					priorityCount++;
+					totalPriority += priorities[i];
+					maxPriority = Math.max(priorities[i], maxPriority);
+				}
+			}
+			if(priorityCount > 0)
+				normedPriority = totalPriority/priorityCount;
+			
+			this.priorities[0] = priorities[0] * normedPriority*maxPriority;			
+			this.priorities[1] = priorities[1] * normedPriority*maxPriority;			
+			this.priorities[2] = priorities[2] * normedPriority*maxPriority;
 		}
 		
+		public void setWeight(double weight) {
+			this.weight = weight;
+		}
+				
 	}
 
 	public class ConstraintState {

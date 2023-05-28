@@ -56,12 +56,14 @@ public class ArmatureSegment {
 	QCP qcpConverger = new QCP(MathUtils.DOUBLE_ROUNDING_ERROR, MathUtils.DOUBLE_ROUNDING_ERROR);
 	public WorkingBone wb_segmentTip;
 	public ArmatureSegment parentSegment;
+	public ArmatureSegment rootSegment; //segment emanating from an effector with 0 falloff, or containing root bone with no effector
 
 	public ArmatureSegment(ShadowSkeleton shadowSkel, BoneState startingFrom, ArmatureSegment parentSegment, boolean isRootPined) {
 		this.shadowSkel = shadowSkel;			
 		this.simTransforms = shadowSkel.simTransforms;
 		this.parentSegment = parentSegment;
 		this.isRootPinned = isRootPined;
+		this.rootSegment = this.isRootPinned || parentSegment == null ? this : this.parentSegment.rootSegment;
 		this.hasPinnedAncestor = (parentSegment != null && (parentSegment.isRootPinned || parentSegment.hasPinnedAncestor));
 		buildSegment(startingFrom);
 		if(this.isRootPinned)
@@ -69,6 +71,7 @@ public class ArmatureSegment {
 		buildReverseTraversalArray();
 		createHeadingArrays();
 	}
+
 	
 	public double getDampening() {
 		return shadowSkel.baseDampening;
@@ -90,14 +93,16 @@ public class ArmatureSegment {
 			if(target != null || currentBS.getChildCount() > 1) {
 				if(target != null) {
 					segEffectors.add(currentWB);
-					if(target.getDepthFallOff() <= 0.0) {						
-						this.wb_segmentTip = currentWB;
+					/** if no fall off this constitutes a proper end of the segment and any children are maintaines as child segments, 
+					 * otherwise, children are treated as subsegments */
+					if(target.getDepthFallOff() <= 0.0) 	
 						finished = true;
-					}
 				}				
-				if(finished) 
+				if(finished) {
+					this.wb_segmentTip = currentWB;
 					for(int i=0; i<currentBS.getChildCount(); i++) 
 						childSgmts.add(new ArmatureSegment(shadowSkel, currentBS.getChild(i), this, true));
+				}
 				else {
 					for(int i=0; i<currentBS.getChildCount(); i++) { 
 						ArmatureSegment subseg = new ArmatureSegment(shadowSkel, currentBS.getChild(i), this, false);
@@ -106,7 +111,7 @@ public class ArmatureSegment {
 						Collections.addAll(segEffectors, subseg.pinnedBones);
 					}
 					finished = true;
-					this.wb_segmentTip = currentWB;
+					this.wb_segmentTip = currentWB; //still mark as
 				}
 			} else if (currentBS.getChildCount() == 1) {
 				currentBS = currentBS.getChild(0);
@@ -130,6 +135,16 @@ public class ArmatureSegment {
 			Collections.addAll(reverseTraversalArray, ss.reversedTraversalArray);
 
 		this.reversedTraversalArray = reverseTraversalArray.toArray(new WorkingBone[0]);
+	}
+	
+	public void recursivelyCreateHeadingArrays() {
+		this.createHeadingArrays();
+		for(ArmatureSegment s : this.subSegments) {
+			s.recursivelyCreateHeadingArrays();
+		}
+		for(ArmatureSegment s : this.childSegments) {
+			s.recursivelyCreateHeadingArrays();
+		}
 	}
 
 	void createHeadingArrays() {
@@ -167,24 +182,22 @@ public class ArmatureSegment {
 			if (target != null) {
 				ArrayList<Double> innerWeightArray = new ArrayList<Double>();
 				weightArray.add(innerWeightArray);
+				double targWeight =  target.getWeight();
 				byte modeCode = target.getModeCode();
 				innerWeightArray.add(target.getWeight() * currentFalloff);
-				double maxPinWeight = target.getMaxPriority();			
-				if (maxPinWeight == 0d)
-					maxPinWeight = 1d;
 
 				if ((modeCode & TargetState.XDir) != 0) {
-					double subTargetWeight = target.getWeight() * (target.getPriority(TargetState.XDir) / maxPinWeight) * currentFalloff;
+					double subTargetWeight = targWeight * target.getPriority(TargetState.XDir) * currentFalloff;
 					innerWeightArray.add(subTargetWeight);
 					innerWeightArray.add(subTargetWeight);
 				}
 				if ((modeCode & TargetState.YDir) != 0) {
-					double subTargetWeight = target.getWeight() * (target.getPriority(TargetState.YDir) / maxPinWeight) * currentFalloff;
+					double subTargetWeight = targWeight * target.getPriority(TargetState.YDir) * currentFalloff;
 					innerWeightArray.add(subTargetWeight);
 					innerWeightArray.add(subTargetWeight);
 				}
 				if ((modeCode & TargetState.ZDir) != 0) {
-					double subTargetWeight = target.getWeight() * (target.getPriority(TargetState.ZDir) / maxPinWeight) * currentFalloff;
+					double subTargetWeight = targWeight * target.getPriority(TargetState.ZDir) * currentFalloff;
 					innerWeightArray.add(subTargetWeight);
 					innerWeightArray.add(subTargetWeight);
 				}
@@ -279,15 +292,18 @@ public class ArmatureSegment {
 		public void setAsSegmentRoot() {
 			this.isSegmentRoot = true;
 		}
+		public ArmatureSegment getRootSegment() {
+			return onChain.rootSegment;
+		}
 
-		public void fastUpdateOptimalRotationToPinnedDescendants(int stabilizePasses, boolean translate) {
+		public void fastUpdateOptimalRotationToPinnedDescendants(int stabilizePasses, boolean translate, boolean skipConstraint) {
 			simLocalAxes.updateGlobal();
 			updateTargetHeadings(onChain.boneCenteredTargetHeadings, onChain.weights);			
 			Rot prevOrientation = new Rot(simLocalAxes.getLocalMBasis().rotation.rotation);
 			boolean gotCloser = true;
 			for (int i = 0; i <= stabilizePasses; i++) {
 				updateTipHeadings(onChain.boneCenteredTipHeadings, true);
-				updateOptimalRotationToPinnedDescendants(translate, onChain.boneCenteredTipHeadings,
+				updateOptimalRotationToPinnedDescendants(translate, skipConstraint, onChain.boneCenteredTipHeadings,
 						onChain.boneCenteredTargetHeadings, weights);
 				if (stabilizePasses > 0) {
 					updateTipHeadings(onChain.uniform_boneCenteredTipHeadings, false);
@@ -308,7 +324,7 @@ public class ArmatureSegment {
 			simLocalAxes.markDirty();
 		}
 
-		private Rot updateOptimalRotationToPinnedDescendants(boolean translate,
+		private Rot updateOptimalRotationToPinnedDescendants(boolean translate, boolean skipConstraints,
 				SGVec_3d[] localizedTipHeadings, SGVec_3d[] localizedTargetHeadings, double[] weights) {
 
 			Rot qcpRot = onChain.qcpConverger.weightedSuperpose(localizedTipHeadings, localizedTargetHeadings, weights,
@@ -325,7 +341,7 @@ public class ArmatureSegment {
 			}		
 			simLocalAxes.updateGlobal();
 
-			if(constraint != null) {
+			if(constraint != null && !skipConstraints) {
 				constraint.setAxesToSnapped(simLocalAxes, simConstraintSwingAxes, simConstraintTwistAxes);
 				/* we should never hit this condition but I know someone's going to try really hard to put constraints
 				 * on root bones despite multiple warnings not to so.. 

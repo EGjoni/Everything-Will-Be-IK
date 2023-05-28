@@ -596,6 +596,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	 */
 	public void rotAboutFrameX(double amt, boolean obeyConstraints) {
 		//localAxes().alignLocalsTo(previousOrientation);
+		if(previousOrientation == null) previousOrientation = localAxes().attachedCopy(false);
 		previousOrientation.alignLocalsTo(localAxes);		
 
 
@@ -613,6 +614,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	 * @param obeyConstrants  whether or not this functions should obey constraints when rotating the bone
 	 */
 	public void rotAboutFrameY(double amt, boolean obeyConstraints) {
+		if(previousOrientation == null) previousOrientation = localAxes().attachedCopy(false);
 		previousOrientation.alignLocalsTo(localAxes);	
 
 		Rot yRot = new Rot(majorRotationAxes.y_().heading(), amt); 
@@ -630,6 +632,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 	 * @param obeyConstrants  whether or not this functions should obey constraints when rotating the bone
 	 */
 	public void rotAboutFrameZ(double amt, boolean obeyConstraints) {
+		if(previousOrientation == null) previousOrientation = localAxes().attachedCopy(false);
 		previousOrientation.alignLocalsTo(localAxes);	
 
 		Rot zRot = new Rot(majorRotationAxes.z_().heading(), amt); 
@@ -766,7 +769,7 @@ public abstract class AbstractBone implements Saveable, Comparable<AbstractBone>
 		pin.enable();
 		freeChildren.clear(); 
 		for (AbstractBone child : getChildren()) {
-			if (!child.pin.isEnabled()) {
+			if (child.pin != null && !child.pin.isEnabled()) {
 				addFreeChild(child);
 			}
 		}

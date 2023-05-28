@@ -2,6 +2,7 @@ package IK.doubleIK.solver;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.function.Consumer;
 
 import IK.doubleIK.AbstractArmature;
@@ -21,8 +22,11 @@ public class ShadowSkeleton {
 	AbstractAxes[] simTransforms = null;
 	AbstractAxes shadowSpace = null;
 	WorkingBone[] traversalArray;
+	HashMap<BoneState, Integer> boneWorkingBoneIndexMap = new HashMap<BoneState, Integer>();
 	ArmatureSegment rootSegment = null;
 	SkeletonState skelState = null;
+	BoneState lastRequested = null;
+	int lastRequestedEndIndex = -1;
 	double baseDampening = Math.PI;
 	/**
 	 * builds a shadowSkeleton from the given SkeletonState object
@@ -39,47 +43,90 @@ public class ShadowSkeleton {
 	private int previousIterationRequest = 0;
 	
 	/**
+	 * @param iterations how many iterations to run the solver
+	 * @param stabilizationPasses set to 0 for maximum speed (but less stability given unreachable situations), 
+	 * Set to 1 for maximum stability while following constraints. 
+	 * Set to higher than 1 for negligible benefit at considerable cost. 
+	 * Set to -1 to indicate constraints can be broken on the last iteration of a solver call
+	 * @param solveFrom optional, if given, the solver will only solve for the segment the given bone is on (and any of its descendant segments
 	 * @param notifier a (potentially threaded) function to call every time the solver has updated the transforms for a given bone. 
 	 * Called once per solve, per bone. NOT once per iteration.
 	 * This can be used to take advantage of parallelism, so that you can update your Bone transforms while this is still writing into the skelState TransformState list
 	 */
-	public void solve(int iterations, int stabilizationPasses, Consumer<BoneState> notifier) {
-		int endOnIndex = traversalArray.length - 1;
-		//int returnfullEndOnIndex = returnfulArray.length > 0 ? returnfulIndex.get(startFrom);  
-		int tipIndex = 0;
+	public void solve(int iterations, int stabilizationPasses, BoneState solveFrom, Consumer<BoneState> notifier) {
 		alignSimAxesToBoneStates();
-		this.pullBack(iterations, false, null); //start all bones closer to a known comfortable pose.
-		previousIterationRequest = iterations;
+		this.pullBack(iterations, solveFrom, false, null); //start all bones closer to a known comfortable pose.
 		for (int i = 0; i < iterations; i++) {
-			this.solveToTargets(1, false, null);
+			this.solveToTargets(1, solveFrom, false, null);
 		}
 		this.conditionalNotify(true, notifier);
 	}
 	
-	public void pullBack(int iterations, boolean doNotify, Consumer<BoneState> notifier) {
-		int endOnIndex = traversalArray.length - 1;
-		if(previousIterationRequest != iterations) {
-			for (int j = 0; j <= endOnIndex; j++) {				
-				traversalArray[j].updateReturnfullnessDamp(iterations);
-			}
-		}
+	
+	public void pullBack(int iterations, BoneState solveFrom, boolean doNotify, Consumer<BoneState> notifier) {
+		int endOnIndex = getEndOnIndex(solveFrom);
+		updateReturnfulnessDamps(iterations);
 		for (int j = 0; j <= endOnIndex; j++) {			
 			traversalArray[j].pullBackTowardAllowableRegion();
-			if(traversalArray[j].isSegmentRoot) 
-				break;
 		}
 		conditionalNotify(doNotify, notifier);
 	}
 	
-	public void solveToTargets(int stabilizationPasses, boolean doNotify, Consumer<BoneState> notifier) {
-		int endOnIndex = traversalArray.length - 1;
+	/**
+	 * @param stabilizationPasses set to 0 for maximum speed (but less stability given unreachable situations), 
+	 * Set to 1 for maximum stability while following constraints. 
+	 * Set to higher than 1 for negligible benefit at considerable cost. 
+	 * Set to -1 to indicate constraints can be broken on the last iteration of a solver call
+	 * @param solveFrom optional, if given, the solver will only solve for the segment the given bone is on (and any of its descendant segments
+	 * @param notifier a (potentially threaded) function to call every time the solver has updated the transforms for a given bone. 
+	 * Called once per solve, per bone. NOT once per iteration.
+	 * This can be used to take advantage of parallelism, so that you can update your Bone transforms while this is still writing into the skelState TransformState list
+	 */
+	public void solveToTargets(int stabilizationPasses, BoneState solveFrom, boolean doNotify, Consumer<BoneState> notifier) {
+		int endOnIndex = getEndOnIndex(solveFrom);
+		boolean translate = endOnIndex == traversalArray.length - 1;
+		boolean skipConstraints = stabilizationPasses < 0;
+		stabilizationPasses = Math.max(0,  stabilizationPasses);
 		for (int j = 0; j <= endOnIndex; j++) {
 			WorkingBone wb = traversalArray[j];
-			wb.fastUpdateOptimalRotationToPinnedDescendants(stabilizationPasses, j == endOnIndex && endOnIndex == traversalArray.length - 1);
-			if(wb.isSegmentRoot && wb.hasPinnedAncestor)
-				break;
+			wb.fastUpdateOptimalRotationToPinnedDescendants(stabilizationPasses, j == endOnIndex && translate, skipConstraints);
 		}
 		conditionalNotify(doNotify, notifier);
+	}
+	
+	/**
+	 * lazy lookup. Get the traversal array index for the root of the pinned segment the working bone corresponding to this bonestate resides on, 
+	 * but only if it's different than the last one that was tracked.
+	 * @param solveFrom
+	 * @return
+	 */
+	private int getEndOnIndex(BoneState solveFrom) {
+		if(solveFrom != lastRequested) {
+			if(solveFrom == null) {
+				lastRequestedEndIndex = traversalArray.length-1;
+				lastRequested = null;
+			} else {
+				Integer idx = boneWorkingBoneIndexMap.get(solveFrom);
+				WorkingBone wb = traversalArray[idx];
+				WorkingBone root = wb.getRootSegment().wb_segmentRoot;
+				lastRequestedEndIndex = (int)boneWorkingBoneIndexMap.get(root.forBone);
+				lastRequested = solveFrom;
+			}			
+		}
+		return lastRequestedEndIndex;
+	}
+	
+	/**
+	 * lazy update of returnfullness dampening if the number of iterations for this solver call is different than the previous one
+	 * @param iterations
+	 */
+	private void updateReturnfulnessDamps(int iterations) {
+		if(previousIterationRequest != iterations) {
+			for (int j = 0; j < traversalArray.length; j++) {				
+				traversalArray[j].updateReturnfullnessDamp(iterations);
+			}
+		}
+		previousIterationRequest = iterations;
 	}
 	public void conditionalNotify(boolean doNotify, Consumer<BoneState> notifier) {
 		if(doNotify) {
@@ -146,15 +193,21 @@ public class ShadowSkeleton {
 		if(this.rootSegment == null) return;
 		ArrayList<ArmatureSegment> segmentTraversalArray = this.rootSegment.getDescendantSegments();
 		ArrayList<WorkingBone> reversedTraversalArray = new ArrayList<>();
+		boneWorkingBoneIndexMap.clear();
 		for(ArmatureSegment segment: segmentTraversalArray) {
 			Collections.addAll(reversedTraversalArray, segment.reversedTraversalArray);
 		}
 		this.traversalArray = new WorkingBone[reversedTraversalArray.size()];
 		int j = 0;
+		
 		for(int i = reversedTraversalArray.size()-1 ; i>=0; i--) {
 			this.traversalArray[j] = reversedTraversalArray.get(i);
+			boneWorkingBoneIndexMap.put(traversalArray[j].forBone, j);
 			j++;
 		}
+		
+		lastRequested = null;
+		lastRequestedEndIndex = traversalArray.length-1;
 	}
 	
 	public void setDampening(double dampening, double defaultIterations) {
@@ -163,6 +216,7 @@ public class ShadowSkeleton {
 	}
 
 	public void updateRates(double iterations) {
+		rootSegment.recursivelyCreateHeadingArrays();
 		for (int j = 0; j < traversalArray.length; j++) {
 			traversalArray[j].updateCosDampening();
 			traversalArray[j].updateReturnfullnessDamp(iterations);

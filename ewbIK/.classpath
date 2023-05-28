@@ -4,5 +4,6 @@
 	<classpathentry excluding="sceneGraph/|sceneGraph/asj/" kind="src" path="src"/>
 	<classpathentry kind="src" path="src/sceneGraph/asj"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/QScene"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/Everything-Will-Be-Affine"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

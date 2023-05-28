@@ -58,8 +58,6 @@ public abstract class AbstractArmature implements Saveable {
 	protected HashMap<String, AbstractBone> tagBoneMap = new HashMap<String, AbstractBone>();
 	
 	protected AbstractBone rootBone;
-	protected HashMap<AbstractBone, Integer> traversalIndex;
-	protected HashMap<AbstractBone, Integer> returnfulIndex;
 	// public StrandedArmature strandedArmature;
 	protected String tag;
 
@@ -158,15 +156,19 @@ public abstract class AbstractArmature implements Saveable {
 	}
 
 	/**
-	 * (warning, this function is untested)
-	 * 
 	 * @return all bones belonging to this armature.
 	 */
 	public ArrayList<? extends AbstractBone> getBoneList() {
-		this.bones.clear();
+		if(this.bones.isEmpty()) {
+			this.repopulateBonesList();
+		}
+		return bones;
+	}
+	
+	public void repopulateBonesList() {
+		bones.clear();
 		bones.add(rootBone);
 		rootBone.addDescendantsToArmature();
-		return bones;
 	}
 
 	/**
@@ -257,6 +259,7 @@ public abstract class AbstractArmature implements Saveable {
 	protected AbstractBone[] skelStateBoneList = new AbstractBone[0];
 	
 	ShadowSkeleton shadowSkel;
+	private HashMap<AbstractBone, BoneState> boneToStateMap = new HashMap<>();
 	private void _regenerateShadowSkeleton() {
 		skelState = new SkeletonState();
 		for(AbstractBone b: bones) {
@@ -265,11 +268,15 @@ public abstract class AbstractArmature implements Saveable {
 		skelState.validate();
 		shadowSkel = new ShadowSkeleton(skelState, this.dampening);
 		skelStateBoneList = new AbstractBone[skelState.getBoneCount()];
+		boneToStateMap.clear();
 		for(int i=0; i<bones.size(); i++) {
 			BoneState bonestate = skelState.getBoneStateById(bones.get(i).getIdentityHash());
-			if(bonestate != null)
+			if(bonestate != null) {
 				skelStateBoneList[bonestate.getIndex()] = bones.get(i);
+				boneToStateMap.put(bones.get(i), bonestate);
+			}
 		}
+		lastRequestedSolveFromBone = null;
 		dirtySkelState = false;
 	}
 	
@@ -313,6 +320,12 @@ public abstract class AbstractArmature implements Saveable {
 			AbstractBone b = skelStateBoneList[i];
 			BoneState bs = bonestates[i];
 			bs.setStiffness(b.getStiffness());
+			if(bs.getTarget() != null) {
+				AbstractIKPin pin = b.getIKPin();
+				TargetState ts = bs.getTarget();
+				ts.setWeight(pin.getPinWeight());
+				ts.setPriorities(new double[] {pin.getXPriority(), pin.getYPriority(), pin.getZPriority()});
+			}
 		}
 	}
 	
@@ -321,7 +334,7 @@ public abstract class AbstractArmature implements Saveable {
 		Constraint constraint = bone.getConstraint();
 		String constraintId = (constraint == null) ? null : constraint.getIdentityHash(); 
 		AbstractIKPin target = bone.getIKPin();
-		String targetId = (target == null || target.getPinWeight() == 0 || target.isEnabled() == false) ? null : target.getIdentityHash();
+		String targetId = (target == null ||target.isEnabled() == false) ? null : target.getIdentityHash();
 		skelState.addBone(
 				bone.getIdentityHash(), 
 				bone.localAxes().getIdentityHash(), 
@@ -421,8 +434,8 @@ public abstract class AbstractArmature implements Saveable {
 			updateSkelStateAxes(twist, cs.getTwistTransform(), false);
 	}	
 	
-	private void updateSkelStateTarget(AbstractIKPin p, TargetState ts) {
-		updateSkelStateAxes(p.getAxes(), ts.getTransform(), true);
+	private void updateSkelStateTarget(AbstractIKPin pin, TargetState ts) {
+		updateSkelStateAxes(pin.getAxes(), ts.getTransform(), true);
 	}
 	
 	private void updateSkelStateAxes(AbstractAxes a, TransformState ts, boolean unparent) {
@@ -463,7 +476,7 @@ public abstract class AbstractArmature implements Saveable {
 	 * @param iterations        number of iterations to run. Set this to -1 if you
 	 *                          want to use the armature's default.
 	 * @param stabilizingPasses number of stabilization passes to run. Set this to
-	 *                          -1 if you want to use the armature's default.
+	 *                          -2 if you want to use the armature's default. -1 tells it to break constraints if need be
 	 */
 	public void IKSolver(AbstractBone bone, int iterations, int stabilizingPasses) {
 		if(dirtySkelState) 
@@ -475,13 +488,27 @@ public abstract class AbstractArmature implements Saveable {
 		}
 		performance.startPerformanceMonitor();
 		this.updateskelStateTransforms();
+		BoneState forBoneState =  getBoneStateFor(bone);
 		shadowSkel.solve(
 				iterations == -1 ? this.getDefaultIterations() : iterations, 
-				stabilizingPasses == -1? this.defaultStabilizingPassCount : stabilizingPasses, 
+				stabilizingPasses == -2? this.defaultStabilizingPassCount : stabilizingPasses, 
+					forBoneState,
 				(bonestate) -> alignBoneToSolverResult(bonestate));
 		performance.solveFinished(iterations == -1 ? this.IKIterations : iterations);
 	}
 	
+	private AbstractBone lastRequestedSolveFromBone = null;
+	private BoneState lastRequestedSolveFromBoneState = null;
+	/**lazy lookup for the BoneState corresponding to the given bone. Result is stored and only looked up when it changes**/
+	private BoneState getBoneStateFor(AbstractBone bone) {
+		if (bone != lastRequestedSolveFromBone) {
+			if(bone == null) 
+				return null;
+			lastRequestedSolveFromBoneState = boneToStateMap.get(bone);
+			lastRequestedSolveFromBone = bone;
+		}
+		return lastRequestedSolveFromBoneState;
+	}
 	/**for debugging purposes, does a single pullback iteration on the shadow skeleton, then updates 
 	 * the bones with the results.
 	 */
@@ -495,7 +522,7 @@ public abstract class AbstractArmature implements Saveable {
 		}
 		this.updateskelStateTransforms();
 		shadowSkel.alignSimAxesToBoneStates();
-		shadowSkel.pullBack(this.getDefaultIterations(), true, (bonestate) -> alignBoneToSolverResult(bonestate));
+		shadowSkel.pullBack(this.getDefaultIterations(), (BoneState)null, true, (bonestate) -> alignBoneToSolverResult(bonestate));
 	}
 	
 	/**for debugging purposes, does a single step to move effectors toward their targets on the shadow skeleton, then updates 
@@ -511,7 +538,7 @@ public abstract class AbstractArmature implements Saveable {
 		}
 		this.updateskelStateTransforms();
 		shadowSkel.alignSimAxesToBoneStates();
-		shadowSkel.solveToTargets(0, true, (bonestate) -> alignBoneToSolverResult(bonestate));
+		shadowSkel.solveToTargets(0, (BoneState)null, true, (bonestate) -> alignBoneToSolverResult(bonestate));
 	}
 	
 	/**
