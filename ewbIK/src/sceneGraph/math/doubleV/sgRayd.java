@@ -865,7 +865,7 @@ public class sgRayd implements CanLoad {
 		} else {
 			bc.set(b);
 			ca.set(a);
-			at.set(a);
+			at.set(c);
 			bt.set(b);
 			ct.set(c);
 			pt.set(p);
